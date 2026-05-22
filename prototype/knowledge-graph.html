@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>知识图谱 · DevPipeline</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-base: oklch(98% 0.006 85);
+      --bg-card: #ffffff;
+      --bg-elev: oklch(99% 0.004 85);
+      --bg-deep: oklch(15% 0.018 260);
+
+      --border-soft: oklch(93% 0.005 85);
+      --border-mid: oklch(88% 0.008 85);
+
+      --text-strong: oklch(22% 0.03 260);
+      --text-body: oklch(38% 0.02 260);
+      --text-muted: oklch(56% 0.015 260);
+      --text-faint: oklch(72% 0.01 260);
+
+      --done: oklch(62% 0.13 150);
+      --done-soft: oklch(94% 0.04 150);
+      --run: oklch(70% 0.15 65);
+      --run-soft: oklch(95% 0.05 75);
+      --review: oklch(58% 0.18 290);
+      --review-soft: oklch(95% 0.04 290);
+      --idle-soft: oklch(96% 0.005 260);
+      --halt: oklch(60% 0.21 25);
+
+      --kg-biz: oklch(58% 0.16 250);
+      --kg-code: oklch(58% 0.14 150);
+      --kg-rule: oklch(60% 0.20 25);
+      --kg-human: oklch(58% 0.18 290);
+      --kg-data: oklch(70% 0.16 70);
+      --kg-misc: oklch(60% 0.04 260);
+
+      --shadow-sm: 0 1px 2px oklch(20% 0.02 260 / 0.04);
+      --shadow-md: 0 2px 6px oklch(20% 0.02 260 / 0.04), 0 1px 2px oklch(20% 0.02 260 / 0.06);
+      --shadow-lg: 0 12px 28px oklch(20% 0.02 260 / 0.07), 0 2px 6px oklch(20% 0.02 260 / 0.04);
+    }
+
+    * { -webkit-font-smoothing: antialiased; }
+    html, body { font-family: 'Inter', system-ui, sans-serif; }
+    body { background: var(--bg-base); color: var(--text-body); }
+    .font-display { font-family: 'Instrument Serif','Songti SC',serif; letter-spacing: -0.01em; }
+    .font-mono    { font-family: 'JetBrains Mono', monospace; }
+
+    .bg-atmosphere {
+      background:
+        radial-gradient(900px 460px at 8% -8%, oklch(93% 0.05 245 / 0.55), transparent 60%),
+        radial-gradient(700px 340px at 105% 0%, oklch(94% 0.05 290 / 0.35), transparent 60%),
+        var(--bg-base);
+    }
+    .grain::before {
+      content:''; position: fixed; inset: 0; pointer-events: none;
+      opacity: .03; mix-blend-mode: multiply; z-index: 100;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 9px; border-radius: 999px;
+      font-size: 11px; font-weight: 500;
+      border: 1px solid transparent;
+    }
+    .chip-dot { width: 6px; height: 6px; border-radius: 999px; }
+    .caps {
+      font-size: 10.5px; letter-spacing: .14em;
+      text-transform: uppercase; font-weight: 500;
+      color: var(--text-muted);
+    }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 12px; border-radius: 9px;
+      font-size: 12.5px; font-weight: 500;
+      border: 1px solid var(--border-mid);
+      background: var(--bg-card); color: var(--text-body);
+      transition: all .15s; cursor: pointer;
+    }
+    .btn:hover { background: var(--bg-elev); color: var(--text-strong); }
+    .btn-primary { background: var(--text-strong); color: white; border-color: var(--text-strong); }
+
+    /* graph canvas */
+    .kg-canvas {
+      position: relative;
+      background:
+        radial-gradient(circle at 30% 30%, oklch(95% 0.04 250 / .6), transparent 50%),
+        radial-gradient(circle at 70% 70%, oklch(95% 0.04 290 / .5), transparent 50%),
+        oklch(99% 0.003 85);
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--border-soft);
+    }
+    .node {
+      stroke: white;
+      stroke-width: 2.5;
+      cursor: pointer;
+      transition: filter .2s;
+    }
+    .node:hover { filter: drop-shadow(0 4px 10px rgba(0,0,0,.15)); }
+    .node-label {
+      font-size: 10px;
+      font-weight: 500;
+      fill: var(--text-strong);
+      pointer-events: none;
+      font-family: 'Inter', system-ui;
+    }
+    .edge {
+      stroke: oklch(72% 0.01 260);
+      stroke-width: 1;
+      fill: none;
+      opacity: .5;
+    }
+    .edge-strong { stroke: var(--text-strong); opacity:.55; stroke-width: 1.4; }
+    .pulse-ring {
+      animation: pulse 2.4s ease-out infinite;
+      transform-origin: center;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: .6; }
+      100% { transform: scale(2); opacity: 0; }
+    }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 999px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+  </style>
+</head>
+<body class="bg-atmosphere grain min-h-screen">
+
+  <!-- ==================== TOP BAR ==================== -->
+  <header class="border-b border-[var(--border-soft)] bg-white/65 backdrop-blur-xl sticky top-0 z-50">
+    <div class="max-w-[1480px] mx-auto px-8 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-10">
+        <a href="index.html" class="flex items-center gap-2.5 hover:opacity-80 transition">
+          <div class="w-8 h-8 rounded-lg bg-[var(--text-strong)] flex items-center justify-center text-white text-[11px] font-bold tracking-tight">DP</div>
+          <div>
+            <div class="text-[14.5px] font-semibold text-[var(--text-strong)] leading-tight">DevPipeline</div>
+            <div class="text-[10px] text-[var(--text-muted)] tracking-[.14em] uppercase">AI 研发流水线 · 驾驶舱</div>
+          </div>
+        </a>
+        <nav class="flex items-center gap-1 text-[13px]">
+          <a href="index.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">运行中</a>
+          <a href="runs-list.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">历史</a>
+          <a href="agent-detail.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">Agents</a>
+          <a href="rules-library.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">军规库</a>
+          <a href="knowledge-graph.html" class="px-3 py-1.5 rounded-md bg-[var(--bg-elev)] text-[var(--text-strong)] font-medium">知识图谱</a>
+          <a href="operations.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">AI 资产</a>
+          <a href="people-ops.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">人员运营</a>
+        </nav>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="btn">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="17" y2="17"/></svg>
+          搜索实体
+        </button>
+        <button class="btn">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          导出
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-[1480px] mx-auto px-8 py-8">
+
+    <!-- ==================== HEADER ==================== -->
+    <section class="mb-7 flex items-end justify-between">
+      <div>
+        <div class="caps mb-2">Knowledge Graph · 全景</div>
+        <h1 class="font-display text-[42px] leading-none text-[var(--text-strong)]">
+          知识图谱 <span class="italic font-light text-[var(--text-muted)]">— 沉淀 · 调用 · 腐化</span>
+        </h1>
+        <div class="text-[13px] text-[var(--text-muted)] mt-2 max-w-[680px]">
+          所有 Agent / Skill 共享的语义底座。本页显示实体与关系的健康度、热区与冷区,以及人评意见沉淀进图谱的轨迹。
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="chip" style="background:var(--done-soft); color:var(--done)"><span class="chip-dot" style="background:var(--done)"></span>实时同步 · lag 2.3s</span>
+        <button class="btn">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          下载快照
+        </button>
+        <button class="btn btn-primary">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+          清理冷区
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== KPI ROW ==================== -->
+    <section class="grid grid-cols-12 gap-4 mb-7">
+      <div class="col-span-3 card p-5">
+        <div class="caps mb-2" style="color:var(--kg-biz)">实体</div>
+        <div class="flex items-baseline gap-2">
+          <span class="font-display text-[40px] text-[var(--text-strong)] leading-none">12,847</span>
+          <span class="text-[11px]" style="color:var(--done)">+318 / 7d</span>
+        </div>
+        <div class="text-[11px] text-[var(--text-muted)] mt-2">24 类型 · 平均度 6.0</div>
+      </div>
+      <div class="col-span-3 card p-5">
+        <div class="caps mb-2" style="color:var(--kg-code)">关系</div>
+        <div class="flex items-baseline gap-2">
+          <span class="font-display text-[40px] text-[var(--text-strong)] leading-none">38,392</span>
+          <span class="text-[11px]" style="color:var(--done)">+1,142 / 7d</span>
+        </div>
+        <div class="text-[11px] text-[var(--text-muted)] mt-2">31 关系类型 · 最长路径 14</div>
+      </div>
+      <div class="col-span-3 card p-5">
+        <div class="caps mb-2" style="color:var(--kg-rule)">热区 / 冷区</div>
+        <div class="flex items-baseline gap-2">
+          <span class="font-display text-[40px] text-[var(--text-strong)] leading-none">62 / 8</span>
+          <span class="text-[11px] text-[var(--text-muted)]">%</span>
+        </div>
+        <div class="text-[11px] text-[var(--text-muted)] mt-2">热区调用占比 · 冷区实体占比</div>
+      </div>
+      <div class="col-span-3 card p-5">
+        <div class="caps mb-2" style="color:var(--kg-human)">人评沉淀</div>
+        <div class="flex items-baseline gap-2">
+          <span class="font-display text-[40px] text-[var(--text-strong)] leading-none">1,108</span>
+          <span class="text-[11px]" style="color:var(--done)">+37 / 7d</span>
+        </div>
+        <div class="text-[11px] text-[var(--text-muted)] mt-2">人评意见 → KG 节点 / 关系</div>
+      </div>
+    </section>
+
+    <!-- ==================== MAIN: GRAPH + SIDEBAR ==================== -->
+    <section class="grid grid-cols-12 gap-5 mb-7">
+
+      <!-- Graph canvas -->
+      <div class="col-span-8 card p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <div class="caps">图谱视图 · 鉴权域 · 半径 2</div>
+            <div class="text-[12.5px] text-[var(--text-muted)] mt-0.5">显示 28 实体 · 41 关系 · 圆点大小 = 7d 调用强度</div>
+          </div>
+          <div class="flex items-center gap-1.5 text-[11px]">
+            <button class="px-2.5 py-1 rounded-md bg-[var(--text-strong)] text-white">鉴权域</button>
+            <button class="px-2.5 py-1 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-elev)]">支付域</button>
+            <button class="px-2.5 py-1 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-elev)]">用户中心</button>
+            <button class="px-2.5 py-1 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-elev)]">+ 自定义</button>
+          </div>
+        </div>
+
+        <div class="kg-canvas" style="height: 480px;">
+          <svg viewBox="0 0 800 480" class="w-full h-full">
+            <!-- edges (drawn first to sit below nodes) -->
+            <g>
+              <!-- core to satellites -->
+              <line class="edge edge-strong" x1="400" y1="240" x2="240" y2="140"/>
+              <line class="edge edge-strong" x1="400" y1="240" x2="560" y2="140"/>
+              <line class="edge edge-strong" x1="400" y1="240" x2="240" y2="340"/>
+              <line class="edge edge-strong" x1="400" y1="240" x2="560" y2="340"/>
+              <line class="edge edge-strong" x1="400" y1="240" x2="400" y2="80"/>
+              <line class="edge edge-strong" x1="400" y1="240" x2="400" y2="400"/>
+              <line class="edge edge-strong" x1="400" y1="240" x2="160" y2="240"/>
+              <line class="edge edge-strong" x1="400" y1="240" x2="640" y2="240"/>
+
+              <!-- outer cluster A (left top) -->
+              <line class="edge" x1="240" y1="140" x2="140" y2="80"/>
+              <line class="edge" x1="240" y1="140" x2="120" y2="180"/>
+              <line class="edge" x1="240" y1="140" x2="320" y2="60"/>
+              <line class="edge" x1="240" y1="140" x2="160" y2="240"/>
+
+              <!-- cluster B (right top) -->
+              <line class="edge" x1="560" y1="140" x2="680" y2="80"/>
+              <line class="edge" x1="560" y1="140" x2="700" y2="180"/>
+              <line class="edge" x1="560" y1="140" x2="480" y2="60"/>
+              <line class="edge" x1="560" y1="140" x2="640" y2="240"/>
+
+              <!-- cluster C (left bot) -->
+              <line class="edge" x1="240" y1="340" x2="140" y2="400"/>
+              <line class="edge" x1="240" y1="340" x2="120" y2="300"/>
+              <line class="edge" x1="240" y1="340" x2="320" y2="430"/>
+              <line class="edge" x1="240" y1="340" x2="160" y2="240"/>
+
+              <!-- cluster D (right bot) -->
+              <line class="edge" x1="560" y1="340" x2="680" y2="400"/>
+              <line class="edge" x1="560" y1="340" x2="700" y2="300"/>
+              <line class="edge" x1="560" y1="340" x2="480" y2="430"/>
+              <line class="edge" x1="560" y1="340" x2="640" y2="240"/>
+
+              <!-- cross edges -->
+              <line class="edge" x1="240" y1="140" x2="560" y2="140"/>
+              <line class="edge" x1="240" y1="340" x2="560" y2="340"/>
+              <line class="edge" x1="240" y1="140" x2="160" y2="240"/>
+              <line class="edge" x1="560" y1="340" x2="640" y2="240"/>
+              <line class="edge" x1="400" y1="80" x2="320" y2="60"/>
+              <line class="edge" x1="400" y1="80" x2="480" y2="60"/>
+              <line class="edge" x1="400" y1="400" x2="320" y2="430"/>
+              <line class="edge" x1="400" y1="400" x2="480" y2="430"/>
+            </g>
+
+            <!-- core hot node (鉴权·实体) with pulse -->
+            <g transform="translate(400 240)">
+              <circle class="pulse-ring" r="28" fill="none" stroke="oklch(60% 0.21 25)" stroke-width="1.5"/>
+              <circle class="node" r="28" fill="oklch(60% 0.21 25)"/>
+              <text class="node-label" y="4" text-anchor="middle" fill="white" font-weight="600">鉴权</text>
+            </g>
+
+            <!-- secondary hot nodes -->
+            <g transform="translate(240 140)">
+              <circle class="node" r="20" fill="oklch(58% 0.16 250)"/>
+              <text class="node-label" y="4" text-anchor="middle" fill="white">LoginSvc</text>
+            </g>
+            <g transform="translate(560 140)">
+              <circle class="node" r="20" fill="oklch(58% 0.16 250)"/>
+              <text class="node-label" y="4" text-anchor="middle" fill="white">Session</text>
+            </g>
+            <g transform="translate(240 340)">
+              <circle class="node" r="18" fill="oklch(58% 0.14 150)"/>
+              <text class="node-label" y="4" text-anchor="middle" fill="white">SQL.q</text>
+            </g>
+            <g transform="translate(560 340)">
+              <circle class="node" r="18" fill="oklch(58% 0.14 150)"/>
+              <text class="node-label" y="4" text-anchor="middle" fill="white">Token.v</text>
+            </g>
+            <g transform="translate(400 80)">
+              <circle class="node" r="17" fill="oklch(60% 0.20 25)"/>
+              <text class="node-label" y="3.5" text-anchor="middle" fill="white" font-size="9">军规·SEC</text>
+            </g>
+            <g transform="translate(400 400)">
+              <circle class="node" r="17" fill="oklch(58% 0.18 290)"/>
+              <text class="node-label" y="3.5" text-anchor="middle" fill="white" font-size="9">人评·王</text>
+            </g>
+            <g transform="translate(160 240)">
+              <circle class="node" r="15" fill="oklch(70% 0.16 70)"/>
+              <text class="node-label" y="3.5" text-anchor="middle" fill="white" font-size="9">SLO §3.1</text>
+            </g>
+            <g transform="translate(640 240)">
+              <circle class="node" r="15" fill="oklch(70% 0.16 70)"/>
+              <text class="node-label" y="3.5" text-anchor="middle" fill="white" font-size="9">RateLim</text>
+            </g>
+
+            <!-- outer satellites (smaller) -->
+            <g transform="translate(140 80)"><circle class="node" r="10" fill="oklch(58% 0.16 250)"/></g>
+            <g transform="translate(120 180)"><circle class="node" r="9" fill="oklch(58% 0.16 250)"/></g>
+            <g transform="translate(320 60)"><circle class="node" r="10" fill="oklch(60% 0.20 25)"/></g>
+            <g transform="translate(680 80)"><circle class="node" r="10" fill="oklch(58% 0.16 250)"/></g>
+            <g transform="translate(700 180)"><circle class="node" r="9" fill="oklch(58% 0.16 250)"/></g>
+            <g transform="translate(480 60)"><circle class="node" r="10" fill="oklch(60% 0.20 25)"/></g>
+            <g transform="translate(140 400)"><circle class="node" r="9" fill="oklch(58% 0.14 150)"/></g>
+            <g transform="translate(120 300)"><circle class="node" r="10" fill="oklch(58% 0.14 150)"/></g>
+            <g transform="translate(320 430)"><circle class="node" r="10" fill="oklch(58% 0.18 290)"/></g>
+            <g transform="translate(680 400)"><circle class="node" r="9" fill="oklch(58% 0.14 150)"/></g>
+            <g transform="translate(700 300)"><circle class="node" r="9" fill="oklch(58% 0.14 150)"/></g>
+            <g transform="translate(480 430)"><circle class="node" r="10" fill="oklch(58% 0.18 290)"/></g>
+
+            <!-- decayed dangling (low opacity, dashed edges) -->
+            <g opacity=".35">
+              <line class="edge" x1="80" y1="60" x2="140" y2="80" stroke-dasharray="3 3"/>
+              <circle class="node" cx="80" cy="60" r="6" fill="oklch(60% 0.04 260)"/>
+              <line class="edge" x1="730" y1="430" x2="680" y2="400" stroke-dasharray="3 3"/>
+              <circle class="node" cx="730" cy="430" r="6" fill="oklch(60% 0.04 260)"/>
+              <line class="edge" x1="60" y1="380" x2="120" y2="300" stroke-dasharray="3 3"/>
+              <circle class="node" cx="60" cy="380" r="6" fill="oklch(60% 0.04 260)"/>
+            </g>
+
+            <!-- legend overlay -->
+            <g transform="translate(20 440)">
+              <rect width="320" height="28" rx="8" fill="white" fill-opacity=".85" stroke="oklch(93% 0.005 85)"/>
+              <circle cx="20" cy="14" r="5" fill="oklch(58% 0.16 250)"/><text x="30" y="17" font-size="10" fill="oklch(38% 0.02 260)">业务</text>
+              <circle cx="70" cy="14" r="5" fill="oklch(58% 0.14 150)"/><text x="80" y="17" font-size="10" fill="oklch(38% 0.02 260)">代码</text>
+              <circle cx="120" cy="14" r="5" fill="oklch(60% 0.20 25)"/><text x="130" y="17" font-size="10" fill="oklch(38% 0.02 260)">军规</text>
+              <circle cx="170" cy="14" r="5" fill="oklch(58% 0.18 290)"/><text x="180" y="17" font-size="10" fill="oklch(38% 0.02 260)">人评</text>
+              <circle cx="220" cy="14" r="5" fill="oklch(70% 0.16 70)"/><text x="230" y="17" font-size="10" fill="oklch(38% 0.02 260)">数据</text>
+              <circle cx="270" cy="14" r="5" fill="oklch(60% 0.04 260)"/><text x="280" y="17" font-size="10" fill="oklch(38% 0.02 260)">腐化</text>
+            </g>
+
+            <!-- hot indicator badge -->
+            <g transform="translate(430 215)">
+              <rect width="56" height="18" rx="9" fill="oklch(60% 0.21 25)"/>
+              <text x="28" y="12.5" font-size="10" fill="white" font-weight="600" text-anchor="middle">12.8k 调用</text>
+            </g>
+          </svg>
+        </div>
+
+        <div class="mt-3 flex items-center justify-between text-[11px] text-[var(--text-muted)]">
+          <span>提示 · 双击节点展开邻居 · 拖拽平移 · 滚轮缩放</span>
+          <span class="font-mono">snapshot: 2026-05-22 14:48:02 · v381</span>
+        </div>
+      </div>
+
+      <!-- Sidebar: relation type donut + entity type bars -->
+      <div class="col-span-4 space-y-5">
+
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div class="caps">关系类型 · 31 种</div>
+            <span class="text-[10.5px] font-mono text-[var(--text-muted)]">38,392 边</span>
+          </div>
+          <div class="relative" style="height: 180px;">
+            <canvas id="relDonut"></canvas>
+            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <div class="font-display text-[26px] text-[var(--text-strong)] leading-none">31</div>
+              <div class="text-[10px] text-[var(--text-muted)] mt-1">关系类型</div>
+            </div>
+          </div>
+          <div class="space-y-1.5 mt-3 text-[11.5px]">
+            <div class="flex items-center justify-between"><span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background: var(--kg-code)"></span>引用 (refers_to)</span><span class="font-mono text-[var(--text-muted)]">11,420</span></div>
+            <div class="flex items-center justify-between"><span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background: var(--kg-biz)"></span>依赖 (depends_on)</span><span class="font-mono text-[var(--text-muted)]">8,732</span></div>
+            <div class="flex items-center justify-between"><span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background: var(--kg-rule)"></span>约束 (constrains)</span><span class="font-mono text-[var(--text-muted)]">5,914</span></div>
+            <div class="flex items-center justify-between"><span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background: var(--kg-human)"></span>评审 (reviewed_by)</span><span class="font-mono text-[var(--text-muted)]">4,028</span></div>
+            <div class="flex items-center justify-between"><span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background: var(--kg-data)"></span>读写 (reads/writes)</span><span class="font-mono text-[var(--text-muted)]">3,180</span></div>
+            <div class="flex items-center justify-between"><span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background: var(--kg-misc)"></span>其它 26 种</span><span class="font-mono text-[var(--text-muted)]">5,118</span></div>
+          </div>
+        </div>
+
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div class="caps">实体类型 · 24 种</div>
+            <span class="text-[10.5px] font-mono text-[var(--text-muted)]">12,847 节点</span>
+          </div>
+          <div class="space-y-3 text-[11.5px]">
+            <div>
+              <div class="flex items-baseline justify-between"><span class="text-[var(--text-strong)] font-medium">业务实体</span><span class="font-mono text-[var(--text-muted)]">5,128 · 39.9%</span></div>
+              <div class="h-1.5 rounded-full bg-[var(--border-soft)] overflow-hidden mt-1"><div class="h-full rounded-full" style="width:39.9%; background:var(--kg-biz)"></div></div>
+            </div>
+            <div>
+              <div class="flex items-baseline justify-between"><span class="text-[var(--text-strong)] font-medium">代码实体 (类 · 方法)</span><span class="font-mono text-[var(--text-muted)]">3,742 · 29.1%</span></div>
+              <div class="h-1.5 rounded-full bg-[var(--border-soft)] overflow-hidden mt-1"><div class="h-full rounded-full" style="width:29.1%; background:var(--kg-code)"></div></div>
+            </div>
+            <div>
+              <div class="flex items-baseline justify-between"><span class="text-[var(--text-strong)] font-medium">军规 · 安全规则</span><span class="font-mono text-[var(--text-muted)]">1,964 · 15.3%</span></div>
+              <div class="h-1.5 rounded-full bg-[var(--border-soft)] overflow-hidden mt-1"><div class="h-full rounded-full" style="width:15.3%; background:var(--kg-rule)"></div></div>
+            </div>
+            <div>
+              <div class="flex items-baseline justify-between"><span class="text-[var(--text-strong)] font-medium">人评意见 (沉淀)</span><span class="font-mono text-[var(--text-muted)]">1,108 · 8.6%</span></div>
+              <div class="h-1.5 rounded-full bg-[var(--border-soft)] overflow-hidden mt-1"><div class="h-full rounded-full" style="width:8.6%; background:var(--kg-human)"></div></div>
+            </div>
+            <div>
+              <div class="flex items-baseline justify-between"><span class="text-[var(--text-strong)] font-medium">数据资产 · 接口</span><span class="font-mono text-[var(--text-muted)]">905 · 7.1%</span></div>
+              <div class="h-1.5 rounded-full bg-[var(--border-soft)] overflow-hidden mt-1"><div class="h-full rounded-full" style="width:7.1%; background:var(--kg-data)"></div></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== HOT + COLD + FEEDBACK ==================== -->
+    <section class="grid grid-cols-12 gap-5 mb-7">
+
+      <!-- Hot entities -->
+      <div class="col-span-4 card p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <div class="caps" style="color:var(--halt)">热区 · Top 实体</div>
+            <div class="text-[12px] text-[var(--text-muted)]">7d 被引用次数 · 候选缓存 / 长期记忆</div>
+          </div>
+          <span class="chip" style="background:oklch(95% 0.04 25); color:var(--halt); font-size:10px">12 待入缓存</span>
+        </div>
+        <div class="space-y-2">
+          <div class="rounded-lg border p-2.5" style="border-color:oklch(67% 0.20 25 / .3); background:oklch(67% 0.20 25 / .04)">
+            <div class="flex items-baseline justify-between">
+              <span class="text-[12.5px] font-medium text-[var(--text-strong)]">鉴权 (核心实体集)</span>
+              <span class="font-mono text-[11px]" style="color:var(--halt)">12,840</span>
+            </div>
+            <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">9 Agent 高频 · 度 84</div>
+            <button class="text-[10.5px] mt-1 underline hover:text-[var(--text-strong)]" style="color:var(--halt)">入 L1 缓存 →</button>
+          </div>
+          <div class="rounded-lg border p-2.5" style="border-color:oklch(67% 0.20 25 / .3); background:oklch(67% 0.20 25 / .04)">
+            <div class="flex items-baseline justify-between">
+              <span class="text-[12.5px] font-medium text-[var(--text-strong)]">支付域 · 路由表</span>
+              <span class="font-mono text-[11px]" style="color:var(--halt)">8,412</span>
+            </div>
+            <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">长期记忆 · ✓ 已写入</div>
+          </div>
+          <div class="rounded-lg border p-2.5" style="border-color:oklch(80% 0.16 65 / .35); background:oklch(80% 0.16 65 / .05)">
+            <div class="flex items-baseline justify-between">
+              <span class="text-[12.5px] font-medium text-[var(--text-strong)]">用户中心 · 接口契约</span>
+              <span class="font-mono text-[11px]" style="color:var(--run)">6,108</span>
+            </div>
+            <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">候选缓存 · 待审核</div>
+          </div>
+          <div class="rounded-lg border p-2.5" style="border-color:oklch(80% 0.16 65 / .35); background:oklch(80% 0.16 65 / .05)">
+            <div class="flex items-baseline justify-between">
+              <span class="text-[12.5px] font-medium text-[var(--text-strong)]">SQL.query 模板</span>
+              <span class="font-mono text-[11px]" style="color:var(--run)">5,470</span>
+            </div>
+            <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">候选缓存 · 待审核</div>
+          </div>
+          <div class="rounded-lg border p-2.5" style="border-color:var(--border-soft)">
+            <div class="flex items-baseline justify-between">
+              <span class="text-[12.5px] font-medium text-[var(--text-strong)]">CSRF 军规</span>
+              <span class="font-mono text-[11px] text-[var(--text-muted)]">4,221</span>
+            </div>
+            <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">已在 SEC-Agent 内联</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cold / stale entities -->
+      <div class="col-span-4 card p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <div class="caps">冷区 · 腐化资产</div>
+            <div class="text-[12px] text-[var(--text-muted)]">90d 未引用 · 建议归档 / 清理</div>
+          </div>
+          <span class="chip" style="background:var(--bg-elev); color:var(--text-muted); font-size:10px">8.3% · 1,066 项</span>
+        </div>
+        <div class="space-y-2">
+          <div class="rounded-lg border p-2.5" style="border-color:var(--border-soft); background:var(--bg-elev)">
+            <div class="flex items-baseline justify-between">
+              <span class="text-[12.5px] font-medium text-[var(--text-strong)]">遗留 · 旧版 SSO 流程</span>
+              <span class="font-mono text-[10.5px] text-[var(--text-faint)]">0 / 7m</span>
+            </div>
+            <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">128 实体 · 上次引用 2025-10-14</div>
+            <button class="text-[10.5px] mt-1 underline hover:text-[var(--text-strong)]">归档 →</button>
+          </div>
+          <div class="rounded-lg border p-2.5" style="border-color:var(--border-soft); background:var(--bg-elev)">
+            <div class="flex items-baseline justify-between">
+              <span class="text-[12.5px] font-medium text-[var(--text-strong)]">Deprecated API · v0.x</span>
+              <span class="font-mono text-[10.5px] text-[var(--text-faint)]">2 / 4m</span>
+            </div>
+            <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">94 关系腐化 · 仅文档残留</div>
+            <button class="text-[10.5px] mt-1 underline hover:text-[var(--text-strong)]">清理 →</button>
+          </div>
+          <div class="rounded-lg border p-2.5" style="border-color:var(--border-soft); background:var(--bg-elev)">
+            <div class="flex items-baseline justify-between">
+              <span class="text-[12.5px] font-medium text-[var(--text-strong)]">实验分支 · feat/llm-mock</span>
+              <span class="font-mono text-[10.5px] text-[var(--text-faint)]">0 / 5m</span>
+            </div>
+            <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">62 实体悬挂 · 无引用</div>
+            <button class="text-[10.5px] mt-1 underline hover:text-[var(--text-strong)]">移除 →</button>
+          </div>
+          <div class="rounded-lg border p-2.5" style="border-color:var(--border-soft); background:var(--bg-elev)">
+            <div class="flex items-baseline justify-between">
+              <span class="text-[12.5px] font-medium text-[var(--text-strong)]">Deprecated · 旧排队规则</span>
+              <span class="font-mono text-[10.5px] text-[var(--text-faint)]">1 / 6m</span>
+            </div>
+            <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">31 节点 · 已被 v2 取代</div>
+            <button class="text-[10.5px] mt-1 underline hover:text-[var(--text-strong)]">归档 →</button>
+          </div>
+          <div class="rounded-lg border p-2.5" style="border-color:var(--border-soft); background:var(--bg-elev)">
+            <div class="flex items-baseline justify-between">
+              <span class="text-[12.5px] font-medium text-[var(--text-strong)]">悬挂 · 无主实体</span>
+              <span class="font-mono text-[10.5px] text-[var(--text-faint)]">— / —</span>
+            </div>
+            <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">214 孤立节点 · 建议合并</div>
+            <button class="text-[10.5px] mt-1 underline hover:text-[var(--text-strong)]">合并/删除 →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Human feedback → KG -->
+      <div class="col-span-4 card p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <div class="caps" style="color:var(--review)">人评 → 图谱沉淀</div>
+            <div class="text-[12px] text-[var(--text-muted)]">人评意见自动结构化为实体 / 关系</div>
+          </div>
+          <span class="chip" style="background:var(--review-soft); color:var(--review); font-size:10px">本周 +37</span>
+        </div>
+
+        <div class="relative pl-4">
+          <div class="absolute left-1 top-1 bottom-1 w-px" style="background:var(--border-mid)"></div>
+
+          <div class="relative pb-3">
+            <div class="absolute -left-3 top-1 w-2.5 h-2.5 rounded-full" style="background:var(--done)"></div>
+            <div class="text-[10.5px] font-mono text-[var(--text-faint)]">14:32 · 王工</div>
+            <div class="text-[12px] text-[var(--text-strong)] mt-0.5 font-medium">+1 实体 "IP-限流桶"</div>
+            <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">关系: <span class="font-mono">depends_on → 鉴权</span></div>
+          </div>
+
+          <div class="relative pb-3">
+            <div class="absolute -left-3 top-1 w-2.5 h-2.5 rounded-full" style="background:var(--done)"></div>
+            <div class="text-[10.5px] font-mono text-[var(--text-faint)]">11:48 · 陈工</div>
+            <div class="text-[12px] text-[var(--text-strong)] mt-0.5 font-medium">+1 关系 "SessionToken ↔ KG 鉴权"</div>
+            <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">类型: <span class="font-mono">constrains</span> · TTL 一致</div>
+          </div>
+
+          <div class="relative pb-3">
+            <div class="absolute -left-3 top-1 w-2.5 h-2.5 rounded-full" style="background:var(--run)"></div>
+            <div class="text-[10.5px] font-mono text-[var(--text-faint)]">10:11 · 李工</div>
+            <div class="text-[12px] text-[var(--text-strong)] mt-0.5 font-medium">修正 LoginSvc 类型标签</div>
+            <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">业务实体 → <span class="font-mono">业务实体 + 安全边界</span></div>
+          </div>
+
+          <div class="relative pb-3">
+            <div class="absolute -left-3 top-1 w-2.5 h-2.5 rounded-full" style="background:var(--done)"></div>
+            <div class="text-[10.5px] font-mono text-[var(--text-faint)]">昨天 · 张工</div>
+            <div class="text-[12px] text-[var(--text-strong)] mt-0.5 font-medium">+1 评审节点 → 需求 RQ-008</div>
+            <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">关系: <span class="font-mono">reviewed_by</span> · 通过</div>
+          </div>
+
+          <div class="relative">
+            <div class="absolute -left-3 top-1 w-2.5 h-2.5 rounded-full" style="background:var(--halt)"></div>
+            <div class="text-[10.5px] font-mono text-[var(--text-faint)]">昨天 · 王工</div>
+            <div class="text-[12px] text-[var(--text-strong)] mt-0.5 font-medium">标记 "旧 SSO" 为冷区</div>
+            <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">已触发归档审核流程</div>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-t flex items-center justify-between" style="border-color:var(--border-soft)">
+          <div class="text-[10.5px] text-[var(--text-muted)]">回流到</div>
+          <div class="flex items-center gap-1.5">
+            <span class="chip" style="background:oklch(58% 0.14 150 / .12); color: oklch(40% 0.16 150); font-size:9.5px">Agent</span>
+            <span class="chip" style="background:oklch(70% 0.16 290 / .12); color: oklch(40% 0.16 290); font-size:9.5px">Skill</span>
+            <span class="chip" style="background:oklch(58% 0.16 250 / .12); color: var(--kg-biz); font-size:9.5px">KG</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="mt-10 mb-6 text-center text-[11px] text-[var(--text-faint)]">
+      DevPipeline · 知识图谱 全景 · prototype v0.2
+    </footer>
+  </main>
+
+  <script>
+    const donutCtx = document.getElementById('relDonut').getContext('2d');
+    new Chart(donutCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['引用','依赖','约束','评审','读写','其它'],
+        datasets: [{
+          data: [11420, 8732, 5914, 4028, 3180, 5118],
+          backgroundColor: [
+            'oklch(58% 0.14 150)',
+            'oklch(58% 0.16 250)',
+            'oklch(60% 0.20 25)',
+            'oklch(58% 0.18 290)',
+            'oklch(70% 0.16 70)',
+            'oklch(60% 0.04 260)'
+          ],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        cutout: '72%',
+        plugins: { legend: { display: false } },
+        maintainAspectRatio: false
+      }
+    });
+  </script>
+</body>
+</html>

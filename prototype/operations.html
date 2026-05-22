@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 资产运营看板 · DevPipeline</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-base: oklch(98% 0.006 85);
+      --bg-card: #ffffff;
+      --bg-elev: oklch(99% 0.004 85);
+      --bg-deep: oklch(15% 0.018 260);
+
+      --border-soft: oklch(93% 0.005 85);
+      --border-mid: oklch(88% 0.008 85);
+
+      --text-strong: oklch(22% 0.03 260);
+      --text-body: oklch(38% 0.02 260);
+      --text-muted: oklch(56% 0.015 260);
+      --text-faint: oklch(72% 0.01 260);
+
+      --done: oklch(62% 0.13 150);
+      --done-soft: oklch(94% 0.04 150);
+      --run: oklch(70% 0.15 65);
+      --run-soft: oklch(95% 0.05 75);
+      --review: oklch(58% 0.18 290);
+      --review-soft: oklch(95% 0.04 290);
+      --idle-soft: oklch(96% 0.005 260);
+      --halt: oklch(60% 0.21 25);
+
+      --a-req: oklch(62% 0.16 245);
+      --a-graph: oklch(60% 0.18 295);
+      --a-arch: oklch(58% 0.13 200);
+      --a-dev: oklch(58% 0.14 150);
+      --a-sec: oklch(60% 0.20 25);
+      --a-perf: oklch(70% 0.16 70);
+      --a-test: oklch(56% 0.17 270);
+
+      --shadow-sm: 0 1px 2px oklch(20% 0.02 260 / 0.04);
+      --shadow-md: 0 2px 6px oklch(20% 0.02 260 / 0.04), 0 1px 2px oklch(20% 0.02 260 / 0.06);
+      --shadow-lg: 0 12px 28px oklch(20% 0.02 260 / 0.07), 0 2px 6px oklch(20% 0.02 260 / 0.04);
+    }
+
+    * { -webkit-font-smoothing: antialiased; }
+    html, body { font-family: 'Inter', system-ui, sans-serif; }
+    body {
+      background: var(--bg-base);
+      color: var(--text-body);
+      font-feature-settings: 'cv02','cv03','cv04','cv11';
+    }
+    .font-display { font-family: 'Instrument Serif','Songti SC',serif; letter-spacing: -0.01em; }
+    .font-mono    { font-family: 'JetBrains Mono', monospace; }
+
+    .bg-atmosphere {
+      background:
+        radial-gradient(900px 460px at 8% -8%, oklch(93% 0.05 245 / 0.55), transparent 60%),
+        radial-gradient(700px 340px at 105% 0%, oklch(94% 0.05 150 / 0.40), transparent 60%),
+        var(--bg-base);
+    }
+    .grain::before {
+      content:''; position: fixed; inset: 0; pointer-events: none;
+      opacity: .03; mix-blend-mode: multiply; z-index: 100;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: 16px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow .2s;
+    }
+    .card:hover { box-shadow: var(--shadow-md); }
+    .card-elev  { box-shadow: var(--shadow-lg); }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 9px; border-radius: 999px;
+      font-size: 11px; font-weight: 500; letter-spacing: .01em;
+      border: 1px solid transparent;
+    }
+    .chip-dot { width: 6px; height: 6px; border-radius: 999px; }
+
+    .caps {
+      font-size: 10.5px; letter-spacing: .14em;
+      text-transform: uppercase; font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 12px; border-radius: 9px;
+      font-size: 12.5px; font-weight: 500;
+      border: 1px solid var(--border-mid);
+      background: var(--bg-card); color: var(--text-body);
+      transition: all .15s; cursor: pointer;
+    }
+    .btn:hover { background: var(--bg-elev); border-color: var(--text-faint); color: var(--text-strong); }
+    .btn-primary { background: var(--text-strong); color: white; border-color: var(--text-strong); }
+    .btn-primary:hover { background: oklch(28% 0.06 265); color: white; }
+    .btn-ghost { background: transparent; border-color: transparent; }
+    .btn-ghost:hover { background: var(--bg-elev); }
+
+    .agent-avatar {
+      width: 28px; height: 28px; border-radius: 8px;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: white; font-size: 11px; font-weight: 600;
+      letter-spacing: -.02em;
+      box-shadow: inset 0 -6px 12px rgba(0,0,0,.18), 0 1px 2px rgba(0,0,0,.06);
+    }
+
+    .tab {
+      padding: 7px 13px; border-radius: 9px; font-size: 12.5px;
+      color: var(--text-muted); cursor: pointer;
+      transition: all .15s;
+    }
+    .tab:hover { color: var(--text-strong); }
+    .tab.active {
+      background: var(--text-strong); color: white;
+    }
+
+    .sparkline {
+      width: 100%; height: 40px; display: block;
+    }
+
+    /* mini-bar */
+    .bar-track {
+      height: 6px; border-radius: 999px; background: var(--border-soft);
+      overflow: hidden; position: relative;
+    }
+    .bar-fill {
+      position: absolute; left: 0; top: 0; bottom: 0;
+      border-radius: 999px;
+      background: var(--text-strong);
+    }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 999px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+
+    .heat-cell {
+      width: 11px; height: 11px; border-radius: 2px;
+      display: inline-block;
+    }
+
+    table.lean th {
+      text-align: left; font-size: 10.5px; letter-spacing: .12em;
+      text-transform: uppercase; font-weight: 500;
+      color: var(--text-muted); padding: 8px 12px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    table.lean td {
+      padding: 12px; border-bottom: 1px solid var(--border-soft);
+      font-size: 12.5px; color: var(--text-body);
+      vertical-align: middle;
+    }
+    table.lean tr:last-child td { border-bottom: 0; }
+    table.lean tr:hover { background: var(--bg-elev); }
+  </style>
+</head>
+<body class="bg-atmosphere grain min-h-screen">
+
+  <!-- ==================== TOP BAR ==================== -->
+  <header class="border-b border-[var(--border-soft)] bg-white/65 backdrop-blur-xl sticky top-0 z-50">
+    <div class="max-w-[1480px] mx-auto px-8 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-10">
+        <a href="index.html" class="flex items-center gap-2.5 hover:opacity-80 transition">
+          <div class="w-8 h-8 rounded-lg bg-[var(--text-strong)] flex items-center justify-center text-white text-[11px] font-bold tracking-tight">DP</div>
+          <div>
+            <div class="text-[14.5px] font-semibold text-[var(--text-strong)] leading-tight">DevPipeline</div>
+            <div class="text-[10px] text-[var(--text-muted)] tracking-[.14em] uppercase">AI 研发流水线 · 驾驶舱</div>
+          </div>
+        </a>
+        <nav class="flex items-center gap-1 text-[13px]">
+          <a href="index.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">运行中</a>
+          <a href="runs-list.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">历史</a>
+          <a href="agent-detail.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">Agents</a>
+          <a href="rules-library.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">军规库</a>
+          <a href="knowledge-graph.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">知识图谱</a>
+          <a href="operations.html" class="px-3 py-1.5 rounded-md bg-[var(--bg-elev)] text-[var(--text-strong)] font-medium">AI 资产</a>
+          <a href="people-ops.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">人员运营</a>
+        </nav>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="btn">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          最近 24h
+        </button>
+        <button class="btn">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          导出
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-[1480px] mx-auto px-8 py-8">
+
+    <!-- ==================== HEADER ==================== -->
+    <section class="mb-7 flex items-end justify-between">
+      <div>
+        <div class="caps mb-1.5">Operations</div>
+        <h1 class="font-display text-[44px] leading-[1.05] text-[var(--text-strong)]">AI 资产运营看板</h1>
+        <p class="text-[13px] text-[var(--text-muted)] mt-1.5">Skill · Model · Agent 三类资产的调用、成本、质量与异常实时监控</p>
+      </div>
+      <div class="flex items-center gap-1.5 bg-white border border-[var(--border-soft)] rounded-xl p-1 shadow-sm">
+        <span class="tab active">概览</span>
+        <span class="tab">Skill</span>
+        <span class="tab">Model</span>
+        <span class="tab">Agent</span>
+        <span class="tab">异常</span>
+      </div>
+    </section>
+
+    <!-- ==================== KPI ROW ==================== -->
+    <section class="grid grid-cols-12 gap-4 mb-7">
+      <div class="col-span-3 card p-5">
+        <div class="flex items-baseline justify-between mb-1.5">
+          <span class="caps">总调用</span>
+          <span class="chip" style="background:var(--done-soft); color:var(--done); font-size:10px; padding:1px 6px">↑ 12%</span>
+        </div>
+        <div class="font-display text-[40px] text-[var(--text-strong)] leading-none">28,471</div>
+        <div class="text-[11.5px] text-[var(--text-muted)] mt-1.5">过去 24h · 比昨日 +3,053</div>
+        <svg class="sparkline mt-3" viewBox="0 0 120 40" preserveAspectRatio="none">
+          <polyline fill="none" stroke="var(--a-req)" stroke-width="1.5"
+            points="0,30 10,28 20,25 30,27 40,22 50,18 60,20 70,15 80,17 90,12 100,14 110,8 120,10"/>
+          <polyline fill="oklch(62% 0.16 245 / 0.12)" stroke="none"
+            points="0,30 10,28 20,25 30,27 40,22 50,18 60,20 70,15 80,17 90,12 100,14 110,8 120,10 120,40 0,40"/>
+        </svg>
+      </div>
+
+      <div class="col-span-3 card p-5">
+        <div class="flex items-baseline justify-between mb-1.5">
+          <span class="caps">Token 消耗</span>
+          <span class="chip" style="background:var(--run-soft); color:var(--run); font-size:10px; padding:1px 6px">↑ 18%</span>
+        </div>
+        <div class="font-display text-[40px] text-[var(--text-strong)] leading-none">12.4<span class="text-[18px] text-[var(--text-muted)] ml-0.5">M</span></div>
+        <div class="text-[11.5px] text-[var(--text-muted)] mt-1.5">¥ <span class="font-mono">3,128.40</span> · 折合昨日 +¥518</div>
+        <svg class="sparkline mt-3" viewBox="0 0 120 40" preserveAspectRatio="none">
+          <polyline fill="none" stroke="var(--run)" stroke-width="1.5"
+            points="0,25 10,28 20,22 30,20 40,24 50,18 60,16 70,19 80,14 90,12 100,15 110,10 120,8"/>
+          <polyline fill="oklch(70% 0.15 65 / 0.12)" stroke="none"
+            points="0,25 10,28 20,22 30,20 40,24 50,18 60,16 70,19 80,14 90,12 100,15 110,10 120,8 120,40 0,40"/>
+        </svg>
+      </div>
+
+      <div class="col-span-3 card p-5">
+        <div class="flex items-baseline justify-between mb-1.5">
+          <span class="caps">P95 延迟</span>
+          <span class="chip" style="background:var(--done-soft); color:var(--done); font-size:10px; padding:1px 6px">↓ 5%</span>
+        </div>
+        <div class="font-display text-[40px] text-[var(--text-strong)] leading-none">1,840<span class="text-[18px] text-[var(--text-muted)] ml-0.5">ms</span></div>
+        <div class="text-[11.5px] text-[var(--text-muted)] mt-1.5">P50 <span class="font-mono">820ms</span> · P99 <span class="font-mono">4,210ms</span></div>
+        <svg class="sparkline mt-3" viewBox="0 0 120 40" preserveAspectRatio="none">
+          <polyline fill="none" stroke="var(--a-dev)" stroke-width="1.5"
+            points="0,15 10,18 20,16 30,22 40,20 50,24 60,18 70,21 80,15 90,18 100,14 110,16 120,12"/>
+          <polyline fill="oklch(58% 0.14 150 / 0.12)" stroke="none"
+            points="0,15 10,18 20,16 30,22 40,20 50,24 60,18 70,21 80,15 90,18 100,14 110,16 120,12 120,40 0,40"/>
+        </svg>
+      </div>
+
+      <div class="col-span-3 card p-5">
+        <div class="flex items-baseline justify-between mb-1.5">
+          <span class="caps">成功率</span>
+          <span class="chip" style="background:oklch(95% 0.04 25); color:var(--halt); font-size:10px; padding:1px 6px">↓ 0.4%</span>
+        </div>
+        <div class="font-display text-[40px] text-[var(--text-strong)] leading-none">98.2<span class="text-[18px] text-[var(--text-muted)] ml-0.5">%</span></div>
+        <div class="text-[11.5px] text-[var(--text-muted)] mt-1.5"><span class="font-mono">512</span> 错误 · <span class="text-[var(--halt)]">3</span> 严重</div>
+        <svg class="sparkline mt-3" viewBox="0 0 120 40" preserveAspectRatio="none">
+          <polyline fill="none" stroke="var(--halt)" stroke-width="1.5"
+            points="0,12 10,10 20,14 30,11 40,15 50,18 60,12 70,16 80,20 90,18 100,22 110,28 120,26"/>
+          <polyline fill="oklch(60% 0.21 25 / 0.10)" stroke="none"
+            points="0,12 10,10 20,14 30,11 40,15 50,18 60,12 70,16 80,20 90,18 100,22 110,28 120,26 120,40 0,40"/>
+        </svg>
+      </div>
+    </section>
+
+    <!-- ==================== MAIN CHART ROW ==================== -->
+    <section class="grid grid-cols-12 gap-5 mb-7">
+      <!-- main chart -->
+      <div class="col-span-8 card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <div class="caps mb-1">资产调用趋势 · 24h</div>
+            <div class="text-[13px] text-[var(--text-muted)]">按资产类型分组 · 每小时聚合</div>
+          </div>
+          <div class="flex items-center gap-1.5 bg-[var(--bg-elev)] rounded-md p-0.5">
+            <button class="px-2.5 py-1 rounded text-[11px] bg-white shadow-sm font-medium text-[var(--text-strong)]">调用</button>
+            <button class="px-2.5 py-1 rounded text-[11px] text-[var(--text-muted)]">Token</button>
+            <button class="px-2.5 py-1 rounded text-[11px] text-[var(--text-muted)]">延迟</button>
+            <button class="px-2.5 py-1 rounded text-[11px] text-[var(--text-muted)]">成本</button>
+          </div>
+        </div>
+        <div class="h-[280px] relative">
+          <canvas id="trendChart"></canvas>
+        </div>
+        <div class="mt-4 pt-4 border-t border-[var(--border-soft)] flex items-center gap-5 text-[12px]">
+          <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm" style="background:var(--a-req)"></span><span class="text-[var(--text-muted)]">Skill 调用</span><span class="font-mono text-[var(--text-strong)] ml-1">14,820</span></span>
+          <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm" style="background:var(--a-graph)"></span><span class="text-[var(--text-muted)]">Model 调用</span><span class="font-mono text-[var(--text-strong)] ml-1">9,234</span></span>
+          <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm" style="background:var(--a-dev)"></span><span class="text-[var(--text-muted)]">Agent 任务</span><span class="font-mono text-[var(--text-strong)] ml-1">4,417</span></span>
+        </div>
+      </div>
+
+      <!-- cost donut -->
+      <div class="col-span-4 card p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div class="caps">成本分布 · 模型</div>
+          <span class="text-[11.5px] font-mono text-[var(--text-strong)]">¥ 3,128.40</span>
+        </div>
+        <div class="h-[200px] relative flex items-center justify-center">
+          <canvas id="costChart"></canvas>
+          <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <div class="font-display text-[26px] text-[var(--text-strong)] leading-none">¥3.1<span class="text-[14px] text-[var(--text-muted)] ml-0.5">k</span></div>
+            <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">24h 总成本</div>
+          </div>
+        </div>
+        <div class="mt-3 space-y-1.5 text-[12px]">
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm" style="background:var(--a-req)"></span>GPT-4o</span>
+            <span class="font-mono text-[var(--text-strong)]">¥1,624</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm" style="background:var(--a-test)"></span>Claude Sonnet 4.6</span>
+            <span class="font-mono text-[var(--text-strong)]">¥982</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm" style="background:var(--a-dev)"></span>DeepSeek-V3</span>
+            <span class="font-mono text-[var(--text-strong)]">¥318</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm" style="background:var(--a-perf)"></span>Qwen3-Coder</span>
+            <span class="font-mono text-[var(--text-strong)]">¥204</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== ASSET TABLES ==================== -->
+    <section class="grid grid-cols-12 gap-5 mb-7">
+
+      <!-- skills table -->
+      <div class="col-span-6 card p-0 overflow-hidden">
+        <div class="flex items-center justify-between p-5 pb-3">
+          <div>
+            <div class="caps mb-1">Skill 资产 · Top 8</div>
+            <div class="text-[13px] text-[var(--text-muted)]">按调用量排序</div>
+          </div>
+          <a href="#" class="text-[11.5px] text-[var(--text-strong)] hover:underline">全部 47 个 →</a>
+        </div>
+        <table class="lean w-full">
+          <thead>
+            <tr>
+              <th>Skill</th>
+              <th class="text-right">调用</th>
+              <th class="text-right">P95</th>
+              <th class="text-right">成功率</th>
+              <th>趋势</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div class="font-medium text-[var(--text-strong)]">requirement-decompose</div>
+                <div class="text-[10.5px] font-mono text-[var(--text-faint)]">v1.4 · 需求富化</div>
+              </td>
+              <td class="text-right font-mono">3,128</td>
+              <td class="text-right font-mono text-[var(--text-muted)]">1.2s</td>
+              <td class="text-right"><span class="font-mono text-[var(--done)]">99.4%</span></td>
+              <td><svg class="w-16 h-6" viewBox="0 0 64 24" preserveAspectRatio="none"><polyline fill="none" stroke="var(--a-req)" stroke-width="1.5" points="0,16 8,14 16,12 24,15 32,10 40,8 48,11 56,6 64,4"/></svg></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="font-medium text-[var(--text-strong)]">code-review-guard</div>
+                <div class="text-[10.5px] font-mono text-[var(--text-faint)]">v2.1 · 军规审查</div>
+              </td>
+              <td class="text-right font-mono">2,841</td>
+              <td class="text-right font-mono text-[var(--text-muted)]">2.4s</td>
+              <td class="text-right"><span class="font-mono text-[var(--done)]">98.8%</span></td>
+              <td><svg class="w-16 h-6" viewBox="0 0 64 24" preserveAspectRatio="none"><polyline fill="none" stroke="var(--a-sec)" stroke-width="1.5" points="0,18 8,16 16,18 24,14 32,12 40,10 48,12 56,8 64,10"/></svg></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="font-medium text-[var(--text-strong)]">kg-entity-search</div>
+                <div class="text-[10.5px] font-mono text-[var(--text-faint)]">v3.2 · KG 检索</div>
+              </td>
+              <td class="text-right font-mono">2,194</td>
+              <td class="text-right font-mono text-[var(--text-muted)]">0.6s</td>
+              <td class="text-right"><span class="font-mono text-[var(--done)]">99.8%</span></td>
+              <td><svg class="w-16 h-6" viewBox="0 0 64 24" preserveAspectRatio="none"><polyline fill="none" stroke="var(--a-graph)" stroke-width="1.5" points="0,14 8,12 16,15 24,10 32,8 40,11 48,9 56,7 64,5"/></svg></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="font-medium text-[var(--text-strong)]">code-generate-java</div>
+                <div class="text-[10.5px] font-mono text-[var(--text-faint)]">v1.8 · 代码生成</div>
+              </td>
+              <td class="text-right font-mono">1,872</td>
+              <td class="text-right font-mono text-[var(--text-muted)]">4.8s</td>
+              <td class="text-right"><span class="font-mono text-[var(--done)]">97.2%</span></td>
+              <td><svg class="w-16 h-6" viewBox="0 0 64 24" preserveAspectRatio="none"><polyline fill="none" stroke="var(--a-dev)" stroke-width="1.5" points="0,12 8,15 16,10 24,13 32,11 40,8 48,12 56,10 64,9"/></svg></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="font-medium text-[var(--text-strong)]">test-strategy-gen</div>
+                <div class="text-[10.5px] font-mono text-[var(--text-faint)]">v1.2 · 测试策略</div>
+              </td>
+              <td class="text-right font-mono">1,520</td>
+              <td class="text-right font-mono text-[var(--text-muted)]">3.1s</td>
+              <td class="text-right"><span class="font-mono text-[var(--done)]">99.0%</span></td>
+              <td><svg class="w-16 h-6" viewBox="0 0 64 24" preserveAspectRatio="none"><polyline fill="none" stroke="var(--a-test)" stroke-width="1.5" points="0,16 8,14 16,11 24,13 32,9 40,11 48,8 56,10 64,6"/></svg></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="font-medium text-[var(--text-strong)]">perf-rule-check</div>
+                <div class="text-[10.5px] font-mono text-[var(--text-faint)]">v1.0 · 性能军规</div>
+              </td>
+              <td class="text-right font-mono">1,318</td>
+              <td class="text-right font-mono text-[var(--text-muted)]">1.8s</td>
+              <td class="text-right"><span class="font-mono text-[var(--halt)]">94.1%</span></td>
+              <td><svg class="w-16 h-6" viewBox="0 0 64 24" preserveAspectRatio="none"><polyline fill="none" stroke="var(--a-perf)" stroke-width="1.5" points="0,10 8,12 16,8 24,14 32,12 40,16 48,14 56,18 64,16"/></svg></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="font-medium text-[var(--text-strong)]">arch-design-map</div>
+                <div class="text-[10.5px] font-mono text-[var(--text-faint)]">v0.9 · 架构映射</div>
+              </td>
+              <td class="text-right font-mono">964</td>
+              <td class="text-right font-mono text-[var(--text-muted)]">5.2s</td>
+              <td class="text-right"><span class="font-mono text-[var(--done)]">98.5%</span></td>
+              <td><svg class="w-16 h-6" viewBox="0 0 64 24" preserveAspectRatio="none"><polyline fill="none" stroke="var(--a-arch)" stroke-width="1.5" points="0,14 8,12 16,15 24,11 32,13 40,10 48,12 56,9 64,11"/></svg></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="font-medium text-[var(--text-strong)]">domain-context</div>
+                <div class="text-[10.5px] font-mono text-[var(--text-faint)]">v1.1 · 业务上下文</div>
+              </td>
+              <td class="text-right font-mono">842</td>
+              <td class="text-right font-mono text-[var(--text-muted)]">0.9s</td>
+              <td class="text-right"><span class="font-mono text-[var(--done)]">99.6%</span></td>
+              <td><svg class="w-16 h-6" viewBox="0 0 64 24" preserveAspectRatio="none"><polyline fill="none" stroke="var(--a-graph)" stroke-width="1.5" points="0,12 8,10 16,13 24,9 32,11 40,8 48,10 56,7 64,9"/></svg></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- model + agent -->
+      <div class="col-span-6 space-y-5">
+        <!-- models -->
+        <div class="card p-0 overflow-hidden">
+          <div class="flex items-center justify-between p-5 pb-3">
+            <div>
+              <div class="caps mb-1">Model 资产 · 调用分布</div>
+              <div class="text-[13px] text-[var(--text-muted)]">按调用 & 单价 排序</div>
+            </div>
+            <a href="#" class="text-[11.5px] text-[var(--text-strong)] hover:underline">配置路由 →</a>
+          </div>
+          <table class="lean w-full">
+            <thead>
+              <tr>
+                <th>模型</th>
+                <th class="text-right">调用</th>
+                <th class="text-right">Token</th>
+                <th class="text-right">成本</th>
+                <th class="text-right">占比</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full" style="background:var(--a-req)"></span>
+                    <div>
+                      <div class="font-medium text-[var(--text-strong)]">GPT-4o</div>
+                      <div class="text-[10.5px] font-mono text-[var(--text-faint)]">openai · 复杂推理</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-right font-mono">4,128</td>
+                <td class="text-right font-mono text-[var(--text-muted)]">5.8M</td>
+                <td class="text-right font-mono">¥1,624</td>
+                <td class="text-right" style="width:18%"><div class="bar-track"><div class="bar-fill" style="width:52%; background:var(--a-req)"></div></div></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full" style="background:var(--a-test)"></span>
+                    <div>
+                      <div class="font-medium text-[var(--text-strong)]">Claude Sonnet 4.6</div>
+                      <div class="text-[10.5px] font-mono text-[var(--text-faint)]">anthropic · 主开发</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-right font-mono">3,214</td>
+                <td class="text-right font-mono text-[var(--text-muted)]">4.2M</td>
+                <td class="text-right font-mono">¥982</td>
+                <td class="text-right"><div class="bar-track"><div class="bar-fill" style="width:32%; background:var(--a-test)"></div></div></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full" style="background:var(--a-dev)"></span>
+                    <div>
+                      <div class="font-medium text-[var(--text-strong)]">DeepSeek-V3</div>
+                      <div class="text-[10.5px] font-mono text-[var(--text-faint)]">deepseek · 代码生成</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-right font-mono">1,420</td>
+                <td class="text-right font-mono text-[var(--text-muted)]">1.7M</td>
+                <td class="text-right font-mono">¥318</td>
+                <td class="text-right"><div class="bar-track"><div class="bar-fill" style="width:10%; background:var(--a-dev)"></div></div></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full" style="background:var(--a-perf)"></span>
+                    <div>
+                      <div class="font-medium text-[var(--text-strong)]">Qwen3-Coder</div>
+                      <div class="text-[10.5px] font-mono text-[var(--text-faint)]">aliyun · 轻量代码</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-right font-mono">472</td>
+                <td class="text-right font-mono text-[var(--text-muted)]">0.7M</td>
+                <td class="text-right font-mono">¥204</td>
+                <td class="text-right"><div class="bar-track"><div class="bar-fill" style="width:6%; background:var(--a-perf)"></div></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- agents -->
+        <div class="card p-0 overflow-hidden">
+          <div class="flex items-center justify-between p-5 pb-3">
+            <div>
+              <div class="caps mb-1">Agent 资产 · 健康度</div>
+              <div class="text-[13px] text-[var(--text-muted)]">7 个 Agent · 24h 任务量</div>
+            </div>
+            <a href="#" class="text-[11.5px] text-[var(--text-strong)] hover:underline">全部 →</a>
+          </div>
+          <div class="px-5 pb-5 space-y-3">
+            <div class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-[var(--bg-elev)]">
+              <span class="agent-avatar" style="background:var(--a-dev)">DEV</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">代码开发师</span>
+                  <span class="text-[11px] font-mono text-[var(--text-muted)]">1,420 任务</span>
+                </div>
+                <div class="mt-1.5 flex items-center gap-3">
+                  <div class="flex-1 bar-track"><div class="bar-fill" style="width:97%; background:var(--done)"></div></div>
+                  <span class="text-[10.5px] font-mono text-[var(--text-muted)] w-14 text-right">97.2% 完成</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-[var(--bg-elev)]">
+              <span class="agent-avatar" style="background:var(--a-req)">REQ</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">需求分析师</span>
+                  <span class="text-[11px] font-mono text-[var(--text-muted)]">982 任务</span>
+                </div>
+                <div class="mt-1.5 flex items-center gap-3">
+                  <div class="flex-1 bar-track"><div class="bar-fill" style="width:99%; background:var(--done)"></div></div>
+                  <span class="text-[10.5px] font-mono text-[var(--text-muted)] w-14 text-right">99.4% 完成</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-[var(--bg-elev)]">
+              <span class="agent-avatar" style="background:var(--a-sec)">SEC</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">安全审查员</span>
+                  <span class="text-[11px] font-mono text-[var(--text-muted)]">714 任务</span>
+                </div>
+                <div class="mt-1.5 flex items-center gap-3">
+                  <div class="flex-1 bar-track"><div class="bar-fill" style="width:94%; background:var(--run)"></div></div>
+                  <span class="text-[10.5px] font-mono text-[var(--text-muted)] w-14 text-right">94.0% 完成</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-[var(--bg-elev)]">
+              <span class="agent-avatar" style="background:var(--a-test)">TST</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">测试工程师</span>
+                  <span class="text-[11px] font-mono text-[var(--text-muted)]">624 任务</span>
+                </div>
+                <div class="mt-1.5 flex items-center gap-3">
+                  <div class="flex-1 bar-track"><div class="bar-fill" style="width:98%; background:var(--done)"></div></div>
+                  <span class="text-[10.5px] font-mono text-[var(--text-muted)] w-14 text-right">98.6% 完成</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-[var(--bg-elev)]">
+              <span class="agent-avatar" style="background:var(--a-graph)">KG</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">知识图谱 Agent</span>
+                  <span class="text-[11px] font-mono text-[var(--text-muted)]">412 任务</span>
+                </div>
+                <div class="mt-1.5 flex items-center gap-3">
+                  <div class="flex-1 bar-track"><div class="bar-fill" style="width:99%; background:var(--done)"></div></div>
+                  <span class="text-[10.5px] font-mono text-[var(--text-muted)] w-14 text-right">99.8% 完成</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3 p-2.5 rounded-lg hover:bg-[var(--bg-elev)]">
+              <span class="agent-avatar" style="background:var(--a-arch)">ARC</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">架构师</span>
+                  <span class="text-[11px] font-mono text-[var(--text-muted)]">265 任务</span>
+                </div>
+                <div class="mt-1.5 flex items-center gap-3">
+                  <div class="flex-1 bar-track"><div class="bar-fill" style="width:97%; background:var(--done)"></div></div>
+                  <span class="text-[10.5px] font-mono text-[var(--text-muted)] w-14 text-right">97.6% 完成</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== HUMAN-IN-THE-LOOP · FEEDBACK OPS ==================== -->
+    <section class="grid grid-cols-12 gap-5 mb-7">
+
+      <!-- Left: Human review → agent/skill quality -->
+      <div class="col-span-8 card p-5">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <div class="caps mb-1">人评反馈 · 沉淀到 Agent / Skill</div>
+            <div class="text-[13px] text-[var(--text-muted)]">人评 go/nogo 与意见自动回流,直接驱动 Agent prompt 与 Skill 规则的迭代</div>
+          </div>
+          <div class="flex items-center gap-2 text-[10.5px]">
+            <span class="chip" style="background:var(--done-soft); color:var(--done)">本周采纳 <span class="font-mono">37</span></span>
+            <span class="chip" style="background:var(--run-soft); color:var(--run)">待复核 <span class="font-mono">8</span></span>
+            <span class="chip" style="background:var(--review-soft); color:var(--review)">在评 <span class="font-mono">12</span></span>
+          </div>
+        </div>
+
+        <!-- Top KPIs -->
+        <div class="grid grid-cols-4 gap-3 mb-5">
+          <div class="rounded-xl border p-3.5" style="border-color:var(--border-soft); background:linear-gradient(180deg, var(--bg-elev) 0%, transparent 80%)">
+            <div class="text-[10.5px] text-[var(--text-muted)]">本周 go 通过率</div>
+            <div class="font-mono text-[22px] font-semibold text-[var(--text-strong)] mt-1">86.4<span class="text-[12px] text-[var(--text-muted)]">%</span></div>
+            <div class="text-[10.5px] mt-0.5" style="color:var(--done)">↑ 4.1 较上周</div>
+          </div>
+          <div class="rounded-xl border p-3.5" style="border-color:var(--border-soft); background:linear-gradient(180deg, var(--bg-elev) 0%, transparent 80%)">
+            <div class="text-[10.5px] text-[var(--text-muted)]">退回率</div>
+            <div class="font-mono text-[22px] font-semibold text-[var(--text-strong)] mt-1">9.2<span class="text-[12px] text-[var(--text-muted)]">%</span></div>
+            <div class="text-[10.5px] mt-0.5" style="color:var(--done)">↓ 2.8</div>
+          </div>
+          <div class="rounded-xl border p-3.5" style="border-color:var(--border-soft); background:linear-gradient(180deg, var(--bg-elev) 0%, transparent 80%)">
+            <div class="text-[10.5px] text-[var(--text-muted)]">AI 误报率</div>
+            <div class="font-mono text-[22px] font-semibold text-[var(--text-strong)] mt-1">4.7<span class="text-[12px] text-[var(--text-muted)]">%</span></div>
+            <div class="text-[10.5px] mt-0.5" style="color:var(--done)">↓ 1.3 由人评校准</div>
+          </div>
+          <div class="rounded-xl border p-3.5" style="border-color:var(--border-soft); background:linear-gradient(180deg, var(--bg-elev) 0%, transparent 80%)">
+            <div class="text-[10.5px] text-[var(--text-muted)]">回流闭环 SLA</div>
+            <div class="font-mono text-[22px] font-semibold text-[var(--text-strong)] mt-1">2.4<span class="text-[12px] text-[var(--text-muted)]">h</span></div>
+            <div class="text-[10.5px] mt-0.5 text-[var(--text-muted)]">从签字到 Agent 生效</div>
+          </div>
+        </div>
+
+        <!-- Agent table -->
+        <div class="rounded-xl border" style="border-color:var(--border-soft)">
+          <table class="w-full text-[12px]">
+            <thead>
+              <tr class="text-[10.5px] text-[var(--text-muted)] tracking-wider uppercase">
+                <th class="text-left font-medium px-4 py-2.5">Agent / Skill</th>
+                <th class="text-right font-medium px-3 py-2.5">人评通过</th>
+                <th class="text-right font-medium px-3 py-2.5">已采纳意见</th>
+                <th class="text-right font-medium px-3 py-2.5">自优化版本</th>
+                <th class="text-right font-medium px-3 py-2.5">趋势</th>
+                <th class="text-right font-medium px-4 py-2.5">状态</th>
+              </tr>
+            </thead>
+            <tbody class="text-[var(--text-strong)]">
+              <tr class="border-t" style="border-color:var(--border-soft)">
+                <td class="px-4 py-2.5"><span class="agent-avatar !w-5 !h-5 !text-[9px] inline-flex align-middle" style="background:var(--a-dev)">DEV</span><span class="ml-2">主开发 Agent</span></td>
+                <td class="px-3 py-2.5 text-right font-mono">94%</td>
+                <td class="px-3 py-2.5 text-right font-mono" style="color:var(--done)">+14</td>
+                <td class="px-3 py-2.5 text-right font-mono">v3.4</td>
+                <td class="px-3 py-2.5 text-right"><span style="color:var(--done)">↑ 5.2</span></td>
+                <td class="px-4 py-2.5 text-right"><span class="chip" style="background:var(--done-soft); color:var(--done); font-size:10px">达标</span></td>
+              </tr>
+              <tr class="border-t" style="border-color:var(--border-soft)">
+                <td class="px-4 py-2.5"><span class="agent-avatar !w-5 !h-5 !text-[9px] inline-flex align-middle" style="background:var(--a-sec)">SEC</span><span class="ml-2">安全审查 Agent</span></td>
+                <td class="px-3 py-2.5 text-right font-mono">91%</td>
+                <td class="px-3 py-2.5 text-right font-mono" style="color:var(--done)">+9</td>
+                <td class="px-3 py-2.5 text-right font-mono">v2.7</td>
+                <td class="px-3 py-2.5 text-right"><span style="color:var(--done)">↑ 3.1</span></td>
+                <td class="px-4 py-2.5 text-right"><span class="chip" style="background:var(--done-soft); color:var(--done); font-size:10px">达标</span></td>
+              </tr>
+              <tr class="border-t" style="border-color:var(--border-soft)">
+                <td class="px-4 py-2.5"><span class="w-5 h-5 rounded-md inline-flex items-center justify-center align-middle text-white text-[8px] font-bold" style="background:var(--run)">AI</span><span class="ml-2">CODE-Reviewer (AI)</span></td>
+                <td class="px-3 py-2.5 text-right font-mono">87%</td>
+                <td class="px-3 py-2.5 text-right font-mono" style="color:var(--run)">+6 (调权重)</td>
+                <td class="px-3 py-2.5 text-right font-mono">v1.2</td>
+                <td class="px-3 py-2.5 text-right"><span style="color:var(--run)">→ 持平</span></td>
+                <td class="px-4 py-2.5 text-right"><span class="chip" style="background:var(--run-soft); color:var(--run); font-size:10px">迭代中</span></td>
+              </tr>
+              <tr class="border-t" style="border-color:var(--border-soft)">
+                <td class="px-4 py-2.5"><span class="agent-avatar !w-5 !h-5 !text-[9px] inline-flex align-middle" style="background:var(--a-arch)">CR</span><span class="ml-2">代码军规 Skill</span></td>
+                <td class="px-3 py-2.5 text-right font-mono">96%</td>
+                <td class="px-3 py-2.5 text-right font-mono" style="color:var(--done)">+5 (新增规则)</td>
+                <td class="px-3 py-2.5 text-right font-mono">r29</td>
+                <td class="px-3 py-2.5 text-right"><span style="color:var(--done)">↑ 1.4</span></td>
+                <td class="px-4 py-2.5 text-right"><span class="chip" style="background:var(--done-soft); color:var(--done); font-size:10px">达标</span></td>
+              </tr>
+              <tr class="border-t" style="border-color:var(--border-soft)">
+                <td class="px-4 py-2.5"><span class="agent-avatar !w-5 !h-5 !text-[9px] inline-flex align-middle" style="background:var(--a-perf)">PRF</span><span class="ml-2">性能审查 Agent</span></td>
+                <td class="px-3 py-2.5 text-right font-mono">74%</td>
+                <td class="px-3 py-2.5 text-right font-mono" style="color:var(--halt)">+3 (8 退回)</td>
+                <td class="px-3 py-2.5 text-right font-mono">v1.8</td>
+                <td class="px-3 py-2.5 text-right"><span style="color:var(--halt)">↓ 6.5</span></td>
+                <td class="px-4 py-2.5 text-right"><span class="chip" style="background:oklch(95% 0.04 25); color:var(--halt); font-size:10px">关注</span></td>
+              </tr>
+              <tr class="border-t" style="border-color:var(--border-soft)">
+                <td class="px-4 py-2.5"><span class="w-5 h-5 rounded-md inline-flex items-center justify-center align-middle" style="background:var(--review-soft)"><svg class="w-2.5 h-2.5" style="color:var(--review)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg></span><span class="ml-2">Skill · 限流模板</span></td>
+                <td class="px-3 py-2.5 text-right font-mono">—</td>
+                <td class="px-3 py-2.5 text-right font-mono" style="color:var(--done)">新增 2</td>
+                <td class="px-3 py-2.5 text-right font-mono">v0.3</td>
+                <td class="px-3 py-2.5 text-right text-[var(--text-muted)]">新增</td>
+                <td class="px-4 py-2.5 text-right"><span class="chip" style="background:var(--review-soft); color:var(--review); font-size:10px">灰度</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Right: Top human reviewers + recent feedback -->
+      <div class="col-span-4 space-y-5">
+
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <div class="caps">活跃人评 · Top</div>
+              <div class="text-[12px] text-[var(--text-muted)]">本周参与度排行</div>
+            </div>
+            <span class="chip text-[10px]" style="background:var(--bg-elev); color:var(--text-muted)">7d</span>
+          </div>
+          <div class="space-y-2.5">
+            <div class="flex items-center gap-3">
+              <div class="w-7 h-7 rounded-full bg-gradient-to-br from-violet-300 to-violet-500 text-white text-[11px] font-semibold flex items-center justify-center">王</div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[12.5px] font-medium text-[var(--text-strong)]">王工 · 主审批</div>
+                <div class="text-[10.5px] text-[var(--text-muted)]">42 评 · 9 采纳沉淀</div>
+              </div>
+              <span class="font-mono text-[11px]" style="color:var(--done)">96%</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-7 h-7 rounded-full bg-gradient-to-br from-amber-300 to-amber-500 text-white text-[11px] font-semibold flex items-center justify-center">李</div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[12.5px] font-medium text-[var(--text-strong)]">李工 · 架构</div>
+                <div class="text-[10.5px] text-[var(--text-muted)]">31 评 · 7 采纳</div>
+              </div>
+              <span class="font-mono text-[11px]" style="color:var(--done)">93%</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-300 to-emerald-500 text-white text-[11px] font-semibold flex items-center justify-center">张</div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[12.5px] font-medium text-[var(--text-strong)]">张工 · 需求</div>
+                <div class="text-[10.5px] text-[var(--text-muted)]">28 评 · 5 采纳</div>
+              </div>
+              <span class="font-mono text-[11px]" style="color:var(--done)">94%</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-7 h-7 rounded-full bg-gradient-to-br from-rose-300 to-rose-500 text-white text-[11px] font-semibold flex items-center justify-center">陈</div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[12.5px] font-medium text-[var(--text-strong)]">陈工 · 安全</div>
+                <div class="text-[10.5px] text-[var(--text-muted)]">19 评 · 4 采纳</div>
+              </div>
+              <span class="font-mono text-[11px]" style="color:var(--run)">82%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div class="caps">最近沉淀</div>
+            <a href="#" class="text-[10.5px] text-[var(--text-strong)] hover:underline">全部 →</a>
+          </div>
+          <div class="space-y-2.5">
+            <div class="rounded-lg border p-2.5" style="border-color:var(--border-soft)">
+              <div class="flex items-center gap-1.5 mb-1">
+                <span class="chip text-[9.5px]" style="background:oklch(72% 0.17 150 / .12); color: oklch(40% 0.16 150);">DEV</span>
+                <span class="text-[10.5px] text-[var(--text-muted)]">王工 → prompt</span>
+                <span class="ml-auto font-mono text-[10px] text-[var(--text-faint)]">14:31</span>
+              </div>
+              <div class="text-[11.5px] text-[var(--text-strong)] leading-snug">"补充 IP 维度限流" → 新 few-shot</div>
+            </div>
+            <div class="rounded-lg border p-2.5" style="border-color:var(--border-soft)">
+              <div class="flex items-center gap-1.5 mb-1">
+                <span class="chip text-[9.5px]" style="background:oklch(67% 0.20 25 / .12); color: oklch(45% 0.18 25);">SEC</span>
+                <span class="text-[10.5px] text-[var(--text-muted)]">陈工 → 军规库</span>
+                <span class="ml-auto font-mono text-[10px] text-[var(--text-faint)]">11:42</span>
+              </div>
+              <div class="text-[11.5px] text-[var(--text-strong)] leading-snug">+1 规则 "SessionToken TTL 与 KG 一致"</div>
+            </div>
+            <div class="rounded-lg border p-2.5" style="border-color:var(--border-soft)">
+              <div class="flex items-center gap-1.5 mb-1">
+                <span class="chip text-[9.5px]" style="background:oklch(80% 0.16 65 / .14); color: oklch(46% 0.16 65);">AI Rvw</span>
+                <span class="text-[10.5px] text-[var(--text-muted)]">李工 → 权重 ↓</span>
+                <span class="ml-auto font-mono text-[10px] text-[var(--text-faint)]">10:08</span>
+              </div>
+              <div class="text-[11.5px] text-[var(--text-strong)] leading-snug">3 例误报 · 阈值由 0.6 → 0.72</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== KNOWLEDGE GRAPH HEALTH ==================== -->
+    <section class="grid grid-cols-12 gap-5 mb-7">
+
+      <div class="col-span-12 card p-5">
+        <div class="flex items-start justify-between mb-5">
+          <div>
+            <div class="caps mb-1">知识图谱健康度 · KG Operations</div>
+            <div class="text-[13px] text-[var(--text-muted)]">实体 · 关系 · 调用热度 · 资产腐化 — <a href="knowledge-graph.html" class="hover:underline" style="color:var(--text-strong)">进入图谱全景 →</a></div>
+          </div>
+          <div class="flex items-center gap-2 text-[10.5px]">
+            <span class="chip" style="background:var(--bg-elev); color:var(--text-muted)">实体 <span class="font-mono">12,847</span></span>
+            <span class="chip" style="background:var(--bg-elev); color:var(--text-muted)">关系 <span class="font-mono">38,392</span></span>
+            <span class="chip" style="background:var(--done-soft); color:var(--done)">健康 81%</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-5">
+
+          <!-- Hot zones (recommend caching) -->
+          <div class="col-span-4">
+            <div class="flex items-center gap-2 mb-2.5">
+              <span class="w-2 h-2 rounded-full" style="background:var(--halt)"></span>
+              <span class="text-[12px] font-medium text-[var(--text-strong)]">热区 · 建议缓存 / 长期记忆</span>
+            </div>
+            <div class="text-[10.5px] text-[var(--text-muted)] mb-2.5">7d 调用 > P95 · 占整体 <span class="font-mono">62%</span> 调用量</div>
+            <div class="space-y-2">
+              <div class="rounded-lg p-2.5" style="background:linear-gradient(90deg, oklch(67% 0.20 25 / .10) 0%, transparent 100%); border:1px solid oklch(67% 0.20 25 / .25)">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[12px] font-medium text-[var(--text-strong)]">鉴权 · 实体集</span>
+                  <span class="font-mono text-[10.5px]" style="color:var(--halt)">12,840 调用</span>
+                </div>
+                <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">9 Agent 高频引用 · <button class="underline hover:text-[var(--text-strong)]">入 L1 缓存 →</button></div>
+              </div>
+              <div class="rounded-lg p-2.5" style="background:linear-gradient(90deg, oklch(67% 0.20 25 / .10) 0%, transparent 100%); border:1px solid oklch(67% 0.20 25 / .25)">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[12px] font-medium text-[var(--text-strong)]">支付域 · 路由表</span>
+                  <span class="font-mono text-[10.5px]" style="color:var(--halt)">8,412 调用</span>
+                </div>
+                <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">已写入长期记忆 · <button class="underline hover:text-[var(--text-strong)]">查看 →</button></div>
+              </div>
+              <div class="rounded-lg p-2.5" style="background:linear-gradient(90deg, oklch(80% 0.16 65 / .10) 0%, transparent 100%); border:1px solid oklch(80% 0.16 65 / .25)">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[12px] font-medium text-[var(--text-strong)]">用户中心 · 接口契约</span>
+                  <span class="font-mono text-[10.5px]" style="color:var(--run)">6,108 调用</span>
+                </div>
+                <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">候选缓存 · <button class="underline hover:text-[var(--text-strong)]">审核 →</button></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cold / stale (recommend cleanup) -->
+          <div class="col-span-4">
+            <div class="flex items-center gap-2 mb-2.5">
+              <span class="w-2 h-2 rounded-full" style="background:var(--text-muted)"></span>
+              <span class="text-[12px] font-medium text-[var(--text-strong)]">冷区 · 长期未引用 / 腐化</span>
+            </div>
+            <div class="text-[10.5px] text-[var(--text-muted)] mb-2.5">90d 未引用 · 占实体 <span class="font-mono">8.3%</span> · 建议清理或归档</div>
+            <div class="space-y-2">
+              <div class="rounded-lg p-2.5 border" style="border-color:var(--border-soft); background:var(--bg-elev)">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[12px] font-medium text-[var(--text-strong)]">遗留 · 旧版 SSO 流程</span>
+                  <span class="font-mono text-[10.5px] text-[var(--text-faint)]">0 / 7m</span>
+                </div>
+                <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">128 实体 · <button class="underline hover:text-[var(--text-strong)]">归档 →</button></div>
+              </div>
+              <div class="rounded-lg p-2.5 border" style="border-color:var(--border-soft); background:var(--bg-elev)">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[12px] font-medium text-[var(--text-strong)]">Deprecated API · v0.x</span>
+                  <span class="font-mono text-[10.5px] text-[var(--text-faint)]">2 / 4m</span>
+                </div>
+                <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">94 关系腐化 · <button class="underline hover:text-[var(--text-strong)]">清理 →</button></div>
+              </div>
+              <div class="rounded-lg p-2.5 border" style="border-color:var(--border-soft); background:var(--bg-elev)">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[12px] font-medium text-[var(--text-strong)]">实验分支 · feat/llm-mock</span>
+                  <span class="font-mono text-[10.5px] text-[var(--text-faint)]">0 / 5m</span>
+                </div>
+                <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">62 实体悬挂 · <button class="underline hover:text-[var(--text-strong)]">移除 →</button></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- KG composition + entropy -->
+          <div class="col-span-4">
+            <div class="flex items-center gap-2 mb-2.5">
+              <span class="w-2 h-2 rounded-full" style="background:#6366f1"></span>
+              <span class="text-[12px] font-medium text-[var(--text-strong)]">图谱构成 · 类型分布</span>
+            </div>
+            <div class="text-[10.5px] text-[var(--text-muted)] mb-2.5">实体类型 24 · 关系类型 31</div>
+
+            <div class="space-y-2">
+              <div>
+                <div class="flex items-baseline justify-between text-[11.5px]">
+                  <span class="text-[var(--text-strong)]">业务实体</span>
+                  <span class="font-mono text-[var(--text-muted)]">5,128 · 39.9%</span>
+                </div>
+                <div class="h-1.5 rounded-full bg-[var(--border-soft)] overflow-hidden mt-1">
+                  <div class="h-full rounded-full" style="width:39.9%; background:#6366f1"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex items-baseline justify-between text-[11.5px]">
+                  <span class="text-[var(--text-strong)]">代码实体</span>
+                  <span class="font-mono text-[var(--text-muted)]">3,742 · 29.1%</span>
+                </div>
+                <div class="h-1.5 rounded-full bg-[var(--border-soft)] overflow-hidden mt-1">
+                  <div class="h-full rounded-full" style="width:29.1%; background:var(--a-dev)"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex items-baseline justify-between text-[11.5px]">
+                  <span class="text-[var(--text-strong)]">规则 / 军规</span>
+                  <span class="font-mono text-[var(--text-muted)]">1,964 · 15.3%</span>
+                </div>
+                <div class="h-1.5 rounded-full bg-[var(--border-soft)] overflow-hidden mt-1">
+                  <div class="h-full rounded-full" style="width:15.3%; background:var(--a-sec)"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex items-baseline justify-between text-[11.5px]">
+                  <span class="text-[var(--text-strong)]">人评意见 (沉淀)</span>
+                  <span class="font-mono text-[var(--text-muted)]">1,108 · 8.6%</span>
+                </div>
+                <div class="h-1.5 rounded-full bg-[var(--border-soft)] overflow-hidden mt-1">
+                  <div class="h-full rounded-full" style="width:8.6%; background:var(--review)"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex items-baseline justify-between text-[11.5px]">
+                  <span class="text-[var(--text-strong)]">其它</span>
+                  <span class="font-mono text-[var(--text-muted)]">905 · 7.1%</span>
+                </div>
+                <div class="h-1.5 rounded-full bg-[var(--border-soft)] overflow-hidden mt-1">
+                  <div class="h-full rounded-full" style="width:7.1%; background:var(--text-faint)"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-3 pt-3 border-t flex items-center justify-between" style="border-color:var(--border-soft)">
+              <div>
+                <div class="text-[10.5px] text-[var(--text-muted)]">本周 Δ</div>
+                <div class="font-mono text-[13px]" style="color:var(--done)">+318 实体 · +1,142 关系</div>
+              </div>
+              <a href="knowledge-graph.html" class="text-[11px] font-medium hover:underline" style="color:#6366f1">图谱全景 →</a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== HEATMAP + EXCEPTIONS ==================== -->
+    <section class="grid grid-cols-12 gap-5 mb-7">
+      <!-- heatmap -->
+      <div class="col-span-7 card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <div class="caps mb-1">资产使用热力 · 7d × 24h</div>
+            <div class="text-[13px] text-[var(--text-muted)]">每小时调用强度</div>
+          </div>
+          <div class="flex items-center gap-2 text-[10.5px] text-[var(--text-muted)]">
+            <span>低</span>
+            <span class="heat-cell" style="background: oklch(96% 0.01 245)"></span>
+            <span class="heat-cell" style="background: oklch(90% 0.06 245)"></span>
+            <span class="heat-cell" style="background: oklch(80% 0.10 245)"></span>
+            <span class="heat-cell" style="background: oklch(65% 0.14 245)"></span>
+            <span class="heat-cell" style="background: oklch(50% 0.16 245)"></span>
+            <span>高</span>
+          </div>
+        </div>
+        <div id="heatmap" class="grid gap-[3px]" style="grid-template-columns: 32px repeat(24, 1fr);">
+          <!-- header row -->
+          <span></span>
+          <!-- 24 hour labels -->
+        </div>
+        <div class="mt-3 text-[11px] text-[var(--text-muted)] flex justify-between">
+          <span>0:00</span><span>6:00</span><span>12:00</span><span>18:00</span><span>23:00</span>
+        </div>
+      </div>
+
+      <!-- exceptions feed -->
+      <div class="col-span-5 card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <div class="caps mb-1">异常事件 · 实时</div>
+            <div class="text-[13px] text-[var(--text-muted)]"><span class="text-[var(--halt)] font-medium">3</span> 严重 · <span class="text-[var(--run)] font-medium">12</span> 警告</div>
+          </div>
+          <a href="#" class="text-[11.5px] text-[var(--text-strong)] hover:underline">全部 →</a>
+        </div>
+
+        <div class="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+          <div class="flex gap-3 p-3 rounded-lg border border-[var(--border-soft)] hover:bg-[var(--bg-elev)]">
+            <span class="w-1 rounded-full flex-shrink-0" style="background:var(--halt)"></span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline justify-between gap-2">
+                <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">Skill <span class="font-mono text-[12px]">perf-rule-check</span> 调用失败激增</span>
+                <span class="text-[10.5px] font-mono text-[var(--text-faint)]">14:08</span>
+              </div>
+              <div class="text-[11.5px] text-[var(--text-muted)] mt-1">5min 内失败 <span class="font-mono text-[var(--halt)]">38</span> 次 · 阈值 25</div>
+              <div class="mt-1.5 flex items-center gap-2">
+                <span class="chip" style="background:oklch(95% 0.04 25); color:var(--halt); font-size:10px">严重</span>
+                <span class="chip" style="background:var(--idle-soft); color:var(--text-muted); font-size:10px">影响 12 运行</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-3 p-3 rounded-lg border border-[var(--border-soft)] hover:bg-[var(--bg-elev)]">
+            <span class="w-1 rounded-full flex-shrink-0" style="background:var(--halt)"></span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline justify-between gap-2">
+                <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">Model <span class="font-mono text-[12px]">GPT-4o</span> 限流触发</span>
+                <span class="text-[10.5px] font-mono text-[var(--text-faint)]">13:54</span>
+              </div>
+              <div class="text-[11.5px] text-[var(--text-muted)] mt-1">租户 <span class="font-mono">tnt-pay</span> 触发 RPM 上限 · 已自动降级到 Claude Sonnet 4.6</div>
+              <div class="mt-1.5 flex items-center gap-2">
+                <span class="chip" style="background:oklch(95% 0.04 25); color:var(--halt); font-size:10px">严重</span>
+                <span class="chip" style="background:var(--done-soft); color:var(--done); font-size:10px">自动降级</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-3 p-3 rounded-lg border border-[var(--border-soft)] hover:bg-[var(--bg-elev)]">
+            <span class="w-1 rounded-full flex-shrink-0" style="background:var(--run)"></span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline justify-between gap-2">
+                <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">Agent <span class="font-mono text-[12px]">SEC</span> 平均延迟升高</span>
+                <span class="text-[10.5px] font-mono text-[var(--text-faint)]">13:30</span>
+              </div>
+              <div class="text-[11.5px] text-[var(--text-muted)] mt-1">P95 从 2.1s 升至 <span class="font-mono text-[var(--run)]">3.4s</span> · 检查 KG 索引</div>
+              <div class="mt-1.5 flex items-center gap-2">
+                <span class="chip" style="background:var(--run-soft); color:var(--run); font-size:10px">警告</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-3 p-3 rounded-lg border border-[var(--border-soft)] hover:bg-[var(--bg-elev)]">
+            <span class="w-1 rounded-full flex-shrink-0" style="background:var(--halt)"></span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline justify-between gap-2">
+                <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">Skill <span class="font-mono text-[12px]">code-generate-java</span> 版本回退</span>
+                <span class="text-[10.5px] font-mono text-[var(--text-faint)]">12:42</span>
+              </div>
+              <div class="text-[11.5px] text-[var(--text-muted)] mt-1">v1.9 评测失败率超阈，自动回退到 v1.8</div>
+              <div class="mt-1.5 flex items-center gap-2">
+                <span class="chip" style="background:oklch(95% 0.04 25); color:var(--halt); font-size:10px">严重</span>
+                <span class="chip" style="background:var(--done-soft); color:var(--done); font-size:10px">已回退</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-3 p-3 rounded-lg border border-[var(--border-soft)] hover:bg-[var(--bg-elev)]">
+            <span class="w-1 rounded-full flex-shrink-0" style="background:var(--run)"></span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline justify-between gap-2">
+                <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">成本异常 · 单次任务 <span class="font-mono text-[12px]">¥12.4</span></span>
+                <span class="text-[10.5px] font-mono text-[var(--text-faint)]">11:18</span>
+              </div>
+              <div class="text-[11.5px] text-[var(--text-muted)] mt-1">运行 #2447 单次 Token 消耗超历史 P99 · 检查 prompt 设计</div>
+              <div class="mt-1.5 flex items-center gap-2">
+                <span class="chip" style="background:var(--run-soft); color:var(--run); font-size:10px">警告</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="mt-12 mb-6 text-center text-[11px] text-[var(--text-faint)]">
+      DevPipeline · AI 资产运营看板 · 数据延迟 < 30s · prototype v0.2
+    </footer>
+  </main>
+
+  <script>
+    // ====== trend chart ======
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    const hours = Array.from({length: 24}, (_, i) => `${i.toString().padStart(2,'0')}:00`);
+    const skillData  = [320,280,210,180,160,200,420,680,920,1080,1240,1180,1320,1180,1260,1140,1080,920,720,580,480,420,380,340];
+    const modelData  = [210,180,150,130,110,150,290,460,640,720,820,780,880,820,840,760,720,620,480,400,320,290,260,240];
+    const agentData  = [110,90,70,60,50,80,160,240,320,360,400,380,420,400,410,380,350,300,240,200,160,140,130,120];
+
+    new Chart(trendCtx, {
+      type: 'line',
+      data: {
+        labels: hours,
+        datasets: [
+          { label: 'Skill', data: skillData, borderColor: 'oklch(62% 0.16 245)', backgroundColor: 'oklch(62% 0.16 245 / 0.12)', tension: .35, fill: true, borderWidth: 1.8, pointRadius: 0 },
+          { label: 'Model', data: modelData, borderColor: 'oklch(60% 0.18 295)', backgroundColor: 'oklch(60% 0.18 295 / 0.10)', tension: .35, fill: true, borderWidth: 1.8, pointRadius: 0 },
+          { label: 'Agent', data: agentData, borderColor: 'oklch(58% 0.14 150)', backgroundColor: 'oklch(58% 0.14 150 / 0.10)', tension: .35, fill: true, borderWidth: 1.8, pointRadius: 0 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: 'oklch(56% 0.015 260)', font: { size: 10 }, maxRotation: 0, autoSkipPadding: 18 } },
+          y: { grid: { color: 'oklch(93% 0.005 85)' }, border: { display: false }, ticks: { color: 'oklch(56% 0.015 260)', font: { size: 10 } } }
+        },
+        interaction: { mode: 'index', intersect: false }
+      }
+    });
+
+    // ====== cost donut ======
+    const costCtx = document.getElementById('costChart').getContext('2d');
+    new Chart(costCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['GPT-4o','Claude Sonnet','DeepSeek-V3','Qwen3-Coder'],
+        datasets: [{
+          data: [1624, 982, 318, 204],
+          backgroundColor: ['oklch(62% 0.16 245)','oklch(56% 0.17 270)','oklch(58% 0.14 150)','oklch(70% 0.16 70)'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        cutout: '72%',
+        plugins: { legend: { display: false } },
+        maintainAspectRatio: false
+      }
+    });
+
+    // ====== heatmap ======
+    const heatmap = document.getElementById('heatmap');
+    const days = ['周一','周二','周三','周四','周五','周六','周日'];
+    // pre-seeded plausible matrix: weekday business hours hot, weekend cooler
+    function intensity(day, hour) {
+      const isWeekday = day < 5;
+      const isBiz = hour >= 9 && hour <= 19;
+      let v = 0;
+      if (isWeekday && isBiz) v = 0.55 + Math.random() * 0.45;
+      else if (isWeekday) v = 0.15 + Math.random() * 0.25;
+      else if (isBiz) v = 0.20 + Math.random() * 0.30;
+      else v = 0.05 + Math.random() * 0.15;
+      // afternoon spike
+      if (isWeekday && hour >= 14 && hour <= 17) v = Math.min(1, v + 0.10);
+      return v;
+    }
+    function colorFor(v) {
+      if (v < 0.15) return 'oklch(96% 0.01 245)';
+      if (v < 0.35) return 'oklch(90% 0.06 245)';
+      if (v < 0.60) return 'oklch(80% 0.10 245)';
+      if (v < 0.85) return 'oklch(65% 0.14 245)';
+      return 'oklch(50% 0.16 245)';
+    }
+    days.forEach((dayLabel, dayIdx) => {
+      const lbl = document.createElement('span');
+      lbl.className = 'text-[10.5px] text-[var(--text-muted)] self-center font-mono';
+      lbl.textContent = dayLabel;
+      heatmap.appendChild(lbl);
+      for (let h = 0; h < 24; h++) {
+        const v = intensity(dayIdx, h);
+        const cell = document.createElement('span');
+        cell.className = 'rounded-[3px] cursor-pointer transition hover:scale-110';
+        cell.style.cssText = `aspect-ratio: 1.6; background:${colorFor(v)};`;
+        cell.title = `${dayLabel} ${h.toString().padStart(2,'0')}:00 · ${Math.round(v * 1240)} 次调用`;
+        heatmap.appendChild(cell);
+      }
+    });
+  </script>
+</body>
+</html>

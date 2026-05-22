@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>人员运营 · DevPipeline</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-base: oklch(98% 0.006 85);
+      --bg-card: #ffffff;
+      --bg-elev: oklch(99% 0.004 85);
+      --bg-deep: oklch(15% 0.018 260);
+
+      --border-soft: oklch(93% 0.005 85);
+      --border-mid: oklch(88% 0.008 85);
+
+      --text-strong: oklch(22% 0.03 260);
+      --text-body: oklch(38% 0.02 260);
+      --text-muted: oklch(56% 0.015 260);
+      --text-faint: oklch(72% 0.01 260);
+
+      --done: oklch(62% 0.13 150);
+      --done-soft: oklch(94% 0.04 150);
+      --run: oklch(70% 0.15 65);
+      --run-soft: oklch(95% 0.05 75);
+      --review: oklch(58% 0.18 290);
+      --review-soft: oklch(95% 0.04 290);
+      --halt: oklch(60% 0.21 25);
+
+      --a-req: oklch(62% 0.16 245);
+      --a-graph: oklch(60% 0.18 295);
+      --a-arch: oklch(58% 0.13 200);
+      --a-dev: oklch(58% 0.14 150);
+      --a-sec: oklch(60% 0.20 25);
+      --a-perf: oklch(70% 0.16 70);
+      --a-test: oklch(56% 0.17 270);
+
+      --shadow-sm: 0 1px 2px oklch(20% 0.02 260 / 0.04);
+      --shadow-md: 0 2px 6px oklch(20% 0.02 260 / 0.04), 0 1px 2px oklch(20% 0.02 260 / 0.06);
+      --shadow-lg: 0 12px 28px oklch(20% 0.02 260 / 0.07), 0 2px 6px oklch(20% 0.02 260 / 0.04);
+    }
+
+    * { -webkit-font-smoothing: antialiased; }
+    html, body { font-family: 'Inter', system-ui, sans-serif; }
+    body { background: var(--bg-base); color: var(--text-body); font-feature-settings: 'cv02','cv03','cv04','cv11'; }
+    .font-display { font-family: 'Instrument Serif','Songti SC',serif; letter-spacing: -0.01em; }
+    .font-mono    { font-family: 'JetBrains Mono', monospace; }
+
+    .bg-atmosphere {
+      background:
+        radial-gradient(900px 460px at 8% -8%, oklch(93% 0.05 245 / 0.55), transparent 60%),
+        radial-gradient(700px 340px at 105% 0%, oklch(94% 0.05 150 / 0.40), transparent 60%),
+        var(--bg-base);
+    }
+    .grain::before {
+      content:''; position: fixed; inset: 0; pointer-events: none;
+      opacity: .03; mix-blend-mode: multiply; z-index: 100;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .card { background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: 16px; box-shadow: var(--shadow-sm); transition: box-shadow .2s; }
+    .card:hover { box-shadow: var(--shadow-md); }
+    .card-elev  { box-shadow: var(--shadow-lg); }
+
+    .chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 500; letter-spacing: .01em; border: 1px solid transparent; }
+    .caps { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; font-weight: 500; color: var(--text-muted); }
+
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 9px; font-size: 12.5px; font-weight: 500; border: 1px solid var(--border-mid); background: var(--bg-card); color: var(--text-body); transition: all .15s; cursor: pointer; }
+    .btn:hover { background: var(--bg-elev); border-color: var(--text-faint); color: var(--text-strong); }
+    .btn-primary { background: var(--text-strong); color: white; border-color: var(--text-strong); }
+
+    .bar-track { height: 6px; border-radius: 999px; background: var(--border-soft); overflow: hidden; position: relative; }
+    .bar-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: var(--text-strong); }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 999px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+
+    table.lean th { text-align: left; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; font-weight: 500; color: var(--text-muted); padding: 8px 12px; border-bottom: 1px solid var(--border-soft); }
+    table.lean td { padding: 12px; border-bottom: 1px solid var(--border-soft); font-size: 12.5px; color: var(--text-body); vertical-align: middle; }
+    table.lean tr:last-child td { border-bottom: 0; }
+    table.lean tr:hover { background: var(--bg-elev); }
+  </style>
+</head>
+<body class="bg-atmosphere grain min-h-screen">
+
+  <!-- ==================== TOP BAR ==================== -->
+  <header class="border-b border-[var(--border-soft)] bg-white/65 backdrop-blur-xl sticky top-0 z-50">
+    <div class="max-w-[1480px] mx-auto px-8 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-10">
+        <a href="index.html" class="flex items-center gap-2.5 hover:opacity-80 transition">
+          <div class="w-8 h-8 rounded-lg bg-[var(--text-strong)] flex items-center justify-center text-white text-[11px] font-bold tracking-tight">DP</div>
+          <div>
+            <div class="text-[14.5px] font-semibold text-[var(--text-strong)] leading-tight">DevPipeline</div>
+            <div class="text-[10px] text-[var(--text-muted)] tracking-[.14em] uppercase">AI 研发流水线 · 驾驶舱</div>
+          </div>
+        </a>
+        <nav class="flex items-center gap-1 text-[13px]">
+          <a href="index.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">运行中</a>
+          <a href="runs-list.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">历史</a>
+          <a href="agent-detail.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">Agents</a>
+          <a href="rules-library.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">军规库</a>
+          <a href="knowledge-graph.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">知识图谱</a>
+          <a href="operations.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">AI 资产</a>
+          <a href="people-ops.html" class="px-3 py-1.5 rounded-md bg-[var(--bg-elev)] text-[var(--text-strong)] font-medium">人员运营</a>
+        </nav>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="btn">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          本周
+        </button>
+        <button class="btn">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          导出
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-[1480px] mx-auto px-8 py-8">
+
+    <!-- ==================== HEADER ==================== -->
+    <section class="mb-7 flex items-end justify-between">
+      <div>
+        <div class="caps mb-1.5">People Ops</div>
+        <h1 class="font-display text-[44px] leading-[1.05] text-[var(--text-strong)]">人员运营 <span class="italic font-light text-[var(--text-muted)]">— 每个工程师的 AI 杠杆</span></h1>
+        <p class="text-[13px] text-[var(--text-muted)] mt-1.5">Skill 调用 · Token 消耗 · 投入时长 · 代码产出 · AI 直接生成占比 · 节省工时</p>
+      </div>
+      <div class="flex items-center gap-2 text-[10.5px]">
+        <span class="chip" style="background:var(--bg-elev); color:var(--text-muted)">本周 · 24 工程师</span>
+        <span class="chip" style="background:var(--done-soft); color:var(--done)">活跃 <span class="font-mono">21</span></span>
+        <button class="btn !py-1 !px-2.5 !text-[11px]">按团队拆分</button>
+      </div>
+    </section>
+
+    <!-- ==================== KPI STRIP ==================== -->
+    <section class="grid grid-cols-12 gap-4 mb-7">
+      <div class="col-span-3 card p-5">
+        <div class="flex items-baseline justify-between">
+          <span class="caps">人均 Skill 调用</span>
+          <span class="text-[10.5px]" style="color:var(--done)">↑ 22%</span>
+        </div>
+        <div class="font-display text-[40px] text-[var(--text-strong)] leading-none mt-1.5">1,186</div>
+        <div class="flex items-center gap-1.5 mt-2.5">
+          <div class="flex-1 bar-track !h-[3px]"><div class="bar-fill" style="width:74%; background:var(--a-req)"></div></div>
+          <span class="text-[10px] font-mono text-[var(--text-faint)]">vs 团队均值</span>
+        </div>
+        <div class="text-[11px] text-[var(--text-muted)] mt-2">使用 <span class="font-mono text-[var(--text-strong)]">47</span> 个 Skill · 最常用 <span class="font-mono">14</span></div>
+      </div>
+
+      <div class="col-span-3 card p-5">
+        <div class="flex items-baseline justify-between">
+          <span class="caps">人均 Token</span>
+          <span class="text-[10.5px]" style="color:var(--run)">↑ 18%</span>
+        </div>
+        <div class="font-display text-[40px] text-[var(--text-strong)] leading-none mt-1.5">516<span class="text-[16px] text-[var(--text-muted)] ml-0.5">k</span></div>
+        <div class="text-[11px] text-[var(--text-muted)] mt-2.5">≈ ¥ <span class="font-mono text-[var(--text-strong)]">130.3</span> / 人 · 周</div>
+        <div class="text-[10.5px] text-[var(--text-faint)] mt-1">本周累计 <span class="font-mono">12.4M</span> · ¥ <span class="font-mono">3,128</span></div>
+      </div>
+
+      <div class="col-span-3 card p-5">
+        <div class="flex items-baseline justify-between">
+          <span class="caps">AI 直接生成代码</span>
+          <span class="text-[10.5px]" style="color:var(--done)">↑ 7.4</span>
+        </div>
+        <div class="font-display text-[40px] text-[var(--text-strong)] leading-none mt-1.5">62.4<span class="text-[16px] text-[var(--text-muted)] ml-0.5">%</span></div>
+        <div class="mt-3 h-1.5 rounded-full overflow-hidden flex" style="background:var(--border-soft)">
+          <div style="width:62%; background:linear-gradient(90deg, var(--a-dev), var(--done))"></div>
+          <div style="width:23%; background:var(--a-arch); opacity:.5"></div>
+        </div>
+        <div class="text-[10.5px] text-[var(--text-faint)] mt-1.5">生成 62.4% · AI 改 23% · 手写 14.6%</div>
+      </div>
+
+      <div class="col-span-3 card p-5" style="background:linear-gradient(135deg, oklch(96% 0.04 150) 0%, var(--bg-card) 60%)">
+        <div class="flex items-baseline justify-between">
+          <span class="caps">节省工时 · 本周</span>
+          <span class="text-[10.5px]" style="color:var(--done)">+ 218h</span>
+        </div>
+        <div class="font-display text-[40px] text-[var(--text-strong)] leading-none mt-1.5">1,842<span class="text-[16px] text-[var(--text-muted)] ml-0.5">h</span></div>
+        <div class="text-[11px] text-[var(--text-muted)] mt-2.5">折合 <span class="font-mono text-[var(--text-strong)]">≈ 11.5</span> 人月</div>
+        <div class="text-[10.5px] text-[var(--text-faint)] mt-1">按 ¥420/h 计 ¥<span class="font-mono">773k</span></div>
+      </div>
+    </section>
+
+    <!-- ==================== DETAIL GRID ==================== -->
+    <section class="grid grid-cols-12 gap-5 mb-7">
+
+      <!-- People table -->
+      <div class="col-span-8 card p-0 overflow-hidden">
+        <div class="flex items-center justify-between p-5 pb-3">
+          <div>
+            <div class="caps mb-1">工程师 · 本周明细 · Top 8 / 24</div>
+            <div class="text-[12.5px] text-[var(--text-muted)]">按 AI 杠杆指数 (节省工时 / 投入工时) 排序</div>
+          </div>
+          <div class="flex items-center gap-1.5 bg-[var(--bg-elev)] rounded-md p-0.5">
+            <button class="px-2.5 py-1 rounded text-[11px] bg-white shadow-sm font-medium text-[var(--text-strong)]">杠杆</button>
+            <button class="px-2.5 py-1 rounded text-[11px] text-[var(--text-muted)]">Skill</button>
+            <button class="px-2.5 py-1 rounded text-[11px] text-[var(--text-muted)]">Token</button>
+            <button class="px-2.5 py-1 rounded text-[11px] text-[var(--text-muted)]">LOC</button>
+          </div>
+        </div>
+        <table class="lean w-full">
+          <thead>
+            <tr>
+              <th>工程师</th>
+              <th class="text-right">投入</th>
+              <th class="text-right">Skill</th>
+              <th class="text-right">Token</th>
+              <th class="text-right">LOC</th>
+              <th>AI 生成占比</th>
+              <th class="text-right">杠杆</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-br from-violet-300 to-violet-500 text-white text-[11px] font-semibold flex items-center justify-center">王</div>
+                  <div>
+                    <div class="font-medium text-[var(--text-strong)]">王明哲</div>
+                    <div class="text-[10px] font-mono text-[var(--text-faint)]">支付 · 后端</div>
+                  </div>
+                </div>
+              </td>
+              <td class="text-right font-mono">38.2h</td>
+              <td class="text-right font-mono">2,184<div class="text-[10px] text-[var(--text-faint)] font-mono">14 skill</div></td>
+              <td class="text-right font-mono">1.42M<div class="text-[10px] text-[var(--text-faint)]">¥ 358</div></td>
+              <td class="text-right font-mono">+4,128<div class="text-[10px] text-[var(--text-faint)]">-612 删</div></td>
+              <td class="w-[180px]">
+                <div class="h-2 rounded-full overflow-hidden flex" style="background:var(--border-soft)">
+                  <div style="width:78%; background:var(--a-dev)"></div>
+                  <div style="width:14%; background:var(--a-arch); opacity:.6"></div>
+                </div>
+                <div class="text-[10px] text-[var(--text-faint)] mt-0.5"><span style="color:var(--a-dev)">生成 78%</span> · 改 14% · 手写 8%</div>
+              </td>
+              <td class="text-right"><span class="font-mono text-[14px] font-semibold" style="color:var(--done)">4.8×</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-300 to-emerald-500 text-white text-[11px] font-semibold flex items-center justify-center">张</div>
+                  <div>
+                    <div class="font-medium text-[var(--text-strong)]">张雪琪</div>
+                    <div class="text-[10px] font-mono text-[var(--text-faint)]">用户域 · 全栈</div>
+                  </div>
+                </div>
+              </td>
+              <td class="text-right font-mono">36.8h</td>
+              <td class="text-right font-mono">1,912<div class="text-[10px] text-[var(--text-faint)] font-mono">12 skill</div></td>
+              <td class="text-right font-mono">1.28M<div class="text-[10px] text-[var(--text-faint)]">¥ 314</div></td>
+              <td class="text-right font-mono">+3,840<div class="text-[10px] text-[var(--text-faint)]">-428 删</div></td>
+              <td>
+                <div class="h-2 rounded-full overflow-hidden flex" style="background:var(--border-soft)">
+                  <div style="width:71%; background:var(--a-dev)"></div>
+                  <div style="width:19%; background:var(--a-arch); opacity:.6"></div>
+                </div>
+                <div class="text-[10px] text-[var(--text-faint)] mt-0.5"><span style="color:var(--a-dev)">生成 71%</span> · 改 19% · 手写 10%</div>
+              </td>
+              <td class="text-right"><span class="font-mono text-[14px] font-semibold" style="color:var(--done)">4.2×</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-br from-amber-300 to-amber-500 text-white text-[11px] font-semibold flex items-center justify-center">李</div>
+                  <div>
+                    <div class="font-medium text-[var(--text-strong)]">李宇航</div>
+                    <div class="text-[10px] font-mono text-[var(--text-faint)]">架构 · Tech Lead</div>
+                  </div>
+                </div>
+              </td>
+              <td class="text-right font-mono">32.1h</td>
+              <td class="text-right font-mono">1,548<div class="text-[10px] text-[var(--text-faint)] font-mono">18 skill</div></td>
+              <td class="text-right font-mono">1.86M<div class="text-[10px] text-[var(--text-faint)]">¥ 471</div></td>
+              <td class="text-right font-mono">+2,164<div class="text-[10px] text-[var(--text-faint)]">-1,802 重构</div></td>
+              <td>
+                <div class="h-2 rounded-full overflow-hidden flex" style="background:var(--border-soft)">
+                  <div style="width:48%; background:var(--a-dev)"></div>
+                  <div style="width:34%; background:var(--a-arch); opacity:.6"></div>
+                </div>
+                <div class="text-[10px] text-[var(--text-faint)] mt-0.5"><span style="color:var(--a-dev)">生成 48%</span> · 改 34% · 手写 18%</div>
+              </td>
+              <td class="text-right"><span class="font-mono text-[14px] font-semibold" style="color:var(--done)">3.9×</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-br from-sky-300 to-sky-500 text-white text-[11px] font-semibold flex items-center justify-center">陈</div>
+                  <div>
+                    <div class="font-medium text-[var(--text-strong)]">陈思远</div>
+                    <div class="text-[10px] font-mono text-[var(--text-faint)]">订单 · 后端</div>
+                  </div>
+                </div>
+              </td>
+              <td class="text-right font-mono">34.5h</td>
+              <td class="text-right font-mono">1,420<div class="text-[10px] text-[var(--text-faint)] font-mono">11 skill</div></td>
+              <td class="text-right font-mono">0.94M<div class="text-[10px] text-[var(--text-faint)]">¥ 236</div></td>
+              <td class="text-right font-mono">+3,210<div class="text-[10px] text-[var(--text-faint)]">-540 删</div></td>
+              <td>
+                <div class="h-2 rounded-full overflow-hidden flex" style="background:var(--border-soft)">
+                  <div style="width:64%; background:var(--a-dev)"></div>
+                  <div style="width:22%; background:var(--a-arch); opacity:.6"></div>
+                </div>
+                <div class="text-[10px] text-[var(--text-faint)] mt-0.5"><span style="color:var(--a-dev)">生成 64%</span> · 改 22% · 手写 14%</div>
+              </td>
+              <td class="text-right"><span class="font-mono text-[14px] font-semibold" style="color:var(--done)">3.6×</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-br from-rose-300 to-rose-500 text-white text-[11px] font-semibold flex items-center justify-center">林</div>
+                  <div>
+                    <div class="font-medium text-[var(--text-strong)]">林婉清</div>
+                    <div class="text-[10px] font-mono text-[var(--text-faint)]">前端 · 用户体验</div>
+                  </div>
+                </div>
+              </td>
+              <td class="text-right font-mono">30.4h</td>
+              <td class="text-right font-mono">1,184<div class="text-[10px] text-[var(--text-faint)] font-mono">9 skill</div></td>
+              <td class="text-right font-mono">0.72M<div class="text-[10px] text-[var(--text-faint)]">¥ 188</div></td>
+              <td class="text-right font-mono">+2,840<div class="text-[10px] text-[var(--text-faint)]">-320 删</div></td>
+              <td>
+                <div class="h-2 rounded-full overflow-hidden flex" style="background:var(--border-soft)">
+                  <div style="width:58%; background:var(--a-dev)"></div>
+                  <div style="width:24%; background:var(--a-arch); opacity:.6"></div>
+                </div>
+                <div class="text-[10px] text-[var(--text-faint)] mt-0.5"><span style="color:var(--a-dev)">生成 58%</span> · 改 24% · 手写 18%</div>
+              </td>
+              <td class="text-right"><span class="font-mono text-[14px] font-semibold" style="color:var(--run)">3.2×</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-br from-cyan-300 to-cyan-500 text-white text-[11px] font-semibold flex items-center justify-center">赵</div>
+                  <div>
+                    <div class="font-medium text-[var(--text-strong)]">赵浩宇</div>
+                    <div class="text-[10px] font-mono text-[var(--text-faint)]">数据 · 平台</div>
+                  </div>
+                </div>
+              </td>
+              <td class="text-right font-mono">28.6h</td>
+              <td class="text-right font-mono">982<div class="text-[10px] text-[var(--text-faint)] font-mono">7 skill</div></td>
+              <td class="text-right font-mono">0.61M<div class="text-[10px] text-[var(--text-faint)]">¥ 154</div></td>
+              <td class="text-right font-mono">+1,840<div class="text-[10px] text-[var(--text-faint)]">-218 删</div></td>
+              <td>
+                <div class="h-2 rounded-full overflow-hidden flex" style="background:var(--border-soft)">
+                  <div style="width:54%; background:var(--a-dev)"></div>
+                  <div style="width:21%; background:var(--a-arch); opacity:.6"></div>
+                </div>
+                <div class="text-[10px] text-[var(--text-faint)] mt-0.5"><span style="color:var(--a-dev)">生成 54%</span> · 改 21% · 手写 25%</div>
+              </td>
+              <td class="text-right"><span class="font-mono text-[14px] font-semibold" style="color:var(--run)">2.8×</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-br from-fuchsia-300 to-fuchsia-500 text-white text-[11px] font-semibold flex items-center justify-center">吴</div>
+                  <div>
+                    <div class="font-medium text-[var(--text-strong)]">吴佳琪</div>
+                    <div class="text-[10px] font-mono text-[var(--text-faint)]">测试 · QA</div>
+                  </div>
+                </div>
+              </td>
+              <td class="text-right font-mono">26.8h</td>
+              <td class="text-right font-mono">864<div class="text-[10px] text-[var(--text-faint)] font-mono">6 skill</div></td>
+              <td class="text-right font-mono">0.48M<div class="text-[10px] text-[var(--text-faint)]">¥ 121</div></td>
+              <td class="text-right font-mono">+1,420<div class="text-[10px] text-[var(--text-faint)]">SIT 用例</div></td>
+              <td>
+                <div class="h-2 rounded-full overflow-hidden flex" style="background:var(--border-soft)">
+                  <div style="width:68%; background:var(--a-dev)"></div>
+                  <div style="width:18%; background:var(--a-arch); opacity:.6"></div>
+                </div>
+                <div class="text-[10px] text-[var(--text-faint)] mt-0.5"><span style="color:var(--a-dev)">生成 68%</span> · 改 18% · 手写 14%</div>
+              </td>
+              <td class="text-right"><span class="font-mono text-[14px] font-semibold" style="color:var(--run)">2.6×</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-br from-stone-300 to-stone-500 text-white text-[11px] font-semibold flex items-center justify-center">周</div>
+                  <div>
+                    <div class="font-medium text-[var(--text-strong)]">周建国</div>
+                    <div class="text-[10px] font-mono text-[var(--text-faint)]">遗留 · 后端</div>
+                  </div>
+                </div>
+              </td>
+              <td class="text-right font-mono">42.0h</td>
+              <td class="text-right font-mono">218<div class="text-[10px] text-[var(--text-faint)] font-mono">3 skill</div></td>
+              <td class="text-right font-mono">0.12M<div class="text-[10px] text-[var(--text-faint)]">¥ 30</div></td>
+              <td class="text-right font-mono">+812<div class="text-[10px] text-[var(--text-faint)]">-92 删</div></td>
+              <td>
+                <div class="h-2 rounded-full overflow-hidden flex" style="background:var(--border-soft)">
+                  <div style="width:18%; background:var(--a-dev)"></div>
+                  <div style="width:14%; background:var(--a-arch); opacity:.6"></div>
+                </div>
+                <div class="text-[10px] text-[var(--text-faint)] mt-0.5"><span style="color:var(--halt)">生成 18%</span> · 改 14% · 手写 68%</div>
+              </td>
+              <td class="text-right"><span class="font-mono text-[14px] font-semibold" style="color:var(--halt)">0.7×</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="px-5 py-3 border-t border-[var(--border-soft)] bg-[var(--bg-elev)] flex items-center justify-between text-[11.5px]">
+          <div class="text-[var(--text-muted)]">团队均值 · <span class="font-mono">3.1×</span> 杠杆 · <span class="font-mono">62.4%</span> AI 生成 · <span class="font-mono">2,684</span> LOC/人</div>
+          <a href="#" class="text-[var(--text-strong)] hover:underline">导出 CSV →</a>
+        </div>
+      </div>
+
+      <!-- Side rail -->
+      <div class="col-span-4 space-y-5">
+
+        <!-- AI 杠杆之星 -->
+        <div class="card p-5" style="background:linear-gradient(160deg, oklch(95% 0.04 150) 0%, var(--bg-card) 55%)">
+          <div class="flex items-center justify-between mb-3">
+            <span class="caps">AI 杠杆之星 · 本周</span>
+            <span class="chip text-[10px]" style="background:var(--done-soft); color:var(--done)">#1</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-300 to-violet-600 text-white text-[20px] font-display font-medium flex items-center justify-center shadow-md">王</div>
+            <div class="flex-1">
+              <div class="text-[15px] font-semibold text-[var(--text-strong)]">王明哲</div>
+              <div class="text-[11px] text-[var(--text-muted)]">支付 · 后端</div>
+              <div class="text-[10.5px] font-mono mt-1" style="color:var(--done)">4.8× 杠杆 · 节省 145h</div>
+            </div>
+          </div>
+          <div class="mt-3.5 grid grid-cols-3 gap-2 text-center">
+            <div class="rounded-lg py-2" style="background:var(--bg-elev)">
+              <div class="font-mono text-[16px] font-semibold text-[var(--text-strong)]">2.1k</div>
+              <div class="text-[9.5px] text-[var(--text-muted)] mt-0.5">Skill</div>
+            </div>
+            <div class="rounded-lg py-2" style="background:var(--bg-elev)">
+              <div class="font-mono text-[16px] font-semibold text-[var(--text-strong)]">4.1k</div>
+              <div class="text-[9.5px] text-[var(--text-muted)] mt-0.5">LOC</div>
+            </div>
+            <div class="rounded-lg py-2" style="background:var(--bg-elev)">
+              <div class="font-mono text-[16px] font-semibold text-[var(--text-strong)]">78%</div>
+              <div class="text-[9.5px] text-[var(--text-muted)] mt-0.5">AI 生成</div>
+            </div>
+          </div>
+          <div class="mt-3 pt-3 border-t border-[var(--border-soft)] text-[10.5px] text-[var(--text-muted)]">
+            <span class="font-medium text-[var(--text-strong)]">最常用 Skill:</span>
+            <span class="chip !text-[9.5px] !py-0.5 ml-1" style="background:oklch(58% 0.14 150 / .12); color:var(--a-dev)">code-generate-java ×412</span>
+          </div>
+        </div>
+
+        <!-- 关注名单 -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <span class="caps">关注名单</span>
+              <div class="text-[11px] text-[var(--text-muted)] mt-0.5">AI 杠杆 &lt; 1× · 建议结对培训</div>
+            </div>
+            <span class="chip text-[10px]" style="background:oklch(95% 0.04 25); color:var(--halt)">3 人</span>
+          </div>
+          <div class="space-y-2.5">
+            <div class="flex items-center gap-2.5 p-2 rounded-lg" style="background:var(--bg-elev)">
+              <div class="w-7 h-7 rounded-full bg-gradient-to-br from-stone-300 to-stone-500 text-white text-[10.5px] font-semibold flex items-center justify-center">周</div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[12px] font-medium text-[var(--text-strong)]">周建国</div>
+                <div class="text-[10px] text-[var(--text-muted)]">3 skill · 手写 68% · 0.7× 杠杆</div>
+              </div>
+              <button class="text-[10.5px] hover:underline" style="color:var(--text-strong)">配对 →</button>
+            </div>
+            <div class="flex items-center gap-2.5 p-2 rounded-lg" style="background:var(--bg-elev)">
+              <div class="w-7 h-7 rounded-full bg-gradient-to-br from-stone-300 to-stone-500 text-white text-[10.5px] font-semibold flex items-center justify-center">郑</div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[12px] font-medium text-[var(--text-strong)]">郑文轩</div>
+                <div class="text-[10px] text-[var(--text-muted)]">2 skill · 手写 74% · 0.6× 杠杆</div>
+              </div>
+              <button class="text-[10.5px] hover:underline" style="color:var(--text-strong)">配对 →</button>
+            </div>
+            <div class="flex items-center gap-2.5 p-2 rounded-lg" style="background:var(--bg-elev)">
+              <div class="w-7 h-7 rounded-full bg-gradient-to-br from-stone-300 to-stone-500 text-white text-[10.5px] font-semibold flex items-center justify-center">孙</div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[12px] font-medium text-[var(--text-strong)]">孙立伟</div>
+                <div class="text-[10px] text-[var(--text-muted)]">4 skill · 手写 62% · 0.9× 杠杆</div>
+              </div>
+              <button class="text-[10.5px] hover:underline" style="color:var(--text-strong)">配对 →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Skill heatmap -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-2">
+            <span class="caps">Skill × 工程师 · 热度</span>
+            <span class="text-[10px] text-[var(--text-faint)] font-mono">7d</span>
+          </div>
+          <div class="text-[10.5px] text-[var(--text-muted)] mb-3">列 = 前 6 Skill · 行 = Top 6 工程师</div>
+          <div class="overflow-hidden">
+            <div class="grid grid-cols-[60px_repeat(6,_1fr)] gap-1 text-[9.5px]">
+              <div></div>
+              <div class="text-[var(--text-muted)] text-center truncate" title="requirement-decompose">需求</div>
+              <div class="text-[var(--text-muted)] text-center truncate" title="code-generate">代码</div>
+              <div class="text-[var(--text-muted)] text-center truncate" title="code-review-guard">军规</div>
+              <div class="text-[var(--text-muted)] text-center truncate" title="kg-entity-search">KG</div>
+              <div class="text-[var(--text-muted)] text-center truncate" title="test-strategy-gen">测试</div>
+              <div class="text-[var(--text-muted)] text-center truncate" title="domain-context">业务</div>
+
+              <div class="text-[var(--text-muted)] truncate">王明哲</div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .88)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / 1.0)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .72)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .58)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .42)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .68)"></div>
+
+              <div class="text-[var(--text-muted)] truncate">张雪琪</div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .76)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .92)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .60)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .68)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .54)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .38)"></div>
+
+              <div class="text-[var(--text-muted)] truncate">李宇航</div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .82)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .50)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .94)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .86)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .48)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .58)"></div>
+
+              <div class="text-[var(--text-muted)] truncate">陈思远</div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .52)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .82)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .56)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .46)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .36)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .42)"></div>
+
+              <div class="text-[var(--text-muted)] truncate">林婉清</div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .44)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .74)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .50)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .32)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .58)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .42)"></div>
+
+              <div class="text-[var(--text-muted)] truncate">周建国</div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .14)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .22)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .08)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .12)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .06)"></div>
+              <div class="rounded-[3px] h-5" style="background:oklch(62% 0.16 245 / .10)"></div>
+            </div>
+          </div>
+          <div class="mt-3 flex items-center justify-between text-[10px] text-[var(--text-faint)]">
+            <span>低</span>
+            <div class="flex-1 h-1 mx-2 rounded-full" style="background:linear-gradient(90deg, oklch(62% 0.16 245 / .08), oklch(62% 0.16 245 / 1.0))"></div>
+            <span>高</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== TEAM SPLIT + WEEKLY ACTIVITY ==================== -->
+    <section class="grid grid-cols-12 gap-5 mb-7">
+
+      <!-- Team split -->
+      <div class="col-span-7 card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <div class="caps mb-1">团队 AI 杠杆对比</div>
+            <div class="text-[12.5px] text-[var(--text-muted)]">按 BU 聚合 · 颜色编码 AI 生成占比</div>
+          </div>
+          <span class="chip text-[10px]" style="background:var(--bg-elev); color:var(--text-muted)">5 团队</span>
+        </div>
+
+        <div class="space-y-3.5">
+          <!-- team row -->
+          <div class="flex items-center gap-4">
+            <div class="w-24 flex-shrink-0">
+              <div class="text-[12px] font-medium text-[var(--text-strong)]">支付 · 后端</div>
+              <div class="text-[10px] font-mono text-[var(--text-faint)]">6 人 · 218h</div>
+            </div>
+            <div class="flex-1">
+              <div class="h-7 rounded-md relative overflow-hidden flex" style="background:var(--border-soft)">
+                <div class="h-full flex items-center justify-end pr-2 text-[10.5px] text-white font-mono" style="width:78%; background:linear-gradient(90deg, var(--a-dev), oklch(60% 0.14 150))">4.4× · AI 72%</div>
+              </div>
+            </div>
+            <div class="w-16 text-right font-mono text-[12.5px] font-semibold" style="color:var(--done)">¥184k</div>
+          </div>
+
+          <div class="flex items-center gap-4">
+            <div class="w-24 flex-shrink-0">
+              <div class="text-[12px] font-medium text-[var(--text-strong)]">用户域</div>
+              <div class="text-[10px] font-mono text-[var(--text-faint)]">5 人 · 184h</div>
+            </div>
+            <div class="flex-1">
+              <div class="h-7 rounded-md relative overflow-hidden flex" style="background:var(--border-soft)">
+                <div class="h-full flex items-center justify-end pr-2 text-[10.5px] text-white font-mono" style="width:70%; background:linear-gradient(90deg, var(--a-dev), oklch(60% 0.14 150))">3.8× · AI 68%</div>
+              </div>
+            </div>
+            <div class="w-16 text-right font-mono text-[12.5px] font-semibold" style="color:var(--done)">¥146k</div>
+          </div>
+
+          <div class="flex items-center gap-4">
+            <div class="w-24 flex-shrink-0">
+              <div class="text-[12px] font-medium text-[var(--text-strong)]">订单</div>
+              <div class="text-[10px] font-mono text-[var(--text-faint)]">4 人 · 142h</div>
+            </div>
+            <div class="flex-1">
+              <div class="h-7 rounded-md relative overflow-hidden flex" style="background:var(--border-soft)">
+                <div class="h-full flex items-center justify-end pr-2 text-[10.5px] text-white font-mono" style="width:62%; background:linear-gradient(90deg, var(--a-dev), oklch(60% 0.14 150))">3.4× · AI 62%</div>
+              </div>
+            </div>
+            <div class="w-16 text-right font-mono text-[12.5px] font-semibold" style="color:var(--done)">¥98k</div>
+          </div>
+
+          <div class="flex items-center gap-4">
+            <div class="w-24 flex-shrink-0">
+              <div class="text-[12px] font-medium text-[var(--text-strong)]">前端 · UX</div>
+              <div class="text-[10px] font-mono text-[var(--text-faint)]">5 人 · 156h</div>
+            </div>
+            <div class="flex-1">
+              <div class="h-7 rounded-md relative overflow-hidden flex" style="background:var(--border-soft)">
+                <div class="h-full flex items-center justify-end pr-2 text-[10.5px] text-white font-mono" style="width:54%; background:linear-gradient(90deg, var(--run), oklch(70% 0.15 65))">3.0× · AI 56%</div>
+              </div>
+            </div>
+            <div class="w-16 text-right font-mono text-[12.5px] font-semibold" style="color:var(--done)">¥78k</div>
+          </div>
+
+          <div class="flex items-center gap-4">
+            <div class="w-24 flex-shrink-0">
+              <div class="text-[12px] font-medium text-[var(--text-strong)]">遗留维护</div>
+              <div class="text-[10px] font-mono text-[var(--text-faint)]">4 人 · 168h</div>
+            </div>
+            <div class="flex-1">
+              <div class="h-7 rounded-md relative overflow-hidden flex" style="background:var(--border-soft)">
+                <div class="h-full flex items-center justify-end pr-2 text-[10.5px] text-white font-mono" style="width:24%; background:linear-gradient(90deg, var(--halt), oklch(65% 0.18 25))">1.1× · AI 22%</div>
+              </div>
+            </div>
+            <div class="w-16 text-right font-mono text-[12.5px]" style="color:var(--halt)">¥-22k</div>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-[var(--border-soft)] flex items-center justify-between text-[11px]">
+          <span class="text-[var(--text-muted)]">遗留维护团队 AI 杠杆显著低于均值 · 建议安排 ECC 进阶培训</span>
+          <a href="#" class="text-[var(--text-strong)] hover:underline">查看培训计划 →</a>
+        </div>
+      </div>
+
+      <!-- Weekly trend -->
+      <div class="col-span-5 card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <div class="caps mb-1">人均 AI 杠杆 · 8 周趋势</div>
+            <div class="text-[12.5px] text-[var(--text-muted)]">从 ECC 上线 W37 起累计</div>
+          </div>
+          <span class="font-mono text-[14px] font-semibold" style="color:var(--done)">+165%</span>
+        </div>
+        <svg viewBox="0 0 360 180" class="w-full" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="leverageGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="oklch(58% 0.14 150)" stop-opacity=".28"/>
+              <stop offset="100%" stop-color="oklch(58% 0.14 150)" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <!-- gridlines -->
+          <line x1="0" y1="40"  x2="360" y2="40"  stroke="oklch(93% 0.005 85)" stroke-width="1"/>
+          <line x1="0" y1="90"  x2="360" y2="90"  stroke="oklch(93% 0.005 85)" stroke-width="1"/>
+          <line x1="0" y1="140" x2="360" y2="140" stroke="oklch(93% 0.005 85)" stroke-width="1"/>
+          <!-- area -->
+          <polyline fill="url(#leverageGrad)" stroke="none"
+            points="0,150 50,138 100,124 150,108 200,88 250,68 300,48 360,32 360,180 0,180"/>
+          <!-- main line -->
+          <polyline fill="none" stroke="oklch(58% 0.14 150)" stroke-width="2.2"
+            points="0,150 50,138 100,124 150,108 200,88 250,68 300,48 360,32"/>
+          <!-- points -->
+          <circle cx="0"   cy="150" r="3" fill="oklch(58% 0.14 150)"/>
+          <circle cx="50"  cy="138" r="3" fill="oklch(58% 0.14 150)"/>
+          <circle cx="100" cy="124" r="3" fill="oklch(58% 0.14 150)"/>
+          <circle cx="150" cy="108" r="3" fill="oklch(58% 0.14 150)"/>
+          <circle cx="200" cy="88"  r="3" fill="oklch(58% 0.14 150)"/>
+          <circle cx="250" cy="68"  r="3" fill="oklch(58% 0.14 150)"/>
+          <circle cx="300" cy="48"  r="3" fill="oklch(58% 0.14 150)"/>
+          <circle cx="360" cy="32"  r="4" fill="oklch(58% 0.14 150)" stroke="white" stroke-width="2"/>
+          <!-- annotation -->
+          <line x1="360" y1="32" x2="360" y2="0" stroke="oklch(58% 0.14 150)" stroke-dasharray="2 2" stroke-width="1"/>
+          <text x="324" y="14" font-size="10" font-family="JetBrains Mono" fill="oklch(22% 0.03 260)" font-weight="600">3.1× 本周</text>
+        </svg>
+        <div class="grid grid-cols-4 gap-3 text-center text-[10px] text-[var(--text-faint)] font-mono mt-1">
+          <span>W37</span><span>W39</span><span>W42</span><span>W45</span>
+        </div>
+        <div class="mt-4 pt-4 border-t border-[var(--border-soft)] grid grid-cols-3 gap-3 text-center">
+          <div>
+            <div class="font-mono text-[18px] font-semibold text-[var(--text-strong)]">1.2×</div>
+            <div class="text-[10px] text-[var(--text-muted)] mt-0.5">起点</div>
+          </div>
+          <div>
+            <div class="font-mono text-[18px] font-semibold" style="color:var(--done)">3.1×</div>
+            <div class="text-[10px] text-[var(--text-muted)] mt-0.5">本周</div>
+          </div>
+          <div>
+            <div class="font-mono text-[18px] font-semibold text-[var(--text-strong)]">4.5×</div>
+            <div class="text-[10px] text-[var(--text-muted)] mt-0.5">Q4 目标</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SKILL ADOPTION + TIME ALLOCATION ==================== -->
+    <section class="grid grid-cols-12 gap-5 mb-7">
+
+      <!-- Skill adoption -->
+      <div class="col-span-7 card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <div class="caps mb-1">Skill 普及度 · 人数覆盖</div>
+            <div class="text-[12.5px] text-[var(--text-muted)]">高价值 Skill 在团队中的渗透率 · 24 工程师</div>
+          </div>
+          <a href="rules-library.html" class="text-[11.5px] text-[var(--text-strong)] hover:underline">军规库 →</a>
+        </div>
+        <div class="space-y-3">
+          <div>
+            <div class="flex items-baseline justify-between mb-1">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-[12px] text-[var(--text-strong)]">code-generate-java</span>
+                <span class="chip !text-[9.5px] !py-0.5" style="background:oklch(58% 0.14 150 / .12); color:var(--a-dev)">代码</span>
+              </div>
+              <span class="text-[10.5px] text-[var(--text-muted)]"><span class="font-mono text-[var(--text-strong)]">22</span> / 24 人 · 92%</span>
+            </div>
+            <div class="bar-track !h-1.5"><div class="bar-fill" style="width:92%; background:var(--a-dev)"></div></div>
+          </div>
+
+          <div>
+            <div class="flex items-baseline justify-between mb-1">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-[12px] text-[var(--text-strong)]">code-review-guard</span>
+                <span class="chip !text-[9.5px] !py-0.5" style="background:oklch(60% 0.20 25 / .12); color:var(--a-sec)">军规</span>
+              </div>
+              <span class="text-[10.5px] text-[var(--text-muted)]"><span class="font-mono text-[var(--text-strong)]">20</span> / 24 人 · 83%</span>
+            </div>
+            <div class="bar-track !h-1.5"><div class="bar-fill" style="width:83%; background:var(--a-sec)"></div></div>
+          </div>
+
+          <div>
+            <div class="flex items-baseline justify-between mb-1">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-[12px] text-[var(--text-strong)]">requirement-decompose</span>
+                <span class="chip !text-[9.5px] !py-0.5" style="background:oklch(62% 0.16 245 / .12); color:var(--a-req)">需求</span>
+              </div>
+              <span class="text-[10.5px] text-[var(--text-muted)]"><span class="font-mono text-[var(--text-strong)]">17</span> / 24 人 · 71%</span>
+            </div>
+            <div class="bar-track !h-1.5"><div class="bar-fill" style="width:71%; background:var(--a-req)"></div></div>
+          </div>
+
+          <div>
+            <div class="flex items-baseline justify-between mb-1">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-[12px] text-[var(--text-strong)]">kg-entity-search</span>
+                <span class="chip !text-[9.5px] !py-0.5" style="background:oklch(60% 0.18 295 / .12); color:var(--a-graph)">KG</span>
+              </div>
+              <span class="text-[10.5px] text-[var(--text-muted)]"><span class="font-mono text-[var(--text-strong)]">14</span> / 24 人 · 58%</span>
+            </div>
+            <div class="bar-track !h-1.5"><div class="bar-fill" style="width:58%; background:var(--a-graph)"></div></div>
+          </div>
+
+          <div>
+            <div class="flex items-baseline justify-between mb-1">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-[12px] text-[var(--text-strong)]">test-strategy-gen</span>
+                <span class="chip !text-[9.5px] !py-0.5" style="background:oklch(56% 0.17 270 / .12); color:var(--a-test)">测试</span>
+                <span class="chip !text-[9.5px] !py-0.5" style="background:var(--done-soft); color:var(--done)">新</span>
+              </div>
+              <span class="text-[10.5px] text-[var(--text-muted)]"><span class="font-mono text-[var(--text-strong)]">9</span> / 24 人 · 38%</span>
+            </div>
+            <div class="bar-track !h-1.5"><div class="bar-fill" style="width:38%; background:var(--a-test)"></div></div>
+          </div>
+
+          <div>
+            <div class="flex items-baseline justify-between mb-1">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-[12px] text-[var(--text-strong)]">perf-rule-check</span>
+                <span class="chip !text-[9.5px] !py-0.5" style="background:oklch(70% 0.16 70 / .12); color:var(--a-perf)">性能</span>
+              </div>
+              <span class="text-[10.5px] text-[var(--text-muted)]"><span class="font-mono text-[var(--text-strong)]">6</span> / 24 人 · 25%</span>
+            </div>
+            <div class="bar-track !h-1.5"><div class="bar-fill" style="width:25%; background:var(--a-perf)"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Time allocation -->
+      <div class="col-span-5 card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <div class="caps mb-1">工程师时间去向</div>
+            <div class="text-[12.5px] text-[var(--text-muted)]">本周人均 32.8h · 与 AI 协作占 64%</div>
+          </div>
+        </div>
+
+        <!-- horizontal stacked bar -->
+        <div class="h-9 rounded-lg overflow-hidden flex shadow-inner">
+          <div class="flex items-center justify-center text-[10.5px] text-white font-mono" style="width:38%; background:var(--a-dev)">38% Skill</div>
+          <div class="flex items-center justify-center text-[10.5px] text-white font-mono" style="width:26%; background:var(--a-req)">26% 对话</div>
+          <div class="flex items-center justify-center text-[10.5px] text-white font-mono" style="width:20%; background:var(--a-arch)">20% 评审</div>
+          <div class="flex items-center justify-center text-[10.5px] text-white font-mono" style="width:16%; background:var(--text-muted)">16% 手写</div>
+        </div>
+
+        <div class="mt-4 space-y-2 text-[12px]">
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm" style="background:var(--a-dev)"></span>Skill 编排执行</span>
+            <span class="font-mono text-[var(--text-strong)]">12.4h <span class="text-[10px] text-[var(--text-faint)]">/ 人</span></span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm" style="background:var(--a-req)"></span>与 Agent 对话</span>
+            <span class="font-mono text-[var(--text-strong)]">8.5h</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm" style="background:var(--a-arch)"></span>评审 AI 产出</span>
+            <span class="font-mono text-[var(--text-strong)]">6.6h</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-sm" style="background:var(--text-muted)"></span>纯手写代码</span>
+            <span class="font-mono text-[var(--text-strong)]">5.3h</span>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-[var(--border-soft)] text-[11px]">
+          <div class="flex items-baseline justify-between">
+            <span class="text-[var(--text-muted)]">vs 上季度</span>
+            <span class="font-mono" style="color:var(--done)">手写从 38% ↓ 16%</span>
+          </div>
+          <div class="mt-1.5 flex items-baseline justify-between">
+            <span class="text-[var(--text-muted)]">评审时长占比</span>
+            <span class="font-mono" style="color:var(--run)">12% ↑ 20% · 角色转变中</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="mt-12 mb-6 text-center text-[11px] text-[var(--text-faint)]">
+      DevPipeline · 人员运营 · 数据延迟 < 30s · prototype v0.2
+    </footer>
+  </main>
+</body>
+</html>

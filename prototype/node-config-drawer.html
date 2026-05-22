@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>节点详细配置 · Drawer · AI 数字产线</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-base: oklch(98.8% 0.006 90);
+    --bg-warm: oklch(96.5% 0.018 75);
+    --ink: oklch(18% 0.02 260);
+    --ink-soft: oklch(38% 0.02 260);
+    --ink-mute: oklch(58% 0.015 260);
+    --line: oklch(90% 0.01 260);
+    --line-soft: oklch(94% 0.008 260);
+    --surface: oklch(100% 0 0);
+    --done: oklch(72% 0.16 150);
+    --run: oklch(80% 0.16 65);
+    --review: oklch(70% 0.16 290);
+    --halt: oklch(67% 0.20 25);
+    --idle: oklch(80% 0.01 260);
+    --a-dev: oklch(72% 0.17 150);
+    --a-sec: oklch(67% 0.20 25);
+    --a-perf: oklch(80% 0.16 65);
+    --accent: oklch(62% 0.18 255);
+  }
+  *{ -webkit-font-smoothing:antialiased; }
+  html,body{ background: var(--bg-base); color: var(--ink); font-family:'Inter',ui-sans-serif,system-ui,sans-serif; }
+  .display{ font-family:'Instrument Serif', ui-serif, Georgia, serif; letter-spacing:-0.01em; }
+  .mono{ font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace; font-variant-numeric: tabular-nums; }
+  .grain::before{
+    content:""; position:fixed; inset:0; pointer-events:none; opacity:.05; mix-blend-mode:multiply; z-index:1;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  /* Ghost canvas (parent page) */
+  .ghost-page{ filter: blur(2px) saturate(.7); opacity:.55; }
+  .ghost-card{ background: var(--surface); border:1px solid var(--line); border-radius:18px; padding:24px; }
+  .ghost-bar{ height:8px; border-radius:4px; background: var(--line-soft); }
+  /* Drawer */
+  .drawer-overlay{
+    background: oklch(15% 0.02 260 / 0.35);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+  }
+  .drawer{
+    background: var(--surface);
+    width: 640px; max-width: 92vw;
+    box-shadow: -32px 0 80px -20px oklch(15% 0.02 260 / .25), -8px 0 24px -8px oklch(15% 0.02 260 / .18);
+    border-left: 1px solid var(--line);
+  }
+  .tab{ font-size:12.5px; color: var(--ink-mute); padding:10px 14px; border-bottom: 2px solid transparent; cursor:pointer; white-space:nowrap; }
+  .tab.active{ color: var(--ink); border-bottom-color: var(--ink); font-weight:600; }
+  .section-h{ font-size:11px; color: var(--ink-mute); letter-spacing:.16em; text-transform: uppercase; }
+  .field-l{ font-size:12.5px; color: var(--ink-soft); }
+  .field-h{ font-size:11px; color: var(--ink-mute); margin-top:4px; }
+  .input{ width:100%; height:36px; border:1px solid var(--line); border-radius:8px; background: var(--surface); padding:0 12px; font-size:13.5px; color: var(--ink); }
+  .input:focus{ outline:none; border-color: oklch(70% 0.06 260); box-shadow: 0 0 0 4px oklch(70% 0.06 260 / .12); }
+  .pill{ font-size:11.5px; padding:3px 8px; border-radius:999px; background: oklch(97% 0.008 260); color: var(--ink-soft); border:1px solid var(--line-soft); }
+  .pill-active{ background: oklch(18% 0.02 260); color:#fff; border-color: oklch(18% 0.02 260); }
+  .switch{ width:34px; height:20px; border-radius:999px; background: var(--line); position:relative; cursor:pointer; transition: background .15s; }
+  .switch::after{ content:""; position:absolute; left:2px; top:2px; width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:0 1px 3px oklch(15% 0 0 / .25); transition: all .18s; }
+  .switch.on{ background: oklch(72% 0.16 150); }
+  .switch.on::after{ left: 16px; }
+  .slider-track{ height:4px; background: var(--line-soft); border-radius:999px; position:relative; }
+  .slider-fill{ position:absolute; left:0; top:0; height:100%; background: oklch(18% 0.02 260); border-radius:999px; }
+  .slider-knob{ position:absolute; top:50%; width:16px; height:16px; border-radius:50%; background:#fff; border:2px solid oklch(18% 0.02 260); transform: translate(-50%, -50%); box-shadow:0 1px 4px oklch(15% 0 0 / .15); }
+  .skill-row{ padding:10px 12px; border-radius:10px; border:1px solid var(--line-soft); background: var(--surface); display:flex; align-items:center; gap:10px; }
+  .skill-row + .skill-row{ margin-top:8px; }
+  .drag{ color: var(--ink-mute); cursor:grab; }
+  .badge-dot{ width:6px; height:6px; border-radius:50%; }
+  .agent-card{ border:1px solid var(--line); border-radius:14px; padding:14px; background: linear-gradient(180deg, var(--surface), oklch(98% 0.006 90)); }
+  .check-card{ border:1px solid var(--line); border-radius:10px; padding:10px 12px; display:flex; align-items:center; gap:10px; cursor:pointer; }
+  .check-card.checked{ border-color: oklch(72% 0.16 150 / .6); background: oklch(72% 0.16 150 / .07); }
+  .check-card.checked .check-box{ background: oklch(72% 0.16 150); border-color: oklch(72% 0.16 150); color:#fff; }
+  .check-box{ width:16px; height:16px; border:1.5px solid var(--line); border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:10px; flex-shrink:0; }
+  .kbd{ font-family:'JetBrains Mono',monospace; font-size:10.5px; padding:1.5px 5px; border-radius:4px; background: oklch(97% 0.008 260); border:1px solid var(--line); color: var(--ink-soft); }
+  .yaml-block{ background: oklch(20% 0.02 260); color: oklch(95% 0 0); font-family:'JetBrains Mono',monospace; font-size:11.5px; padding:12px 14px; border-radius:10px; line-height:1.75; }
+  .yaml-k{ color: oklch(82% 0.16 250); }
+  .yaml-v{ color: oklch(85% 0.14 150); }
+  .yaml-c{ color: oklch(60% 0.04 260); font-style: italic; }
+  .footer-pulse{ animation: pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{opacity:.4} 50%{opacity:.85} }
+</style>
+</head>
+<body class="grain">
+
+<!-- Ghost background (parent canvas) -->
+<div class="ghost-page fixed inset-0 overflow-hidden p-8">
+  <div class="max-w-[1280px] mx-auto">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="ghost-bar w-24"></div>
+      <div class="ghost-bar w-16"></div>
+      <div class="ghost-bar w-12 ml-auto"></div>
+    </div>
+    <div class="ghost-card mb-4 h-48"></div>
+    <div class="grid grid-cols-4 gap-3">
+      <div class="ghost-card h-40"></div>
+      <div class="ghost-card h-40"></div>
+      <div class="ghost-card h-40"></div>
+      <div class="ghost-card h-40"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay + Drawer -->
+<a href="index.html" class="drawer-overlay fixed inset-0 z-10" aria-label="返回数字产线"></a>
+
+<aside class="drawer fixed top-0 right-0 bottom-0 z-20 flex flex-col">
+
+  <!-- Drawer header -->
+  <div class="px-7 pt-6 pb-4 border-b border-[color:var(--line)]">
+    <div class="flex items-start justify-between">
+      <div>
+        <div class="flex items-center gap-2 mb-2">
+          <span class="pill" style="background: oklch(72% 0.16 150 / .12); color: oklch(40% 0.13 150); border-color: oklch(72% 0.16 150 / .35);">Stage 03 · 编码 + UT</span>
+          <span class="pill mono">DEV-3</span>
+          <span class="pill" style="background: oklch(80% 0.16 65 / .14); color: oklch(46% 0.16 65); border-color: oklch(80% 0.16 65 / .4);">运行中</span>
+        </div>
+        <h1 class="display text-[28px] leading-tight">LoginService<span class="text-[color:var(--ink-mute)]">.</span>login()</h1>
+        <div class="text-xs text-[color:var(--ink-mute)] mt-1 mono">auth-service / src/main/java/com/acme/auth/LoginService.java · 行 84–142</div>
+      </div>
+      <div class="flex items-center gap-1">
+        <button class="w-8 h-8 rounded-md hover:bg-[color:var(--line-soft)] flex items-center justify-center text-[color:var(--ink-mute)]" title="复制配置">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+        <button class="w-8 h-8 rounded-md hover:bg-[color:var(--line-soft)] flex items-center justify-center text-[color:var(--ink-mute)]" title="导出 YAML">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </button>
+        <a href="index.html" class="w-8 h-8 rounded-md hover:bg-[color:var(--line-soft)] flex items-center justify-center text-[color:var(--ink-mute)]" title="关闭">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex items-center gap-1 mt-5 -mb-4 border-b border-transparent overflow-x-auto">
+      <div class="tab active">通用</div>
+      <div class="tab">Agent</div>
+      <div class="tab">Skill <span class="kbd ml-1">5</span></div>
+      <div class="tab">Model</div>
+      <div class="tab">评审策略</div>
+      <div class="tab">触发条件</div>
+      <div class="tab">YAML</div>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="flex-1 overflow-y-auto px-7 py-6 space-y-7">
+
+    <!-- 通用 -->
+    <section>
+      <div class="section-h mb-3">通用</div>
+      <div class="grid grid-cols-2 gap-x-5 gap-y-4">
+        <div>
+          <div class="field-l">节点名称</div>
+          <input class="input mt-1.5" value="DEV-3 · LoginService.login()" />
+          <div class="field-h">在画布与日志中显示的标签</div>
+        </div>
+        <div>
+          <div class="field-l">节点 ID</div>
+          <input class="input mono mt-1.5" value="auth-svc.login.v3" />
+          <div class="field-h">全局唯一,不可重复</div>
+        </div>
+        <div>
+          <div class="field-l">优先级</div>
+          <div class="flex items-center gap-2 mt-2">
+            <span class="pill pill-active">高</span>
+            <span class="pill">中</span>
+            <span class="pill">低</span>
+          </div>
+        </div>
+        <div>
+          <div class="field-l">超时</div>
+          <div class="flex items-center gap-2 mt-1.5">
+            <input class="input mono flex-1" value="600" />
+            <span class="text-xs text-[color:var(--ink-mute)] mono">秒</span>
+          </div>
+          <div class="field-h">超过后自动暂停并通知值班 DRI</div>
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-center justify-between p-3 rounded-lg border border-[color:var(--line-soft)] bg-[color:oklch(98%_0.008_260)]">
+        <div>
+          <div class="text-[13px] font-medium">允许跨阶段中断补充上下文</div>
+          <div class="text-[11px] text-[color:var(--ink-mute)] mt-0.5">DRI 可在该节点运行时随时注入需求/约束/示例</div>
+        </div>
+        <div class="switch on"></div>
+      </div>
+    </section>
+
+    <!-- Agent 配置 -->
+    <section>
+      <div class="section-h mb-3">Agent 装配</div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="agent-card">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-md flex items-center justify-center mono font-semibold text-white text-[12px]" style="background: var(--a-dev)">DEV</div>
+            <div class="flex-1">
+              <div class="text-[13px] font-medium">DEV-Engineer</div>
+              <div class="text-[10.5px] text-[color:var(--ink-mute)] mono">v2.3.1 · primary</div>
+            </div>
+            <div class="switch on"></div>
+          </div>
+          <div class="text-[11.5px] text-[color:var(--ink-soft)] mt-2 leading-relaxed">Java/Spring 实现工程师 · 默认产出代码 + 单元测试</div>
+        </div>
+        <div class="agent-card">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-md flex items-center justify-center mono font-semibold text-white text-[12px]" style="background: var(--a-sec)">SEC</div>
+            <div class="flex-1">
+              <div class="text-[13px] font-medium">SEC-Auditor</div>
+              <div class="text-[10.5px] text-[color:var(--ink-mute)] mono">v1.7.0 · advisor</div>
+            </div>
+            <div class="switch on"></div>
+          </div>
+          <div class="text-[11.5px] text-[color:var(--ink-soft)] mt-2 leading-relaxed">安全审查员 · 因含登录/口令处理 自动挂载</div>
+        </div>
+        <div class="agent-card opacity-70">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-md flex items-center justify-center mono font-semibold text-white text-[12px]" style="background: var(--a-perf)">PRF</div>
+            <div class="flex-1">
+              <div class="text-[13px] font-medium">PRF-Profiler</div>
+              <div class="text-[10.5px] text-[color:var(--ink-mute)] mono">v1.2.0 · advisor</div>
+            </div>
+            <div class="switch"></div>
+          </div>
+          <div class="text-[11.5px] text-[color:var(--ink-soft)] mt-2 leading-relaxed">性能优化建议 · 当 SLO 含 P99 时建议启用</div>
+        </div>
+        <div class="agent-card border-dashed border-[color:var(--line)] bg-transparent flex items-center justify-center text-[12px] text-[color:var(--ink-mute)] cursor-pointer hover:text-[color:var(--ink)]">
+          + 添加 Agent
+        </div>
+      </div>
+
+      <div class="mt-4 p-3 rounded-lg border border-[color:var(--line-soft)] bg-[color:oklch(98%_0.008_260)]">
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-[12.5px] font-medium">协作模式</div>
+          <span class="pill mono">debate</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <div class="check-card text-[12px]"><div class="check-box"></div><div>串行 (sequential)</div></div>
+          <div class="check-card checked text-[12px]"><div class="check-box">✓</div><div>辩论 (debate)</div></div>
+          <div class="check-card text-[12px]"><div class="check-box"></div><div>并行 + 汇聚</div></div>
+        </div>
+        <div class="text-[11px] text-[color:var(--ink-mute)] mt-2.5">主 Agent 给出方案,advisor 角色提出质疑直至收敛或达到上限</div>
+      </div>
+
+      <div class="mt-3 grid grid-cols-2 gap-3">
+        <div>
+          <div class="field-l">最大轮次</div>
+          <div class="mt-2 px-1.5">
+            <div class="slider-track"><div class="slider-fill" style="width:55%"></div><div class="slider-knob" style="left:55%"></div></div>
+            <div class="flex justify-between text-[10.5px] text-[color:var(--ink-mute)] mono mt-1.5"><span>2</span><span class="text-[color:var(--ink)] font-semibold">12</span><span>20</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="field-l">收敛阈值</div>
+          <div class="mt-2 px-1.5">
+            <div class="slider-track"><div class="slider-fill" style="width:78%"></div><div class="slider-knob" style="left:78%"></div></div>
+            <div class="flex justify-between text-[10.5px] text-[color:var(--ink-mute)] mono mt-1.5"><span>0.6</span><span class="text-[color:var(--ink)] font-semibold">0.88</span><span>0.99</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Skills -->
+    <section>
+      <div class="flex items-center justify-between mb-3">
+        <div class="section-h">挂载 Skill <span class="text-[color:var(--ink-mute)] normal-case tracking-normal ml-1">· 5 个</span></div>
+        <button class="text-[11.5px] text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] flex items-center gap-1">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          从市场添加
+        </button>
+      </div>
+
+      <div>
+        <div class="skill-row">
+          <span class="drag mono">⋮⋮</span>
+          <span class="badge-dot" style="background: var(--a-dev)"></span>
+          <div class="flex-1">
+            <div class="text-[13px] font-medium">spring-boot-rest-codegen</div>
+            <div class="text-[10.5px] text-[color:var(--ink-mute)] mono">v2.4.0 · 调用 12,408 · P95 280ms · 98.7%</div>
+          </div>
+          <span class="pill">必选</span>
+          <div class="switch on"></div>
+        </div>
+        <div class="skill-row">
+          <span class="drag mono">⋮⋮</span>
+          <span class="badge-dot" style="background: var(--a-sec)"></span>
+          <div class="flex-1">
+            <div class="text-[13px] font-medium">password-policy-checker</div>
+            <div class="text-[10.5px] text-[color:var(--ink-mute)] mono">v1.1.0 · 调用 3,212 · P95 95ms · 99.4%</div>
+          </div>
+          <div class="switch on"></div>
+        </div>
+        <div class="skill-row">
+          <span class="drag mono">⋮⋮</span>
+          <span class="badge-dot" style="background: var(--a-sec)"></span>
+          <div class="flex-1">
+            <div class="text-[13px] font-medium">jwt-token-handler</div>
+            <div class="text-[10.5px] text-[color:var(--ink-mute)] mono">v3.0.1 · 调用 6,540 · P95 110ms · 99.0%</div>
+          </div>
+          <div class="switch on"></div>
+        </div>
+        <div class="skill-row">
+          <span class="drag mono">⋮⋮</span>
+          <span class="badge-dot" style="background: var(--a-perf)"></span>
+          <div class="flex-1">
+            <div class="text-[13px] font-medium">redis-rate-limiter</div>
+            <div class="text-[10.5px] text-[color:var(--ink-mute)] mono">v1.4.2 · 调用 2,108 · P95 62ms · 99.6%</div>
+          </div>
+          <div class="switch on"></div>
+        </div>
+        <div class="skill-row" style="opacity:.7">
+          <span class="drag mono">⋮⋮</span>
+          <span class="badge-dot" style="background: var(--idle)"></span>
+          <div class="flex-1">
+            <div class="text-[13px] font-medium">openapi-spec-generator</div>
+            <div class="text-[10.5px] text-[color:var(--ink-mute)] mono">v1.0.0 · 仅在 OpenAPI 输出时启用</div>
+          </div>
+          <div class="switch"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Model 路由 -->
+    <section>
+      <div class="section-h mb-3">Model 路由</div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="p-3.5 rounded-xl border border-[color:var(--line)] bg-[color:var(--surface)]">
+          <div class="flex items-center justify-between">
+            <div class="text-[11px] text-[color:var(--ink-mute)] uppercase tracking-wider">主模型</div>
+            <span class="pill pill-active mono">primary</span>
+          </div>
+          <div class="mt-2 text-[14px] font-medium">claude-sonnet-4.6</div>
+          <div class="text-[11px] text-[color:var(--ink-mute)] mono mt-0.5">temp 0.2 · top_p 0.9 · max_tokens 8k</div>
+          <div class="mt-3 flex items-center gap-3 text-[11px] text-[color:var(--ink-soft)] mono">
+            <span>P95 1.8s</span><span>·</span><span>¥ 0.41 / 1k</span>
+          </div>
+        </div>
+        <div class="p-3.5 rounded-xl border border-[color:var(--line)] bg-[color:var(--surface)]">
+          <div class="flex items-center justify-between">
+            <div class="text-[11px] text-[color:var(--ink-mute)] uppercase tracking-wider">回退</div>
+            <span class="pill mono">fallback</span>
+          </div>
+          <div class="mt-2 text-[14px] font-medium">deepseek-v3</div>
+          <div class="text-[11px] text-[color:var(--ink-mute)] mono mt-0.5">temp 0.2 · top_p 0.9 · max_tokens 8k</div>
+          <div class="mt-3 flex items-center gap-3 text-[11px] text-[color:var(--ink-soft)] mono">
+            <span>P95 2.2s</span><span>·</span><span>¥ 0.08 / 1k</span>
+          </div>
+        </div>
+      </div>
+      <div class="mt-3 p-3 rounded-lg border border-[color:var(--line-soft)] bg-[color:oklch(98%_0.008_260)] flex items-center gap-3">
+        <span class="mono text-[11px] text-[color:var(--ink-mute)]">路由策略</span>
+        <span class="pill pill-active text-[11px]">优先质量</span>
+        <span class="pill text-[11px]">优先成本</span>
+        <span class="pill text-[11px]">智能(eval)</span>
+        <span class="ml-auto text-[10.5px] text-[color:var(--ink-mute)] mono">eval 命中率 92.4%</span>
+      </div>
+    </section>
+
+    <!-- 评审策略 -->
+    <section>
+      <div class="section-h mb-3">评审策略</div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="check-card checked">
+          <div class="check-box">✓</div>
+          <div class="flex-1">
+            <div class="text-[13px] font-medium">AI 自动审查</div>
+            <div class="text-[10.5px] text-[color:var(--ink-mute)]">军规 + Lint + 安全扫</div>
+          </div>
+        </div>
+        <div class="check-card checked">
+          <div class="check-box">✓</div>
+          <div class="flex-1">
+            <div class="text-[13px] font-medium">人工评审 (必须)</div>
+            <div class="text-[10.5px] text-[color:var(--ink-mute)]">CR-3 ·  审批员 1 人</div>
+          </div>
+        </div>
+        <div class="check-card">
+          <div class="check-box"></div>
+          <div class="flex-1">
+            <div class="text-[13px] font-medium">双签</div>
+            <div class="text-[10.5px] text-[color:var(--ink-mute)]">变更 > 200 行时自动启用</div>
+          </div>
+        </div>
+        <div class="check-card checked">
+          <div class="check-box">✓</div>
+          <div class="flex-1">
+            <div class="text-[13px] font-medium">SLA 4 小时</div>
+            <div class="text-[10.5px] text-[color:var(--ink-mute)]">超时自动通知 backup</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-3">
+        <div class="field-l mb-2">审批员候选</div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="pill pill-active">@王工 (primary)</span>
+          <span class="pill">@刘工 (backup)</span>
+          <span class="pill">@安全组 (要求)</span>
+          <span class="pill text-[color:var(--ink-mute)] cursor-pointer">+ 添加</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 触发条件 -->
+    <section>
+      <div class="section-h mb-3">触发条件 / 依赖</div>
+      <div class="p-3.5 rounded-xl border border-[color:var(--line)] bg-[color:var(--surface)] space-y-2.5">
+        <div class="flex items-center gap-2 text-[12.5px]">
+          <span class="mono text-[10.5px] text-[color:var(--ink-mute)] w-12">前置</span>
+          <span class="pill mono">ARC-2 完成</span>
+          <span class="text-[color:var(--ink-mute)]">AND</span>
+          <span class="pill mono">CR-2 通过</span>
+        </div>
+        <div class="flex items-center gap-2 text-[12.5px]">
+          <span class="mono text-[10.5px] text-[color:var(--ink-mute)] w-12">条件</span>
+          <span class="pill">影响文件包含 LoginService.java</span>
+        </div>
+        <div class="flex items-center gap-2 text-[12.5px]">
+          <span class="mono text-[10.5px] text-[color:var(--ink-mute)] w-12">阻断</span>
+          <span class="pill" style="color: var(--halt); border-color: oklch(67% 0.20 25 / .4); background: oklch(67% 0.20 25 / .08);">SEC 严重 ≥ 1</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- YAML 预览 -->
+    <section>
+      <div class="flex items-center justify-between mb-3">
+        <div class="section-h">YAML 预览</div>
+        <span class="text-[10.5px] text-[color:var(--ink-mute)] mono footer-pulse">同步中…</span>
+      </div>
+      <div class="yaml-block">
+<span class="yaml-c"># 自动同步自上面字段</span>
+<span class="yaml-k">node</span>: auth-svc.login.v3
+<span class="yaml-k">stage</span>: dev
+<span class="yaml-k">agents</span>:
+  - <span class="yaml-k">id</span>: dev-engineer <span class="yaml-k">role</span>: primary
+  - <span class="yaml-k">id</span>: sec-auditor   <span class="yaml-k">role</span>: advisor
+<span class="yaml-k">collab</span>: debate
+<span class="yaml-k">max_rounds</span>: <span class="yaml-v">12</span>
+<span class="yaml-k">model</span>:
+  <span class="yaml-k">primary</span>: claude-sonnet-4.6
+  <span class="yaml-k">fallback</span>: deepseek-v3
+<span class="yaml-k">review</span>:
+  <span class="yaml-k">auto</span>: true
+  <span class="yaml-k">human</span>: required
+  <span class="yaml-k">approvers</span>: [<span class="yaml-v">"@王工"</span>]
+  <span class="yaml-k">sla_hours</span>: <span class="yaml-v">4</span>
+      </div>
+    </section>
+  </div>
+
+  <!-- Drawer footer -->
+  <div class="px-7 py-4 border-t border-[color:var(--line)] bg-[color:oklch(99%_0.005_90)] flex items-center gap-3">
+    <div class="text-[11px] text-[color:var(--ink-mute)]">
+      <span class="mono">5</span> 处未保存改动 · 影响下一次运行
+    </div>
+    <div class="ml-auto flex items-center gap-2">
+      <button class="px-4 h-9 rounded-lg text-[12.5px] text-[color:var(--ink-soft)] hover:bg-[color:var(--line-soft)]">取消</button>
+      <button class="px-4 h-9 rounded-lg text-[12.5px] border border-[color:var(--line)] bg-white text-[color:var(--ink)] hover:bg-[color:var(--line-soft)]">保存为草稿</button>
+      <button class="px-5 h-9 rounded-lg text-[12.5px] font-medium text-white" style="background: oklch(18% 0.02 260)">保存并应用 →</button>
+    </div>
+  </div>
+</aside>
+
+<!-- Helper -->
+<div class="fixed bottom-4 left-4 z-30 text-[10.5px] mono text-[color:var(--ink-mute)] flex items-center gap-2 bg-white/70 backdrop-blur px-2.5 py-1.5 rounded-md border border-[color:var(--line-soft)]">
+  <span class="w-1.5 h-1.5 rounded-full" style="background: var(--review)"></span>
+  Prototype · node-config-drawer.html
+</div>
+
+</body>
+</html>

@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>设计与拆解 · Stage 2 · DevPipeline</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-base: oklch(98% 0.006 85);
+      --bg-card: #ffffff;
+      --bg-elev: oklch(99% 0.004 85);
+      --bg-deep: oklch(15% 0.018 260);
+
+      --border-soft: oklch(93% 0.005 85);
+      --border-mid: oklch(88% 0.008 85);
+
+      --text-strong: oklch(22% 0.03 260);
+      --text-body: oklch(38% 0.02 260);
+      --text-muted: oklch(56% 0.015 260);
+      --text-faint: oklch(72% 0.01 260);
+
+      --done: oklch(62% 0.13 150);
+      --done-soft: oklch(94% 0.04 150);
+      --run: oklch(70% 0.15 65);
+      --run-soft: oklch(95% 0.05 75);
+      --review: oklch(58% 0.18 290);
+      --review-soft: oklch(95% 0.04 290);
+      --idle-soft: oklch(96% 0.005 260);
+      --halt: oklch(60% 0.21 25);
+
+      --a-req: oklch(62% 0.16 245);
+      --a-graph: oklch(60% 0.18 295);
+      --a-arch: oklch(58% 0.13 200);
+      --a-idx: oklch(58% 0.16 175);
+      --a-dev: oklch(58% 0.14 150);
+      --a-sec: oklch(60% 0.20 25);
+      --a-perf: oklch(70% 0.16 70);
+      --a-test: oklch(56% 0.17 270);
+
+      --shadow-sm: 0 1px 2px oklch(20% 0.02 260 / 0.04);
+      --shadow-md: 0 2px 6px oklch(20% 0.02 260 / 0.04), 0 1px 2px oklch(20% 0.02 260 / 0.06);
+      --shadow-lg: 0 12px 28px oklch(20% 0.02 260 / 0.07), 0 2px 6px oklch(20% 0.02 260 / 0.04);
+    }
+
+    * { -webkit-font-smoothing: antialiased; }
+    html, body { font-family: 'Inter', system-ui, sans-serif; }
+    body {
+      background: var(--bg-base);
+      color: var(--text-body);
+      font-feature-settings: 'cv02','cv03','cv04','cv11';
+    }
+    .font-display { font-family: 'Instrument Serif','Songti SC',serif; letter-spacing: -0.01em; }
+    .font-mono    { font-family: 'JetBrains Mono', monospace; }
+
+    .bg-atmosphere {
+      background:
+        radial-gradient(900px 460px at 8% -8%, oklch(93% 0.05 200 / 0.55), transparent 60%),
+        radial-gradient(700px 340px at 105% 0%, oklch(94% 0.05 175 / 0.45), transparent 60%),
+        var(--bg-base);
+    }
+    .grain::before {
+      content:''; position: fixed; inset: 0; pointer-events: none;
+      opacity: .03; mix-blend-mode: multiply; z-index: 100;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: 16px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow .2s, transform .2s;
+    }
+    .card:hover { box-shadow: var(--shadow-md); }
+    .card-elev  { box-shadow: var(--shadow-lg); }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 9px; border-radius: 999px;
+      font-size: 11px; font-weight: 500; letter-spacing: .01em;
+      border: 1px solid transparent;
+    }
+    .chip-dot { width: 6px; height: 6px; border-radius: 999px; }
+
+    .caps {
+      font-size: 10.5px; letter-spacing: .14em;
+      text-transform: uppercase; font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 12px; border-radius: 9px;
+      font-size: 12.5px; font-weight: 500;
+      border: 1px solid var(--border-mid);
+      background: var(--bg-card); color: var(--text-body);
+      transition: all .15s; cursor: pointer;
+    }
+    .btn:hover { background: var(--bg-elev); border-color: var(--text-faint); color: var(--text-strong); }
+    .btn-primary { background: var(--text-strong); color: white; border-color: var(--text-strong); }
+    .btn-primary:hover { background: oklch(28% 0.06 265); color: white; }
+    .btn-ghost { background: transparent; border-color: transparent; }
+    .btn-ghost:hover { background: var(--bg-elev); }
+
+    .agent-avatar {
+      width: 28px; height: 28px; border-radius: 8px;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: white; font-size: 11px; font-weight: 600;
+      letter-spacing: -.02em;
+      box-shadow: inset 0 -6px 12px rgba(0,0,0,.18), 0 1px 2px rgba(0,0,0,.06);
+    }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 999px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+
+    /* class diagram box */
+    .uml-box {
+      background: white;
+      border: 1px solid var(--border-mid);
+      border-radius: 10px;
+      box-shadow: var(--shadow-sm);
+      font-size: 11px;
+      overflow: hidden;
+    }
+    .uml-title {
+      padding: 6px 10px;
+      background: oklch(96% 0.025 200);
+      border-bottom: 1px solid var(--border-soft);
+      font-weight: 600;
+      color: var(--text-strong);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .uml-section {
+      padding: 6px 10px;
+      border-bottom: 1px dashed var(--border-soft);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10.5px;
+      color: var(--text-body);
+      line-height: 1.55;
+    }
+    .uml-section:last-child { border-bottom: 0; }
+    .uml-mark-new { background: oklch(94% 0.04 150); border-left: 2px solid var(--done); padding-left: 8px; margin: -2px -10px -2px -10px; padding-right: 10px;}
+    .uml-mark-mod { background: oklch(94% 0.04 65);  border-left: 2px solid var(--run);  padding-left: 8px; margin: -2px -10px -2px -10px; padding-right: 10px;}
+
+    /* impact tag */
+    .tag-new { background: var(--done-soft); color: var(--done); border: 1px solid color-mix(in oklch, var(--done) 20%, transparent); }
+    .tag-mod { background: var(--run-soft); color: var(--run); border: 1px solid color-mix(in oklch, var(--run) 20%, transparent); }
+
+    .tl-rail { position: relative; }
+    .tl-rail::before {
+      content:''; position: absolute; left: 7px; top: 0; bottom: 0;
+      width: 2px; background: var(--border-soft);
+    }
+    .tl-dot {
+      width: 16px; height: 16px; border-radius: 999px;
+      background: white; border: 2px solid var(--done);
+      position: relative; z-index: 1; flex-shrink: 0;
+    }
+  </style>
+</head>
+<body class="bg-atmosphere grain min-h-screen">
+
+  <!-- TOP BAR -->
+  <header class="border-b border-[var(--border-soft)] bg-white/65 backdrop-blur-xl sticky top-0 z-50">
+    <div class="max-w-[1480px] mx-auto px-8 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-6">
+        <a href="index.html" class="flex items-center gap-2.5 hover:opacity-80 transition">
+          <div class="w-8 h-8 rounded-lg bg-[var(--text-strong)] flex items-center justify-center text-white text-[11px] font-bold tracking-tight">DP</div>
+          <div>
+            <div class="text-[14.5px] font-semibold text-[var(--text-strong)] leading-tight">DevPipeline</div>
+            <div class="text-[10px] text-[var(--text-muted)] tracking-[.14em] uppercase">AI 研发流水线 · 驾驶舱</div>
+          </div>
+        </a>
+        <div class="text-[12px] text-[var(--text-muted)] flex items-center gap-1.5">
+          <a href="index.html" class="hover:text-[var(--text-strong)]">运行 #2451</a>
+          <span class="text-[var(--text-faint)]">/</span>
+          <span class="text-[var(--text-strong)] font-medium">设计与拆解</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="btn">下载产物</button>
+        <button class="btn">配置</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-[1480px] mx-auto px-8 py-8">
+
+    <!-- STAGE HEADER -->
+    <section class="mb-7">
+      <div class="flex items-baseline justify-between gap-6 mb-3">
+        <div class="flex items-baseline gap-4">
+          <span class="caps font-mono">Stage 02</span>
+          <h1 class="font-display text-[44px] leading-[1.05] text-[var(--text-strong)]">设计与拆解</h1>
+          <span class="text-[13px] text-[var(--text-muted)]">富化需求 → 4 IR · 并行产出 US / 测试策略 / SIT 用例</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="chip" style="background:var(--done-soft); color:var(--done); border-color:color-mix(in oklch, var(--done) 20%, transparent)"><span class="chip-dot" style="background:var(--done)"></span>已完成</span>
+          <span class="chip" style="background:var(--review-soft); color:var(--review); border-color:color-mix(in oklch, var(--review) 20%, transparent)"><span class="chip-dot" style="background:var(--review)"></span>已评审 · 李工 · 1 建议</span>
+        </div>
+      </div>
+
+      <!-- metrics -->
+      <div class="grid grid-cols-6 gap-4 mt-5">
+        <div class="card p-4"><div class="caps mb-1.5">耗时</div><div class="font-display text-[28px] text-[var(--text-strong)] leading-none">7<span class="text-[14px] text-[var(--text-muted)] ml-0.5">m</span> 04<span class="text-[14px] text-[var(--text-muted)] ml-0.5">s</span></div></div>
+        <div class="card p-4"><div class="caps mb-1.5">影响类</div><div class="font-display text-[28px] text-[var(--text-strong)] leading-none">9</div></div>
+        <div class="card p-4"><div class="caps mb-1.5">新增接口</div><div class="font-display text-[28px] text-[var(--text-strong)] leading-none">4</div></div>
+        <div class="card p-4"><div class="caps mb-1.5">改动文件</div><div class="font-display text-[28px] text-[var(--text-strong)] leading-none">14</div></div>
+        <div class="card p-4"><div class="caps mb-1.5">Token</div><div class="font-display text-[28px] text-[var(--text-strong)] leading-none">52<span class="text-[14px] text-[var(--text-muted)] ml-0.5">k</span></div></div>
+        <div class="card p-4"><div class="caps mb-1.5">置信度</div><div class="font-display text-[28px] text-[var(--text-strong)] leading-none">88<span class="text-[14px] text-[var(--text-muted)] ml-0.5">%</span></div></div>
+      </div>
+    </section>
+
+    <!-- INPUT/OUTPUT STRIP -->
+    <section class="grid grid-cols-12 gap-5 mb-7">
+      <!-- input: 来自上游 -->
+      <div class="col-span-4 card p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div class="caps">输入 · 来自 Stage 01</div>
+          <a href="stage-1-requirement.html" class="text-[10.5px] font-mono text-[var(--text-strong)] hover:underline">v2 ↗</a>
+        </div>
+        <ul class="space-y-2 text-[12.5px]">
+          <li class="flex items-baseline gap-2"><span class="font-mono text-[10.5px] text-[var(--text-faint)] mt-0.5">R1</span><span class="text-[var(--text-body)]">网关层 IP+账号 双维度令牌桶</span></li>
+          <li class="flex items-baseline gap-2"><span class="font-mono text-[10.5px] text-[var(--text-faint)] mt-0.5">R2</span><span class="text-[var(--text-body)]">账号 5min 失败 5 次 → 15min 锁定</span></li>
+          <li class="flex items-baseline gap-2"><span class="font-mono text-[10.5px] text-[var(--text-faint)] mt-0.5">R3</span><span class="text-[var(--text-body)]">Redis Pipeline / 异步批处理</span></li>
+          <li class="flex items-baseline gap-2"><span class="font-mono text-[10.5px] text-[var(--text-faint)] mt-0.5">R4</span><span class="text-[var(--text-body)]">JWT 本地缓存 + 异步刷新</span></li>
+          <li class="flex items-baseline gap-2"><span class="font-mono text-[10.5px] text-[var(--text-faint)] mt-0.5">R5</span><span class="text-[var(--text-body)]">RiskCenter 异常告警上报</span></li>
+          <li class="flex items-baseline gap-2"><span class="font-mono text-[10.5px] text-[var(--text-faint)] mt-0.5">R6</span><span class="text-[var(--text-body)]">压测 / SLO 验证</span></li>
+        </ul>
+        <div class="mt-4 pt-3 border-t border-dashed border-[var(--border-soft)] text-[11.5px] text-[var(--text-muted)]">
+          <div class="caps mb-2" style="font-size:10px">本阶段输出</div>
+          <p>把上述 6 条原子需求映射到具体的 <strong class="text-[var(--text-strong)]">9 个类</strong> · <strong class="text-[var(--text-strong)]">4 个新接口</strong> · <strong class="text-[var(--text-strong)]">14 个文件</strong>。</p>
+        </div>
+      </div>
+
+      <!-- output: 影响文件清单 -->
+      <div class="col-span-8 card p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div class="caps">产物 · 影响文件清单</div>
+          <div class="flex items-center gap-2">
+            <button class="btn btn-ghost text-[11.5px]">复制为分支</button>
+            <button class="btn btn-ghost text-[11.5px]">导出 PR Plan</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-x-6 gap-y-1.5">
+          <!-- col 1 -->
+          <div>
+            <div class="caps mb-2" style="font-size:10px; color:var(--text-faint)">auth-gateway · 6</div>
+
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--bg-elev)] text-[12px]">
+              <span class="chip tag-new" style="font-size:10px; padding:1px 6px">NEW</span>
+              <span class="font-mono text-[var(--text-strong)] truncate flex-1">filter/RateLimitFilter.java</span>
+              <span class="font-mono text-[10.5px] text-[var(--text-muted)]">R1</span>
+            </div>
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--bg-elev)] text-[12px]">
+              <span class="chip tag-new" style="font-size:10px; padding:1px 6px">NEW</span>
+              <span class="font-mono text-[var(--text-strong)] truncate flex-1">limiter/TokenBucketLimiter.java</span>
+              <span class="font-mono text-[10.5px] text-[var(--text-muted)]">R1</span>
+            </div>
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--bg-elev)] text-[12px]">
+              <span class="chip tag-mod" style="font-size:10px; padding:1px 6px">MOD</span>
+              <span class="font-mono text-[var(--text-strong)] truncate flex-1">config/GatewayConfig.java</span>
+              <span class="font-mono text-[10.5px] text-[var(--text-muted)]">R1</span>
+            </div>
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--bg-elev)] text-[12px]">
+              <span class="chip tag-new" style="font-size:10px; padding:1px 6px">NEW</span>
+              <span class="font-mono text-[var(--text-strong)] truncate flex-1">limiter/MultiDimKey.java</span>
+              <span class="font-mono text-[10.5px] text-[var(--text-muted)]">R1</span>
+            </div>
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--bg-elev)] text-[12px]">
+              <span class="chip tag-new" style="font-size:10px; padding:1px 6px">NEW</span>
+              <span class="font-mono text-[var(--text-strong)] truncate flex-1">resources/limiter.yml</span>
+              <span class="font-mono text-[10.5px] text-[var(--text-muted)]">R1</span>
+            </div>
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--bg-elev)] text-[12px]">
+              <span class="chip tag-mod" style="font-size:10px; padding:1px 6px">MOD</span>
+              <span class="font-mono text-[var(--text-strong)] truncate flex-1">handler/AuthHandler.java</span>
+              <span class="font-mono text-[10.5px] text-[var(--text-muted)]">R3,R4</span>
+            </div>
+          </div>
+
+          <!-- col 2 -->
+          <div>
+            <div class="caps mb-2" style="font-size:10px; color:var(--text-faint)">auth-service · 8</div>
+
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--bg-elev)] text-[12px]">
+              <span class="chip tag-mod" style="font-size:10px; padding:1px 6px">MOD</span>
+              <span class="font-mono text-[var(--text-strong)] truncate flex-1">service/LoginService.java</span>
+              <span class="font-mono text-[10.5px] text-[var(--text-muted)]">R2,R3</span>
+            </div>
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--bg-elev)] text-[12px]">
+              <span class="chip tag-new" style="font-size:10px; padding:1px 6px">NEW</span>
+              <span class="font-mono text-[var(--text-strong)] truncate flex-1">service/AccountLockService.java</span>
+              <span class="font-mono text-[10.5px] text-[var(--text-muted)]">R2</span>
+            </div>
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--bg-elev)] text-[12px]">
+              <span class="chip tag-new" style="font-size:10px; padding:1px 6px">NEW</span>
+              <span class="font-mono text-[var(--text-strong)] truncate flex-1">cache/JwtKeyCache.java</span>
+              <span class="font-mono text-[10.5px] text-[var(--text-muted)]">R4</span>
+            </div>
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--bg-elev)] text-[12px]">
+              <span class="chip tag-mod" style="font-size:10px; padding:1px 6px">MOD</span>
+              <span class="font-mono text-[var(--text-strong)] truncate flex-1">repo/LoginAttemptRepo.java</span>
+              <span class="font-mono text-[10.5px] text-[var(--text-muted)]">R2</span>
+            </div>
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--bg-elev)] text-[12px]">
+              <span class="chip tag-mod" style="font-size:10px; padding:1px 6px">MOD</span>
+              <span class="font-mono text-[var(--text-strong)] truncate flex-1">redis/RedisTemplate.java</span>
+              <span class="font-mono text-[10.5px] text-[var(--text-muted)]">R3</span>
+            </div>
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--bg-elev)] text-[12px]">
+              <span class="chip tag-new" style="font-size:10px; padding:1px 6px">NEW</span>
+              <span class="font-mono text-[var(--text-strong)] truncate flex-1">event/BruteForceEvent.java</span>
+              <span class="font-mono text-[10.5px] text-[var(--text-muted)]">R5</span>
+            </div>
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--bg-elev)] text-[12px]">
+              <span class="chip tag-new" style="font-size:10px; padding:1px 6px">NEW</span>
+              <span class="font-mono text-[var(--text-strong)] truncate flex-1">client/RiskCenterClient.java</span>
+              <span class="font-mono text-[10.5px] text-[var(--text-muted)]">R5</span>
+            </div>
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--bg-elev)] text-[12px]">
+              <span class="chip tag-new" style="font-size:10px; padding:1px 6px">NEW</span>
+              <span class="font-mono text-[var(--text-strong)] truncate flex-1">test/LoginLoadTest.java</span>
+              <span class="font-mono text-[10.5px] text-[var(--text-muted)]">R6</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-dashed border-[var(--border-soft)] flex items-center justify-between text-[12px] text-[var(--text-muted)]">
+          <span>共 <span class="font-mono text-[var(--done)]">8</span> 新增 · <span class="font-mono text-[var(--run)]">6</span> 修改 · 跨 <span class="font-mono text-[var(--text-strong)]">2</span> 服务</span>
+          <a href="artifact-diff.html" class="text-[var(--text-strong)] hover:underline">查看完整改动 →</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- MAIN GRID -->
+    <section class="grid grid-cols-12 gap-5">
+
+      <!-- LEFT: class diagram + agent collab -->
+      <div class="col-span-7 space-y-5">
+
+        <!-- class diagram -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <div class="caps mb-1">类与接口映射 · 简化 UML</div>
+              <div class="text-[13px] text-[var(--text-muted)]">新增 / 修改类的接口签名概览</div>
+            </div>
+            <button class="btn btn-ghost text-[11.5px]">展开</button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div class="uml-box">
+              <div class="uml-title">
+                <span><span class="text-[var(--done)]">«new»</span> TokenBucketLimiter</span>
+                <span class="chip tag-new" style="font-size:9.5px; padding:0 5px">R1</span>
+              </div>
+              <div class="uml-section">
+                <div>- capacity: int</div>
+                <div>- refillRate: int</div>
+                <div>- redisOps: RedisOps</div>
+              </div>
+              <div class="uml-section">
+                <div class="uml-mark-new">+ tryAcquire(key: MultiDimKey, n: int): boolean</div>
+                <div class="uml-mark-new">+ remaining(key: MultiDimKey): int</div>
+              </div>
+            </div>
+
+            <div class="uml-box">
+              <div class="uml-title">
+                <span><span class="text-[var(--done)]">«new»</span> RateLimitFilter</span>
+                <span class="chip tag-new" style="font-size:9.5px; padding:0 5px">R1</span>
+              </div>
+              <div class="uml-section">
+                <div>- limiter: TokenBucketLimiter</div>
+              </div>
+              <div class="uml-section">
+                <div class="uml-mark-new">+ filter(ex: ServerWebExchange, chain): Mono&lt;Void&gt;</div>
+              </div>
+            </div>
+
+            <div class="uml-box">
+              <div class="uml-title">
+                <span><span class="text-[var(--done)]">«new»</span> AccountLockService</span>
+                <span class="chip tag-new" style="font-size:9.5px; padding:0 5px">R2</span>
+              </div>
+              <div class="uml-section">
+                <div>- WINDOW = 5min, MAX = 5</div>
+                <div>- LOCK = 15min</div>
+              </div>
+              <div class="uml-section">
+                <div class="uml-mark-new">+ recordFailure(account: String): LockState</div>
+                <div class="uml-mark-new">+ isLocked(account: String): boolean</div>
+                <div class="uml-mark-new">+ clear(account: String): void</div>
+              </div>
+            </div>
+
+            <div class="uml-box">
+              <div class="uml-title">
+                <span><span class="text-[var(--run)]">«mod»</span> LoginService</span>
+                <span class="chip tag-mod" style="font-size:9.5px; padding:0 5px">R2,R3</span>
+              </div>
+              <div class="uml-section">
+                <div>- repo: UserRepository</div>
+                <div>- lockSvc: AccountLockService</div>
+                <div>- jwtCache: JwtKeyCache</div>
+              </div>
+              <div class="uml-section">
+                <div class="uml-mark-mod">~ login(req): LoginResult <span class="text-[var(--text-faint)]">// + 并发优化</span></div>
+                <div>+ logout(token): void</div>
+              </div>
+            </div>
+
+            <div class="uml-box">
+              <div class="uml-title">
+                <span><span class="text-[var(--done)]">«new»</span> JwtKeyCache</span>
+                <span class="chip tag-new" style="font-size:9.5px; padding:0 5px">R4</span>
+              </div>
+              <div class="uml-section">
+                <div>- cache: Caffeine&lt;K,V&gt;</div>
+                <div>- refresher: ScheduledExecutor</div>
+              </div>
+              <div class="uml-section">
+                <div class="uml-mark-new">+ getActiveKey(): RSAKey</div>
+                <div class="uml-mark-new">+ refreshAsync(): void</div>
+              </div>
+            </div>
+
+            <div class="uml-box">
+              <div class="uml-title">
+                <span><span class="text-[var(--done)]">«new»</span> RiskCenterClient</span>
+                <span class="chip tag-new" style="font-size:9.5px; padding:0 5px">R5</span>
+              </div>
+              <div class="uml-section">
+                <div>- endpoint: String</div>
+                <div>- retry: RetryPolicy</div>
+              </div>
+              <div class="uml-section">
+                <div class="uml-mark-new">+ report(evt: BruteForceEvent): void</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 flex items-center gap-4 text-[11px]">
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm" style="background:var(--done)"></span><span class="text-[var(--text-muted)]">新增类</span></span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm" style="background:var(--run)"></span><span class="text-[var(--text-muted)]">修改类</span></span>
+            <span class="ml-auto text-[10.5px] text-[var(--text-faint)] font-mono">仅展示 6/9 · 其余在产物文件</span>
+          </div>
+        </div>
+
+        <!-- agent collab -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <div class="caps mb-1">多 Agent 协同 · 设计推演</div>
+              <div class="text-[13px] text-[var(--text-muted)]">ARC + IDX · 11 轮交互</div>
+            </div>
+            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[var(--bg-elev)]">
+              <span class="agent-avatar" style="background:var(--a-arch); width:18px; height:18px; font-size:9px;">AR</span>
+              <span class="agent-avatar" style="background:var(--a-idx); width:18px; height:18px; font-size:9px;">IX</span>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div class="text-center"><span class="text-[10.5px] font-mono text-[var(--text-faint)] px-2 py-0.5 bg-[var(--bg-elev)] rounded">14:31 · 设计启动</span></div>
+
+            <div class="flex gap-3">
+              <span class="agent-avatar flex-shrink-0" style="background:var(--a-arch)">AR</span>
+              <div class="flex-1">
+                <div class="flex items-baseline gap-2 mb-1"><span class="text-[12.5px] font-semibold text-[var(--text-strong)]">架构师</span><span class="text-[10.5px] text-[var(--text-faint)] font-mono">14:31:12</span></div>
+                <div class="text-[13px] leading-relaxed text-[var(--text-body)] bg-[var(--bg-elev)] rounded-lg px-3.5 py-2.5">
+                  R1+R2+R3 都触碰登录主路径。需要先让 IDX 索引现有 <span class="font-mono">LoginService</span> 的并发调用链，找最合适的切入点。
+                </div>
+              </div>
+            </div>
+
+            <div class="flex gap-3">
+              <span class="agent-avatar flex-shrink-0" style="background:var(--a-idx)">IX</span>
+              <div class="flex-1">
+                <div class="flex items-baseline gap-2 mb-1"><span class="text-[12.5px] font-semibold text-[var(--text-strong)]">代码索引</span><span class="text-[10.5px] text-[var(--text-faint)] font-mono">14:32:01</span><span class="chip" style="background:var(--review-soft); color:var(--review); font-size:10px; padding:1px 6px">命中 23 文件</span></div>
+                <div class="text-[13px] leading-relaxed text-[var(--text-body)] bg-[var(--bg-elev)] rounded-lg px-3.5 py-2.5">
+                  <span class="font-mono">LoginService.login()</span> 调用链：handler → service → repo → redis (4 跳同步)。瓶颈在 redis 单次 GET·SET·DEL。建议引入 Pipeline 抽象到 <span class="font-mono">RedisTemplate</span>，业务层用 hint 注解开启批处理。
+                </div>
+              </div>
+            </div>
+
+            <div class="flex gap-3">
+              <span class="agent-avatar flex-shrink-0" style="background:var(--a-arch)">AR</span>
+              <div class="flex-1">
+                <div class="flex items-baseline gap-2 mb-1"><span class="text-[12.5px] font-semibold text-[var(--text-strong)]">架构师</span><span class="text-[10.5px] text-[var(--text-faint)] font-mono">14:34:18</span></div>
+                <div class="text-[13px] leading-relaxed text-[var(--text-body)] bg-[var(--bg-elev)] rounded-lg px-3.5 py-2.5">
+                  接受。R1 的限流我建议独立到 <span class="font-mono">RateLimitFilter</span>（网关层），不进 service 层。R4 JWT 缓存独立成 <span class="font-mono">JwtKeyCache</span>，由 <span class="font-mono">LoginService</span> 注入。R5 风控走异步事件，避免阻塞主路径。
+                </div>
+              </div>
+            </div>
+
+            <div class="flex gap-3">
+              <span class="agent-avatar flex-shrink-0" style="background:var(--a-idx)">IX</span>
+              <div class="flex-1">
+                <div class="flex items-baseline gap-2 mb-1"><span class="text-[12.5px] font-semibold text-[var(--text-strong)]">代码索引</span><span class="text-[10.5px] text-[var(--text-faint)] font-mono">14:35:42</span></div>
+                <div class="text-[13px] leading-relaxed text-[var(--text-body)] bg-[var(--bg-elev)] rounded-lg px-3.5 py-2.5">
+                  注意 <span class="font-mono">AuthHandler</span> 在 v3.2 已有事件总线，<span class="font-mono">BruteForceEvent</span> 直接复用即可，无需新增 publisher。
+                </div>
+              </div>
+            </div>
+
+            <div class="text-center"><span class="text-[10.5px] font-mono text-[var(--done)] px-2 py-0.5 bg-[var(--done-soft)] rounded">14:38:04 · 阶段完成 · 7m 04s</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="col-span-5 space-y-5">
+
+        <!-- 风险 -->
+        <div class="card p-5">
+          <div class="caps mb-3">风险与权衡 · 5 项</div>
+          <ul class="space-y-2.5">
+            <li class="flex gap-2.5 items-start text-[12.5px]">
+              <span class="chip" style="background:oklch(95% 0.04 25); color:var(--halt); font-size:10px; padding:1px 6px; flex-shrink:0">高</span>
+              <div class="flex-1">
+                <div class="text-[var(--text-strong)] font-medium">Redis Pipeline 引入后异常处理变化</div>
+                <div class="text-[11.5px] text-[var(--text-muted)] mt-0.5">批处理中单条失败不再抛异常，需在业务层逐条判断。<span class="text-[var(--text-strong)]">→ R3</span></div>
+              </div>
+            </li>
+            <li class="flex gap-2.5 items-start text-[12.5px]">
+              <span class="chip" style="background:var(--run-soft); color:var(--run); font-size:10px; padding:1px 6px; flex-shrink:0">中</span>
+              <div class="flex-1">
+                <div class="text-[var(--text-strong)] font-medium">RSA 密钥本地缓存 + 异步刷新可能短暂签名失败</div>
+                <div class="text-[11.5px] text-[var(--text-muted)] mt-0.5">刷新窗口 ±30s 需保留旧密钥兜底。<span class="text-[var(--text-strong)]">→ R4</span></div>
+              </div>
+            </li>
+            <li class="flex gap-2.5 items-start text-[12.5px]">
+              <span class="chip" style="background:var(--run-soft); color:var(--run); font-size:10px; padding:1px 6px; flex-shrink:0">中</span>
+              <div class="flex-1">
+                <div class="text-[var(--text-strong)] font-medium">网关限流配置 hot reload 频率</div>
+                <div class="text-[11.5px] text-[var(--text-muted)] mt-0.5">大促期间需 5min 内生效，配置中心 SLA 已满足。<span class="text-[var(--text-strong)]">→ R1</span></div>
+              </div>
+            </li>
+            <li class="flex gap-2.5 items-start text-[12.5px]">
+              <span class="chip" style="background:var(--done-soft); color:var(--done); font-size:10px; padding:1px 6px; flex-shrink:0">低</span>
+              <div class="flex-1">
+                <div class="text-[var(--text-strong)] font-medium">RiskCenter 客户端超时设置</div>
+                <div class="text-[11.5px] text-[var(--text-muted)] mt-0.5">事件总线异步消费，不阻塞主路径。<span class="text-[var(--text-strong)]">→ R5</span></div>
+              </div>
+            </li>
+            <li class="flex gap-2.5 items-start text-[12.5px]">
+              <span class="chip" style="background:var(--done-soft); color:var(--done); font-size:10px; padding:1px 6px; flex-shrink:0">低</span>
+              <div class="flex-1">
+                <div class="text-[var(--text-strong)] font-medium">压测脚本与生产数据隔离</div>
+                <div class="text-[11.5px] text-[var(--text-muted)] mt-0.5">压测路由必须带 <span class="font-mono">x-stress: 1</span> 头。<span class="text-[var(--text-strong)]">→ R6</span></div>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <!-- 时序 -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-4"><div class="caps">阶段时序</div><span class="text-[11px] font-mono text-[var(--text-muted)]">7m 04s</span></div>
+          <div class="tl-rail space-y-3.5 pl-1">
+            <div class="flex items-start gap-3"><span class="tl-dot"></span><div class="flex-1 -mt-0.5"><div class="text-[12.5px] text-[var(--text-strong)]">阶段启动 · 接收 6 原子需求</div><div class="text-[11px] text-[var(--text-muted)] font-mono">14:31:08</div></div></div>
+            <div class="flex items-start gap-3"><span class="tl-dot"></span><div class="flex-1 -mt-0.5"><div class="text-[12.5px] text-[var(--text-strong)]">IDX 扫描相关模块 · 23 文件</div><div class="text-[11px] text-[var(--text-muted)] font-mono">14:32:01 · +53s</div></div></div>
+            <div class="flex items-start gap-3"><span class="tl-dot"></span><div class="flex-1 -mt-0.5"><div class="text-[12.5px] text-[var(--text-strong)]">ARC 出第一版方案（v1）</div><div class="text-[11px] text-[var(--text-muted)] font-mono">14:34:18 · +2m17s</div></div></div>
+            <div class="flex items-start gap-3"><span class="tl-dot" style="border-color: var(--review)"></span><div class="flex-1 -mt-0.5"><div class="text-[12.5px] text-[var(--text-strong)]">用户提示 · "事件总线已有，不要新建"</div><div class="text-[11px] text-[var(--text-muted)] font-mono">14:35:30 · 李工</div></div></div>
+            <div class="flex items-start gap-3"><span class="tl-dot"></span><div class="flex-1 -mt-0.5"><div class="text-[12.5px] text-[var(--text-strong)]">ARC 修订 · v2 复用现有 bus</div><div class="text-[11px] text-[var(--text-muted)] font-mono">14:37:22</div></div></div>
+            <div class="flex items-start gap-3"><span class="tl-dot" style="background: var(--done); border-color: var(--done)"></span><div class="flex-1 -mt-0.5"><div class="text-[12.5px] text-[var(--text-strong)]">完成 · 影响清单 + UML 输出</div><div class="text-[11px] text-[var(--text-muted)] font-mono">14:38:04</div></div></div>
+          </div>
+        </div>
+
+        <!-- agents -->
+        <div class="card p-5">
+          <div class="caps mb-3">本阶段 Agent</div>
+          <div class="space-y-3">
+            <a href="agent-detail.html" class="flex items-center gap-3 p-2 -mx-2 rounded-lg hover:bg-[var(--bg-elev)]">
+              <span class="agent-avatar" style="background:var(--a-arch)">AR</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-baseline justify-between"><span class="text-[12.5px] font-semibold text-[var(--text-strong)]">架构师</span><span class="text-[10.5px] font-mono text-[var(--text-muted)]">7 调用 · 32k tok</span></div>
+                <div class="text-[11px] text-[var(--text-muted)] mt-0.5">主导映射 · GPT-4o · skill: arch-design-map v0.9</div>
+              </div>
+            </a>
+            <a href="agent-detail.html" class="flex items-center gap-3 p-2 -mx-2 rounded-lg hover:bg-[var(--bg-elev)]">
+              <span class="agent-avatar" style="background:var(--a-idx)">IX</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-baseline justify-between"><span class="text-[12.5px] font-semibold text-[var(--text-strong)]">代码索引</span><span class="text-[10.5px] font-mono text-[var(--text-muted)]">4 调用 · 20k tok</span></div>
+                <div class="text-[11px] text-[var(--text-muted)] mt-0.5">代码库索引 · ASTIndexer v2.4 · 23 文件命中</div>
+              </div>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- REVIEW -->
+    <section class="mt-7 card card-elev p-6" style="background: linear-gradient(180deg, oklch(98% 0.012 290) 0%, white 30%);">
+      <div class="flex items-start justify-between gap-6 mb-5">
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="caps" style="color: var(--review)">阶段评审 · Gate #2</span>
+            <span class="chip" style="background:var(--done-soft); color:var(--done); border-color:color-mix(in oklch, var(--done) 20%, transparent)"><span class="chip-dot" style="background:var(--done)"></span>已通过</span>
+            <span class="chip" style="background:var(--review-soft); color:var(--review); font-size:10.5px">1 建议</span>
+          </div>
+          <div class="font-display text-[24px] text-[var(--text-strong)] leading-tight">由 <span style="color: var(--review)">李工</span> 审核 · 14:42:15 通过</div>
+        </div>
+        <div class="text-right">
+          <div class="caps mb-1">耗时</div>
+          <div class="font-display text-[26px] text-[var(--text-strong)] leading-none">4<span class="text-[14px] text-[var(--text-muted)] ml-0.5">m</span> 11<span class="text-[14px] text-[var(--text-muted)] ml-0.5">s</span></div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-12 gap-5">
+        <div class="col-span-7">
+          <div class="caps mb-2">评审意见</div>
+          <div class="bg-white border border-[var(--border-soft)] rounded-xl p-4">
+            <div class="flex items-center gap-2.5 mb-2.5">
+              <div class="w-7 h-7 rounded-full bg-[var(--bg-deep)] text-white flex items-center justify-center text-[11px] font-semibold">李</div>
+              <div>
+                <div class="text-[12.5px] font-semibold text-[var(--text-strong)]">李工 · 后端技术专家</div>
+                <div class="text-[10.5px] text-[var(--text-muted)]">评审组 · 登录域 owner</div>
+              </div>
+            </div>
+            <p class="text-[13px] leading-relaxed text-[var(--text-body)]">
+              <strong>方案合理</strong>。建议 <span class="font-mono text-[12.5px]">TokenBucketLimiter</span> 把 redisOps 抽象为接口，便于未来切换为 Redisson 限流器。已记入产物，不阻塞下游。<strong>JwtKeyCache</strong> 的双密钥兜底要在测试用例中显式覆盖。
+            </p>
+            <div class="mt-3 flex items-center gap-2 text-[11.5px] text-[var(--text-muted)]">
+              <span class="chip" style="background:var(--done-soft); color:var(--done); font-size:10.5px">通过</span>
+              <span class="chip" style="background:var(--review-soft); color:var(--review); font-size:10.5px">1 建议</span>
+              <span class="ml-auto font-mono text-[var(--text-faint)]">v1 → v2</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-span-5">
+          <div class="caps mb-2">评审清单</div>
+          <ul class="space-y-2 text-[12.5px] text-[var(--text-body)]">
+            <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="var(--done)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>类划分单一职责</li>
+            <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="var(--done)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>不破坏现有接口契约</li>
+            <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="var(--done)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>复用既有事件总线</li>
+            <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="var(--done)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>高风险点已标注</li>
+            <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="var(--review)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>RedisOps 抽象为接口（建议）</li>
+            <li class="flex items-start gap-2"><svg class="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="var(--done)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>14 文件改动可拆分为 3 PR</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mt-5 pt-5 border-t border-dashed border-[var(--border-soft)] flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <a href="review-detail.html" class="btn">查看完整评审详情</a>
+          <button class="btn btn-ghost text-[11.5px]">查看 diff（v1 → v2）</button>
+        </div>
+        <div class="text-[11.5px] text-[var(--text-muted)]">
+          下游已激活 · <a href="index.html" class="text-[var(--text-strong)] hover:underline">进入编码 + UT →</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- STAGE NAV -->
+    <nav class="mt-7 flex items-center justify-between">
+      <a href="stage-1-requirement.html" class="btn">← 需求富化 · Stage 01</a>
+      <a href="index.html" class="btn btn-ghost text-[11.5px]">返回驾驶舱</a>
+      <a href="index.html" class="btn btn-primary">编码 + UT · Stage 03 →</a>
+    </nav>
+
+    <footer class="mt-12 mb-6 text-center text-[11px] text-[var(--text-faint)]">
+      DevPipeline · AI 研发流水线 · Stage 02 / 设计与拆解 · prototype v0.2
+    </footer>
+  </main>
+
+</body>
+</html>

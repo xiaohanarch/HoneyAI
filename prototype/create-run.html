@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>新建运行 · 引导 · AI 数字产线</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-base: oklch(98.8% 0.006 90);
+    --ink: oklch(18% 0.02 260);
+    --ink-soft: oklch(38% 0.02 260);
+    --ink-mute: oklch(58% 0.015 260);
+    --line: oklch(90% 0.01 260);
+    --line-soft: oklch(94% 0.008 260);
+    --surface: oklch(100% 0 0);
+    --done: oklch(72% 0.16 150);
+    --run: oklch(80% 0.16 65);
+    --review: oklch(70% 0.16 290);
+    --halt: oklch(67% 0.20 25);
+    --idle: oklch(80% 0.01 260);
+    --a-req: oklch(72% 0.13 245);
+    --a-arch: oklch(68% 0.13 200);
+    --a-dev: oklch(72% 0.17 150);
+    --a-test: oklch(70% 0.16 270);
+    --accent: oklch(62% 0.18 255);
+  }
+  *{ -webkit-font-smoothing:antialiased; }
+  html,body{ background: var(--bg-base); color: var(--ink); font-family:'Inter',ui-sans-serif,system-ui,sans-serif; }
+  .display{ font-family:'Instrument Serif', ui-serif, Georgia, serif; letter-spacing:-0.01em; }
+  .mono{ font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace; font-variant-numeric: tabular-nums; }
+  .grain::before{
+    content:""; position:fixed; inset:0; pointer-events:none; opacity:.05; mix-blend-mode:multiply; z-index:1;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  .panel{ background: var(--surface); border:1px solid var(--line); border-radius:14px; }
+  .pill{ font-size:11px; padding:3px 8px; border-radius:999px; background: oklch(97% 0.008 260); color: var(--ink-soft); border:1px solid var(--line-soft); }
+  .pill-done{ color: oklch(40% 0.13 150); background: oklch(72% 0.16 150 / .12); border-color: oklch(72% 0.16 150 / .4); }
+  .pill-active{ background: oklch(18% 0.02 260); color:#fff; border-color: oklch(18% 0.02 260); }
+  .section-h{ font-size:11px; color: var(--ink-mute); letter-spacing:.16em; text-transform: uppercase; }
+  .field-l{ font-size:12.5px; color: var(--ink-soft); }
+  .field-h{ font-size:11px; color: var(--ink-mute); margin-top:4px; }
+  .input{ width:100%; height:38px; border:1px solid var(--line); border-radius:10px; background: var(--surface); padding:0 14px; font-size:13.5px; color: var(--ink); }
+  .input:focus, .ta:focus{ outline:none; border-color: oklch(70% 0.06 260); box-shadow: 0 0 0 4px oklch(70% 0.06 260 / .12); }
+  .ta{ width:100%; min-height:140px; border:1px solid var(--line); border-radius:10px; background: var(--surface); padding:12px 14px; font-size:13.5px; color: var(--ink); resize:vertical; line-height:1.6; font-family: 'Inter', sans-serif; }
+  .atmo{
+    background:
+      radial-gradient(60% 50% at 0% 0%, oklch(72% 0.13 245 / .10), transparent 60%),
+      radial-gradient(50% 40% at 100% 100%, oklch(72% 0.17 150 / .07), transparent 60%);
+  }
+  /* stepper */
+  .stepper{ display:flex; align-items:center; gap:0; }
+  .step{ display:flex; align-items:center; gap:10px; }
+  .step .num{ width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; background: oklch(97% 0.008 260); color: var(--ink-mute); border: 1px solid var(--line); }
+  .step.done .num{ background: var(--done); color:#fff; border-color: var(--done); }
+  .step.active .num{ background: var(--ink); color:#fff; border-color: var(--ink); }
+  .step .lbl{ font-size:12.5px; color: var(--ink-mute); }
+  .step.active .lbl, .step.done .lbl{ color: var(--ink); font-weight:500; }
+  .step-link{ width:48px; height:1px; background: var(--line); margin: 0 12px; }
+  .step.done + .step-link{ background: var(--done); }
+
+  /* template card */
+  .tpl-card{
+    border: 1.5px solid var(--line);
+    border-radius: 14px;
+    padding: 18px;
+    cursor: pointer;
+    transition: all .15s ease;
+    background: var(--surface);
+    position: relative;
+  }
+  .tpl-card:hover{ border-color: oklch(70% 0.06 260); transform: translateY(-1px); box-shadow: 0 6px 20px -8px oklch(15% 0 0 / .12); }
+  .tpl-card.selected{ border-color: var(--ink); background: linear-gradient(180deg, var(--surface), oklch(98.5% 0.006 90)); box-shadow: 0 4px 14px -6px oklch(15% 0 0 / .12); }
+  .tpl-card.selected::after{
+    content: "✓"; position:absolute; top:14px; right:14px;
+    width:22px; height:22px; border-radius:50%;
+    background: var(--ink); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:600;
+  }
+  .tpl-icon{ width:42px; height:42px; border-radius:11px; display:flex; align-items:center; justify-content:center; color:#fff; font-family:'Instrument Serif', serif; font-size:18px; margin-bottom:12px; }
+
+  /* pipeline preview */
+  .pipe-strip{ display:grid; grid-template-columns: repeat(4, 1fr); gap: 12px; position:relative; }
+  .pipe-node{ background: var(--surface); border:1px solid var(--line); border-radius: 12px; padding: 14px; position:relative; }
+  .pipe-node::after{
+    content: ""; position:absolute; right:-12px; top:50%; width:12px; height:1px;
+    background: var(--line); z-index:1;
+  }
+  .pipe-node:last-child::after{ display:none; }
+  .pipe-num{ font-family:'JetBrains Mono',monospace; font-size:10.5px; color: var(--ink-mute); }
+  .pipe-name{ font-size:13px; font-weight:600; margin-top:4px; }
+  .pipe-agents{ font-size:10.5px; color: var(--ink-mute); margin-top:6px; font-family: 'JetBrains Mono', monospace; }
+
+  /* chip selectors */
+  .chip{ display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:999px; font-size:12px; background: var(--surface); border:1px solid var(--line); cursor:pointer; color: var(--ink-soft); }
+  .chip.selected{ background: var(--ink); color:#fff; border-color: var(--ink); }
+  .chip .dot{ width:6px; height:6px; border-radius:50%; }
+
+  /* file dropzone */
+  .dropzone{
+    border: 1.5px dashed var(--line);
+    border-radius: 12px;
+    padding: 18px;
+    text-align: center;
+    background: oklch(98% 0.008 260);
+    transition: all .15s;
+    cursor: pointer;
+  }
+  .dropzone:hover{ border-color: oklch(70% 0.06 260); background: oklch(99% 0.005 90); }
+
+  /* summary right pane */
+  .sum-row{ display:flex; justify-content:space-between; padding: 9px 0; font-size:12.5px; border-bottom: 1px solid var(--line-soft); }
+  .sum-row:last-child{ border-bottom: 0; }
+  .sum-row .k{ color: var(--ink-mute); }
+  .sum-row .v{ font-weight: 500; }
+
+  .ruler{ height:1px; background: var(--line-soft); }
+  .kbd{ font-family:'JetBrains Mono',monospace; font-size:10.5px; padding:1.5px 5px; border-radius:4px; background: oklch(97% 0.008 260); border:1px solid var(--line); color: var(--ink-soft); }
+  .switch{ width:34px; height:20px; border-radius:999px; background: var(--line); position:relative; cursor:pointer; transition: background .15s; flex-shrink:0; }
+  .switch::after{ content:""; position:absolute; left:2px; top:2px; width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:0 1px 3px oklch(15% 0 0 / .25); transition: all .18s; }
+  .switch.on{ background: oklch(72% 0.16 150); }
+  .switch.on::after{ left: 16px; }
+</style>
+</head>
+<body class="grain atmo">
+
+<header class="px-8 pt-6 pb-3 flex items-center gap-4 sticky top-0 z-20 backdrop-blur bg-[color:oklch(98.8%_0.006_90/.85)] border-b border-[color:var(--line-soft)]">
+  <a href="runs-list.html" class="text-[12.5px] text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] flex items-center gap-1.5">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    历史运行
+  </a>
+  <div class="h-4 w-px bg-[color:var(--line)]"></div>
+  <span class="text-[12.5px] text-[color:var(--ink)] font-medium">新建运行</span>
+  <div class="ml-auto flex items-center gap-2 text-[11.5px] text-[color:var(--ink-mute)]">
+    <span class="kbd">esc</span><span>取消</span>
+    <span class="ml-3 kbd">⌘↵</span><span>下一步</span>
+  </div>
+</header>
+
+<main class="px-8 py-8 atmo">
+  <div class="max-w-[1280px] mx-auto">
+
+  <!-- Hero / Stepper -->
+  <section class="mb-7">
+    <div class="section-h">START · NEW RUN</div>
+    <h1 class="display text-[52px] leading-[1.04] mt-2 max-w-[880px]">
+      把一条需求<span class="italic text-[color:oklch(35%_0.16_260)]">送入</span>数字产线
+    </h1>
+    <p class="text-[13.5px] text-[color:var(--ink-soft)] mt-2 max-w-[640px] leading-relaxed">
+      4 个阶段固定不变 · 每节点可中断 / 补充上下文 / 续跑。这一步选模板、贴需求、定关键参数,然后由系统排程进入需求富化阶段。
+    </p>
+
+    <!-- Stepper -->
+    <div class="stepper mt-8">
+      <div class="step done"><div class="num">✓</div><div class="lbl">模板</div></div>
+      <div class="step-link"></div>
+      <div class="step active"><div class="num">2</div><div class="lbl">需求 & 上下文</div></div>
+      <div class="step-link"></div>
+      <div class="step"><div class="num">3</div><div class="lbl">阶段 & Agent</div></div>
+      <div class="step-link"></div>
+      <div class="step"><div class="num">4</div><div class="lbl">评审 & 通知</div></div>
+      <div class="step-link"></div>
+      <div class="step"><div class="num">5</div><div class="lbl">预览 & 排程</div></div>
+    </div>
+  </section>
+
+  <!-- Body: left form + right summary -->
+  <section class="grid grid-cols-12 gap-5">
+
+    <!-- LEFT main content -->
+    <div class="col-span-8 space-y-5">
+
+      <!-- ─────────── Step 1 · 模板(已选,可改) ─────────── -->
+      <div class="panel p-6">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <div class="section-h">① 选择模板</div>
+            <div class="text-[12.5px] text-[color:var(--ink-soft)] mt-1">不同模板会预置不同的 agent 装配 / 评审策略 / 模型路由</div>
+          </div>
+          <button class="text-[11.5px] text-[color:var(--ink-soft)] hover:text-[color:var(--ink)]">从历史 Run 复制 →</button>
+        </div>
+
+        <div class="grid grid-cols-4 gap-3">
+          <div class="tpl-card selected">
+            <div class="tpl-icon" style="background: linear-gradient(135deg, oklch(72% 0.13 245), oklch(55% 0.16 250))">⌘</div>
+            <div class="text-[13.5px] font-semibold">标准 4 阶段</div>
+            <div class="text-[11px] text-[color:var(--ink-mute)] mt-1 leading-snug">需求 → 架构 → 代码 → 测试,人工评审 4 次</div>
+            <div class="text-[10.5px] text-[color:var(--ink-mute)] mono mt-2.5">推荐 · 79% 团队在用</div>
+          </div>
+          <div class="tpl-card">
+            <div class="tpl-icon" style="background: linear-gradient(135deg, oklch(72% 0.17 150), oklch(48% 0.18 150))">⚡</div>
+            <div class="text-[13.5px] font-semibold">极速通道</div>
+            <div class="text-[11px] text-[color:var(--ink-mute)] mt-1 leading-snug">小变更 / 改 BUG · 仅 AI 评审</div>
+            <div class="text-[10.5px] text-[color:var(--ink-mute)] mono mt-2.5">≤ 50 行 推荐</div>
+          </div>
+          <div class="tpl-card">
+            <div class="tpl-icon" style="background: linear-gradient(135deg, oklch(67% 0.20 25), oklch(55% 0.22 20))">🔐</div>
+            <div class="text-[13.5px] font-semibold">安全敏感</div>
+            <div class="text-[11px] text-[color:var(--ink-mute)] mt-1 leading-snug">强制双签 + 安全组会签</div>
+            <div class="text-[10.5px] text-[color:var(--ink-mute)] mono mt-2.5">payment / auth 默认</div>
+          </div>
+          <div class="tpl-card">
+            <div class="tpl-icon" style="background: linear-gradient(135deg, oklch(70% 0.16 290), oklch(50% 0.18 290))">⚙</div>
+            <div class="text-[13.5px] font-semibold">自定义</div>
+            <div class="text-[11px] text-[color:var(--ink-mute)] mt-1 leading-snug">从零拼装,适合架构探索</div>
+            <div class="text-[10.5px] text-[color:var(--ink-mute)] mono mt-2.5">高级</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────── Step 2 · 需求来源(当前激活) ─────────── -->
+      <div class="panel p-6">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <div class="section-h">② 需求 & 上下文</div>
+            <div class="text-[12.5px] text-[color:var(--ink-soft)] mt-1">系统会用 REQ Agent 拆解为原子需求,这里贴得越准确,后面 Agent 越省事</div>
+          </div>
+        </div>
+
+        <!-- source tabs -->
+        <div class="flex items-center gap-2 mb-4">
+          <span class="chip selected"><span class="dot" style="background: var(--accent)"></span>JIRA 单</span>
+          <span class="chip">手写需求</span>
+          <span class="chip">PRD 文档</span>
+          <span class="chip">语音 / 录音</span>
+          <span class="chip">Issue / GitHub</span>
+        </div>
+
+        <!-- Jira -->
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <div class="field-l">JIRA Key</div>
+            <input class="input mono mt-1.5" value="JIRA-3982" />
+            <div class="field-h">输入后系统会拉取标题 / 描述 / 验收条件</div>
+          </div>
+          <div>
+            <div class="field-l">关联服务</div>
+            <input class="input mono mt-1.5" value="auth-service" />
+            <div class="field-h">用于挂载知识库 / 选择 Agent 装配</div>
+          </div>
+        </div>
+
+        <!-- Auto-fetched preview -->
+        <div class="p-4 rounded-xl border border-[color:var(--line-soft)] bg-[color:oklch(98%_0.008_260)]">
+          <div class="flex items-center justify-between mb-2">
+            <span class="pill mono">从 JIRA 拉取</span>
+            <span class="text-[10.5px] text-[color:var(--ink-mute)] mono">已同步 · 12s 前</span>
+          </div>
+          <div class="display text-[20px] leading-tight">登录接口加入限流与账户锁定</div>
+          <div class="text-[12.5px] text-[color:var(--ink-soft)] mt-2 leading-relaxed">
+            为减少撞库 / 暴力破解,登录接口需要支持基于用户名 + IP 的限流(默认 10次/分),
+            连续失败 5 次锁定 15 分钟。需要兼容现有 JWT 流,不改动接口契约。
+          </div>
+          <div class="flex flex-wrap gap-2 mt-3">
+            <span class="pill">报告人 · 王工</span>
+            <span class="pill">优先级 · 高</span>
+            <span class="pill">SLO · QPS≥2000 / P99≤80ms</span>
+            <span class="pill">验收条件 · 6 项</span>
+          </div>
+        </div>
+
+        <!-- 补充上下文 -->
+        <div class="mt-5">
+          <div class="field-l">补充说明 / 约束(可选)</div>
+          <textarea class="ta mt-1.5">注意:限流键不要只用用户名,要带 IP;锁定时长可由配置中心覆盖;
+日志中不能出现明文用户名 / 密码,只保留 hash。</textarea>
+          <div class="field-h">这些内容会作为额外指令传给所有阶段的 Agent</div>
+        </div>
+
+        <!-- 附件 -->
+        <div class="mt-4">
+          <div class="field-l mb-2">参考资料(可选)</div>
+          <div class="dropzone">
+            <div class="text-[12.5px] text-[color:var(--ink-soft)]">拖入 PDF / Word / Markdown,或选择已有知识源</div>
+            <div class="flex items-center justify-center gap-2 mt-3">
+              <span class="chip selected text-[11.5px]">登录限流规范 v3</span>
+              <span class="chip text-[11.5px]">账户安全策略</span>
+              <span class="chip text-[11.5px]">+ 浏览</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────── Step 3 · 阶段 & Agent 预设(只读预览) ─────────── -->
+      <div class="panel p-6 opacity-90">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <div class="section-h">③ 阶段 & Agent · 预览</div>
+            <div class="text-[12.5px] text-[color:var(--ink-soft)] mt-1">由模板预设,可在下一步进入画布调整每个节点</div>
+          </div>
+          <span class="pill pill-done">来自:标准 4 阶段</span>
+        </div>
+
+        <!-- Pipeline preview -->
+        <div class="pipe-strip">
+          <div class="pipe-node">
+            <div class="flex items-center justify-between">
+              <span class="pipe-num">STAGE · 01</span>
+              <span class="w-2 h-2 rounded-full" style="background: var(--a-req)"></span>
+            </div>
+            <div class="pipe-name">需求富化</div>
+            <div class="pipe-agents">REQ · KG · BIZ</div>
+          </div>
+          <div class="pipe-node">
+            <div class="flex items-center justify-between">
+              <span class="pipe-num">STAGE · 02</span>
+              <span class="w-2 h-2 rounded-full" style="background: var(--a-arch)"></span>
+            </div>
+            <div class="pipe-name">设计与拆解</div>
+            <div class="pipe-agents">ARC · IDX · TS · US</div>
+          </div>
+          <div class="pipe-node">
+            <div class="flex items-center justify-between">
+              <span class="pipe-num">STAGE · 03</span>
+              <span class="w-2 h-2 rounded-full" style="background: var(--a-dev)"></span>
+            </div>
+            <div class="pipe-name">编码 + UT</div>
+            <div class="pipe-agents">DEV · SEC · PRF</div>
+          </div>
+          <div class="pipe-node">
+            <div class="flex items-center justify-between">
+              <span class="pipe-num">STAGE · 04</span>
+              <span class="w-2 h-2 rounded-full" style="background: var(--a-test)"></span>
+            </div>
+            <div class="pipe-name">SIT 集成测试</div>
+            <div class="pipe-agents">SIT · PRF</div>
+          </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-3 gap-3 text-[12px]">
+          <div class="flex items-center justify-between p-3 rounded-lg bg-[color:oklch(98%_0.008_260)] border border-[color:var(--line-soft)]">
+            <span><span class="text-[color:var(--ink-mute)]">总 Agent</span> <span class="mono font-medium">10</span></span>
+            <span class="text-[10.5px] text-[color:var(--ink-mute)]">5 primary · 5 advisor</span>
+          </div>
+          <div class="flex items-center justify-between p-3 rounded-lg bg-[color:oklch(98%_0.008_260)] border border-[color:var(--line-soft)]">
+            <span><span class="text-[color:var(--ink-mute)]">预估时长</span> <span class="mono font-medium">~ 3.8h</span></span>
+            <span class="text-[10.5px] text-[color:var(--ink-mute)]">含评审等待</span>
+          </div>
+          <div class="flex items-center justify-between p-3 rounded-lg bg-[color:oklch(98%_0.008_260)] border border-[color:var(--line-soft)]">
+            <span><span class="text-[color:var(--ink-mute)]">预估成本</span> <span class="mono font-medium">¥ 18 ~ 24</span></span>
+            <span class="text-[10.5px] text-[color:var(--ink-mute)]">基于 30 天均值</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────── Step 4 · 评审 & 通知 ─────────── -->
+      <div class="panel p-6">
+        <div class="section-h mb-1">④ 评审 & 通知</div>
+        <div class="text-[12.5px] text-[color:var(--ink-soft)] mb-4">每一阶段的人工评审审批员,可在任意节点临时换人</div>
+
+        <div class="space-y-3">
+          <!-- one approver row -->
+          <div class="flex items-center gap-3 p-3 rounded-lg border border-[color:var(--line-soft)]">
+            <span class="w-7 h-7 rounded-md bg-[color:var(--a-req)] text-white text-[11px] font-semibold flex items-center justify-center">CR1</span>
+            <div class="flex-1 text-[12.5px]"><span class="font-medium">CR-1 · 需求评审</span><div class="text-[11px] text-[color:var(--ink-mute)]">SLA 2h · 来自 标准 4 阶段</div></div>
+            <span class="pill selected pill-active">@王工</span>
+            <span class="pill">@刘工 backup</span>
+          </div>
+          <div class="flex items-center gap-3 p-3 rounded-lg border border-[color:var(--line-soft)]">
+            <span class="w-7 h-7 rounded-md bg-[color:var(--a-arch)] text-white text-[11px] font-semibold flex items-center justify-center">CR2</span>
+            <div class="flex-1 text-[12.5px]"><span class="font-medium">CR-2 · 架构评审</span><div class="text-[11px] text-[color:var(--ink-mute)]">SLA 4h</div></div>
+            <span class="pill selected pill-active">@李工</span>
+          </div>
+          <div class="flex items-center gap-3 p-3 rounded-lg border border-[color:var(--line-soft)]">
+            <span class="w-7 h-7 rounded-md bg-[color:var(--a-dev)] text-white text-[11px] font-semibold flex items-center justify-center">CR3</span>
+            <div class="flex-1 text-[12.5px]"><span class="font-medium">CR-3 · 代码评审</span><div class="text-[11px] text-[color:var(--ink-mute)]">SLA 4h · 含安全组会签</div></div>
+            <span class="pill selected pill-active">@王工</span>
+            <span class="pill">@安全组</span>
+          </div>
+          <div class="flex items-center gap-3 p-3 rounded-lg border border-[color:var(--line-soft)]">
+            <span class="w-7 h-7 rounded-md bg-[color:var(--a-test)] text-white text-[11px] font-semibold flex items-center justify-center">CR4</span>
+            <div class="flex-1 text-[12.5px]"><span class="font-medium">CR-4 · 测试通过</span><div class="text-[11px] text-[color:var(--ink-mute)]">SLA 2h</div></div>
+            <span class="pill selected pill-active">@张工</span>
+          </div>
+        </div>
+
+        <div class="ruler my-5"></div>
+
+        <div class="section-h mb-3">通知</div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex items-center justify-between p-3 rounded-lg border border-[color:var(--line-soft)]">
+            <div>
+              <div class="text-[13px] font-medium">企业微信群通知</div>
+              <div class="text-[11px] text-[color:var(--ink-mute)] mt-0.5">每阶段结束 + 评审待办</div>
+            </div>
+            <div class="switch on"></div>
+          </div>
+          <div class="flex items-center justify-between p-3 rounded-lg border border-[color:var(--line-soft)]">
+            <div>
+              <div class="text-[13px] font-medium">邮件给 DRI</div>
+              <div class="text-[11px] text-[color:var(--ink-mute)] mt-0.5">仅当人工评审 SLA 超时</div>
+            </div>
+            <div class="switch on"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────── Footer nav ─────────── -->
+      <div class="flex items-center gap-3 pt-2">
+        <button class="px-4 h-10 rounded-lg text-[12.5px] text-[color:var(--ink-soft)] hover:bg-[color:var(--line-soft)]">← 上一步</button>
+        <span class="text-[11.5px] text-[color:var(--ink-mute)] ml-2">系统会自动保存草稿 · 可关闭后继续</span>
+        <button class="ml-auto px-4 h-10 rounded-lg text-[12.5px] border border-[color:var(--line)] bg-white">保存为模板</button>
+        <button class="px-5 h-10 rounded-lg text-[12.5px] font-medium text-white flex items-center gap-2" style="background: oklch(18% 0.02 260)">
+          下一步 · 预览
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- RIGHT summary pane -->
+    <aside class="col-span-4">
+      <div class="panel p-6 sticky top-[88px]">
+        <div class="section-h mb-3">运行摘要</div>
+
+        <div class="flex items-start gap-3 mb-4">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white display text-[15px]" style="background: linear-gradient(135deg, oklch(72% 0.13 245), oklch(55% 0.16 250))">⌘</div>
+          <div class="flex-1">
+            <div class="text-[10.5px] text-[color:var(--ink-mute)] uppercase tracking-wider">来自模板</div>
+            <div class="font-medium text-[14px] mt-0.5">标准 4 阶段</div>
+            <div class="text-[10.5px] text-[color:var(--ink-mute)] mono mt-1">tpl-std-v3</div>
+          </div>
+        </div>
+
+        <div class="sum-row"><span class="k">需求</span><span class="v mono">JIRA-3982</span></div>
+        <div class="sum-row"><span class="k">服务</span><span class="v mono">auth-service</span></div>
+        <div class="sum-row"><span class="k">阶段</span><span class="v">4 (固定)</span></div>
+        <div class="sum-row"><span class="k">Agent</span><span class="v mono">10</span></div>
+        <div class="sum-row"><span class="k">人工评审</span><span class="v mono">4 次</span></div>
+        <div class="sum-row"><span class="k">附件 / 知识</span><span class="v mono">1 文档</span></div>
+        <div class="sum-row"><span class="k">通知</span><span class="v">企微 · 邮件</span></div>
+
+        <div class="ruler my-4"></div>
+
+        <div class="sum-row"><span class="k">预估时长</span><span class="v mono">~ 3.8 h</span></div>
+        <div class="sum-row"><span class="k">预估 Token</span><span class="v mono">~ 420k</span></div>
+        <div class="sum-row"><span class="k">预估成本</span><span class="v mono" style="color: oklch(40% 0.13 150)">¥ 18.4 ~ 24.0</span></div>
+        <div class="sum-row"><span class="k">排程</span><span class="v">立即</span></div>
+
+        <div class="ruler my-4"></div>
+
+        <div class="space-y-2 text-[11.5px]">
+          <div class="flex items-start gap-2"><span class="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] text-white mt-0.5" style="background: var(--done)">✓</span><span>模板与服务匹配</span></div>
+          <div class="flex items-start gap-2"><span class="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] text-white mt-0.5" style="background: var(--done)">✓</span><span>所有评审员可达</span></div>
+          <div class="flex items-start gap-2"><span class="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] text-white mt-0.5" style="background: var(--done)">✓</span><span>knowledge 已同步 (4m 前)</span></div>
+          <div class="flex items-start gap-2"><span class="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] mt-0.5 border border-[color:var(--line)]"></span><span class="text-[color:var(--ink-mute)]">待确认:成本预估</span></div>
+        </div>
+
+        <a href="index.html" class="w-full h-11 rounded-lg text-[13px] font-medium text-white mt-5 flex items-center justify-center" style="background: linear-gradient(180deg, oklch(72% 0.16 150), oklch(58% 0.18 150))">
+          一键启动运行 →
+        </a>
+        <div class="text-center text-[10.5px] text-[color:var(--ink-mute)] mt-2 mono">⌘↵ 启动 · 启动后将创建 Run #2452</div>
+      </div>
+    </aside>
+
+  </section>
+
+  </div>
+</main>
+
+<footer class="px-8 py-6 text-[10.5px] mono text-[color:var(--ink-mute)] flex items-center gap-3">
+  <span class="w-1.5 h-1.5 rounded-full" style="background: var(--accent)"></span>
+  Prototype · create-run.html · 新建运行向导
+</footer>
+
+</body>
+</html>
