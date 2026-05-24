@@ -316,3 +316,11 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY run_cost_summary;
 ```
 
 > ⚠️ CONCURRENTLY 要求物化视图有唯一索引：`CREATE UNIQUE INDEX ON run_cost_summary (tenant_id, run_id);`
+
+## 15. 验收清单（V1.0 种子）
+
+> 见 [00-README.md §验收清单约定](./00-README.md#验收清单约定acceptance-criteria)。
+
+- [ ] **AC-09-01** `[Idempotency]` `[Cross-module]`：worker 对同一 `(run_id, node_id, attempt, event_kind)` 二次写 cost_event → 第二次 ON CONFLICT DO NOTHING，租户月度 total 不重复累加
+- [ ] **AC-09-02** `[Boundary]` `[Failure]`：tenant 月度 cost 达 100% budget → `createRun()` 抛 `BudgetExceededError`，UI 弹窗 + 拒绝创建；降到 99% 后立即恢复
+- [ ] **AC-09-03** `[Happy]` `[Boundary]`：tenant 月度 cost 跨过 80% 阈值 → 后续页面顶部 banner "本月已用 80% 预算"，仍允许创建 Run

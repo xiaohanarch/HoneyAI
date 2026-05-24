@@ -391,21 +391,25 @@ export const artifactKindEnum = pgEnum('artifact_kind', [
 ])
 export const artifactStatusEnum = pgEnum('artifact_status', ['ok', 'failed'])
 
+// artifact_blobs: CAS 物理层（sha256 去重），不可变
+// oss_key 规范：<tenant_id>/blobs/<sha256[0:2]>/<sha256[2:]> （单 bucket + 租户前缀，见 TD-016）
 export const artifactBlobs = pgTable('artifact_blobs', {
   sha256: text('sha256').primaryKey(),
   byteSize: bigint('byte_size', { mode: 'bigint' }).notNull(),
-  ossKey: text('oss_key').notNull(),
+  ossKey: text('oss_key').notNull().unique(), // UNIQUE：幂等 INSERT 防 BullMQ 重试导致重复
   contentType: text('content_type').notNull().default('text/markdown'),
   ...tsCols,
 })
 
+// artifacts: 逻辑层（每次 attempt 一行），不可变；通过 blob_sha256 引用物理 blob
+// 同一 (run, node, attempt, kind) 唯一；retry 触发新行，旧行保留（见 06 §16）
 export const artifacts = pgTable('artifacts', {
   id: uuid('id').primaryKey(),
   tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
   runId: uuid('run_id').notNull().references(() => runs.id, { onDelete: 'cascade' }),
   nodeId: uuid('node_id').references(() => nodes.id, { onDelete: 'set null' }),
+  attempt: integer('attempt').notNull().default(1), // 节点重试编号（与 nodes.attempt 对应）
   kind: artifactKindEnum('kind').notNull(),
-  version: integer('version').notNull().default(1),
   status: artifactStatusEnum('status').notNull().default('ok'),
   blobSha256: text('blob_sha256').notNull().references(() => artifactBlobs.sha256),
   metadata: jsonb('metadata').notNull().default({}), // frontmatter mirror
@@ -414,8 +418,36 @@ export const artifacts = pgTable('artifacts', {
   pinned: boolean('pinned').notNull().default(false),
   ...tsCols,
 }, (t) => ({
-  byRunKind: index('artifacts_by_run_kind').on(t.runId, t.kind, t.version.desc()),
+  byRunKind: index('artifacts_by_run_kind').on(t.runId, t.kind, t.attempt.desc()),
   byTenantCreated: index('artifacts_by_tenant_created').on(t.tenantId, t.createdAt.desc()),
+  // UNIQUE：禁止同一 (run,node,attempt,kind) 重复 — 配合 INSERT ON CONFLICT DO NOTHING 实现幂等
+  uniqByNodeAttempt: uniqueIndex('artifacts_uniq_node_attempt_kind').on(t.runId, t.nodeId, t.attempt, t.kind),
+}))
+```
+
+### 6.6b IR Documents（人工可编辑层，A2 append-only）
+```ts
+// packages/db/src/schema/ir-documents.ts
+// IR markdown 不落 OSS，TEXT 列直存；每次 save 写新版本行（append-only INSERT）
+// 见 04 §11 完整规则
+export const irStageEnum = pgEnum('ir_stage', ['requirement', 'design', 'implementation'])
+
+export const irDocuments = pgTable('ir_documents', {
+  // PK = (run_id, stage, version) — 复合主键
+  runId: uuid('run_id').notNull().references(() => runs.id, { onDelete: 'cascade' }),
+  stage: irStageEnum('stage').notNull(),
+  version: integer('version').notNull(),                // monotonic int，server 在事务内 +1
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'cascade' }),
+  body: text('body').notNull(),                         // 完整 markdown + frontmatter
+  frontmatterJson: jsonb('frontmatter_json').notNull(), // 解析后的 frontmatter（zod 校验过）
+  createdByUserId: uuid('created_by_user_id').references(() => users.id), // null = agent 写入
+  createdByKind: text('created_by_kind', { enum: ['agent', 'user'] }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.runId, t.stage, t.version] }),
+  // 索引：取当前版本 → ORDER BY version DESC LIMIT 1
+  byCurrent: index('ir_documents_by_current').on(t.runId, t.stage, t.version.desc()),
+  byTenant: index('ir_documents_by_tenant_created').on(t.tenantId, t.createdAt.desc()),
 }))
 ```
 
@@ -623,3 +655,11 @@ const db = withTenant(session.tenantId, rawDb)
 const runs = await db.select().from(schema.runs).limit(20)
 // 自动 → WHERE tenant_id = session.tenantId
 ```
+
+## 9. 验收清单（V1.0 种子）
+
+> 见 [00-README.md §验收清单约定](./00-README.md#验收清单约定acceptance-criteria)。
+
+- [ ] **AC-03-01** `[Happy]` `[Cross-module]`：`withTenant(t1, db).select().from(runs)` 生成的 SQL 自动含 `WHERE tenant_id = 't1'`（通过 query log assertion 验证）
+- [ ] **AC-03-02** `[Failure]` `[Boundary]`：tenant A 用户用 `withTenant(B, db)` 查询 → 返回 0 行（fixture：A、B 各有 1 条 run），且 audit_log 记录跨租户访问尝试
+- [ ] **AC-03-03** `[Idempotency]`：artifacts INSERT 同 `(run_id, node_id, attempt, kind)` 二次 → 第二次 ON CONFLICT DO NOTHING，结果集仍为 1 行；artifact_blobs INSERT 同 `oss_key` 二次 → 同样幂等

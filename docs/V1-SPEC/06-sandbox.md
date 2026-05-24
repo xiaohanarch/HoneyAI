@@ -390,3 +390,64 @@ export function classifyPodFailure(pod: V1Pod): FailureClass {
   }
 }
 ```
+
+## 16. OSS 写入语义
+
+### 16.1 写入流程（PUT-first，幂等 INSERT）
+1. sandbox-runner 在节点末尾把产物写本地 `/workspace/.outputs/<file>`
+2. 计算 sha256 → 拼 oss_key（见 §17）→ OSS PUT
+3. PUT 成功 → emit JSONL `{kind:'artifact', sha256, oss_key, byte_size, content_type, artifact_kind}`
+4. PUT 失败 → CLI 退出码 ≠ 0，节点标 failed，**不**外发 artifact event
+5. worker 消费 JSONL → `INSERT INTO artifact_blobs ... ON CONFLICT (oss_key) DO NOTHING`
+6. worker 同时 `INSERT INTO artifacts ... ON CONFLICT (run_id, node_id, attempt, kind) DO NOTHING`
+
+### 16.2 幂等保证
+- BullMQ 至少一次投递，worker 可能消费同一 JSONL ≥ 2 次
+- 双 UNIQUE 索引（`artifact_blobs.oss_key` + `artifacts (run,node,attempt,kind)`）保证 SQL 层幂等
+- 业务层无需"先查再写"，直接 INSERT ON CONFLICT
+
+### 16.3 孤儿对象处理
+- **正常运行期不主动清理**（V1 无后台 cron、无存储过程）
+- 唯一清理入口：admin 删除 tenant → 应用层一次性 `ossutil rm -r oss://honeyai-prod/<tenant_id>/`
+- 孤儿成因：步骤 2 成功 + 步骤 3 之前 sandbox Pod 崩 → OSS 对象无对应 DB 行
+- 孤儿成本上限：单 Run < 10MB × 偶发崩溃 < 1% = 单 tenant 一年累积 KB~MB 级，OSS 0.12 元/GB/月可忽略
+- 与 ADR-007（Run 二元状态，V1 无 fork / 无 user 删除 Run）相容：artifact 与 Run 同寿命
+
+### 16.4 失败节点 artifact 保留
+- ADR-007 + 09 §6：失败也计入成本、失败 artifact 也保留
+- artifacts.status='failed' 用于显示但不阻止读取
+- retry 触发新 attempt 行（新 sha256 / 新 OSS 对象），不覆盖前次
+
+## 17. Artifact 物理路径规范
+
+### 17.1 Canonical OSS Key
+```
+oss://honeyai-prod/<tenant_id>/blobs/<sha256[0:2]>/<sha256[2:]>
+```
+- 共享 bucket `honeyai-prod`（V1 单 bucket，见 TD-016）
+- 租户前缀 `<tenant_id>/` 实现跨租户隔离（应用层 + bucket policy 双重）
+- `blobs/` 段固定，方便 bucket lifecycle 一条 prefix 规则覆盖
+- 两级 sha256 hash 分桶（前 2 char）避免单目录百万对象
+
+### 17.2 逻辑寻址（attempt 语义）
+- OSS 物理层用 CAS（sha256 去重），同一内容跨 attempt 自动复用
+- "第几次 attempt 产出的 artifact" 由 `artifacts` 表行（`run_id + node_id + attempt + kind`）记录
+- 查询"节点最后一次产出" → `SELECT ... FROM artifacts WHERE node_id=? AND kind=? ORDER BY attempt DESC LIMIT 1`
+
+### 17.3 与 IR documents 的对比（不在 OSS）
+- IR markdown 走 PostgreSQL `ir_documents` 表（详见 04 §11 + 03 §6.6b）
+- 不进 OSS，不走 CAS
+- 原因：编辑频繁 + 小尺寸 + 乐观锁需要事务原子性
+
+### 17.4 image digest 流向（与本章配套）
+- sandbox image digest 由 worker `SANDBOX_IMAGE_DIGEST` env 注入（见 02 §5 + 08 §12.3）
+- worker / sandbox 强绑定同一 release（见 ADR-005）
+- 每次 createPod 时 worker 使用 env 里的 digest 创建 Job spec，不读 DB / ConfigMap
+
+## 18. 验收清单（V1.0 种子）
+
+> 见 [00-README.md §验收清单约定](./00-README.md#验收清单约定acceptance-criteria)。
+
+- [ ] **AC-06-01** `[Failure]` `[Boundary]`：sandbox 容器分配 1GB 内存，节点写 1.5GB 数组触发 OOMKilled → worker 在 5min 内识别，节点状态 `failed` + `failure_reason='sandbox_oom'`，artifact stderr 含 OOM signal
+- [ ] **AC-06-02** `[Failure]` `[Cross-module]`：sandbox 内 `curl https://example.com/exfiltrate` → Cilium NetworkPolicy 阻断，curl exit code ≠ 0，sandbox 节点状态保持原状（不因网络失败崩溃）
+- [ ] **AC-06-03** `[Timeout]`：单节点 `kubectl exec` 超过 30min → worker SIGTERM + 等 10s → SIGKILL，节点状态 `failed` + `failure_reason='node_timeout'`，部分 stdout 仍写入 artifact

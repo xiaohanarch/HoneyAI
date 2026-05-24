@@ -342,3 +342,11 @@ export async function createRun(input: { title: string; oneLiner: string; repoId
   redirect(`/t/${session.tenantSlug}/runs/${run.id}`)
 }
 ```
+
+## 11. 验收清单（V1.0 种子）
+
+> 见 [00-README.md §验收清单约定](./00-README.md#验收清单约定acceptance-criteria)。
+
+- [ ] **AC-07-01** `[Concurrency]` (consumes AC-04-01)：用户 A 进入 IR 编辑 → 用户 B 同 IR 看到"A 正在编辑（剩 04:xx）"+ 按钮 [查看 / 等待 / 强抢]；B 点 [强抢] + 二次确认 → A 的 tab 通过 `ir.lock.changed` SSE 收到通知，编辑器置只读
+- [ ] **AC-07-02** `[Timeout]`：用户进入 IR 编辑后关闭浏览器，5min 内无 keep-alive → Redis lock 过期，第二人无需 [强抢] 直接进入编辑
+

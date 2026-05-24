@@ -91,3 +91,44 @@ V1 目标：让一个 5-10 人的小团队能自部署后试用 1-2 周并产出
 
 ### 章节链接
 跨章节引用统一格式：`详见 [05-orchestrator.md §4](./05-orchestrator.md#4-重试机制)`
+
+## 验收清单约定（Acceptance Criteria）
+
+每个章节（00 / 10 元文档除外）末尾设 `§N 验收清单（V1.0 种子）` 段，列可测试断言。
+
+### 编号
+- 格式 `AC-<章号>-<序号>`，例 `AC-05-01`, `AC-09-03`
+- 跨章引用 `AC-05-03 (consumes AC-04-02)`
+
+### 维度标签（每条 AC 前缀方括号标注，可叠加）
+- `[Happy]` — 正常路径
+- `[Failure]` — 异常输入 / 失败状态
+- `[Boundary]` — 临界值
+- `[Concurrency]` — 并发 / 锁
+- `[Timeout]` — 超时升级
+- `[Idempotency]` — 重复触发
+- `[Cross-module]` — 跨模块契约
+
+**强制**：每章必含 `[Happy]` + `[Failure]` 各 ≥ 1 条；其余维度按章节性质补充。
+
+### 验证方式
+- **代码可测**：测试 title 必须前缀 `AC-XX-YY:`，CI 解析输出覆盖矩阵
+  ```ts
+  test('AC-05-01: Run pending + cancel → canceled in ≤5s', async () => {...})
+  ```
+- **非代码可测**（UI 视觉 / bootstrap 脚本 / 运维巡检）：标 `[Manual]`，PR 描述里手动勾选 + 写验证证据
+  ```
+  - [ ] AC-08-04 [Idempotency] [Manual]: 02-services.sh 重复执行 3 次 → 无副作用
+  ```
+
+### 工具
+- `pnpm ac:coverage` 扫 spec + test，输出三态报表（covered / missing / manual）
+- V1.0 release 门槛：种子 AC 100% 通过；全量 AC ≥ 50% 覆盖；关键章节（05/06/09）≥ 70%
+
+### PR template 集成
+PR 描述必含 Acceptance 段：
+```
+## Acceptance
+- 本 PR 覆盖的 AC: AC-05-01, AC-05-02
+- Manual AC 验证证据: <screenshot/log/链接>
+```

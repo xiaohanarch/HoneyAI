@@ -150,14 +150,31 @@
 
 ---
 
+### TD-016: 单 OSS bucket + tenant 前缀隔离
+- **V1 选择**：所有租户共享一个 `honeyai-prod` bucket，靠 `<tenant_id>/` 路径前缀 + 应用层校验隔离
+- **反常规点**：跨租户隔离仅靠应用层 prefix 检查，缺第二道防线；与 TD-002（RLS 缺位）同档
+- **V1 缓解**：
+  - bucket policy 限定 RAM 子账号只能 `s3:GetObject/PutObject` on `arn:...:bucket/honeyai-prod/*`
+  - 应用层每次 OSS 调用强制 prefix 包含 `<tenant_id>/`，单元测试覆盖跨租户阻断
+  - 孤儿对象与 tenant 删除级联清理（不主动 GC）
+  - 详见 03 §6.6 + 06 §16-17
+- **V2 修复方向**：每租户独立 bucket（`honeyai-prod-<tenant_id>`），bucket policy 物理隔离；自动化 bootstrap 创建 bucket + lifecycle
+- **触发 V2 的信号**：
+  - (a) 用户数 > 50（管理复杂度可控阈值）
+  - (b) 任意一次跨租户 OSS 泄露事故
+  - (c) 合规要求物理隔离（如金融客户）
+
+---
+
 ## 升级触发汇总表
 
 | 触发条件 | 触发的 TD 修复 |
 |---|---|
 | 并发 Run > 20 | TD-001 |
 | 用户数 > 30 | TD-004 |
-| 用户数 > 50 | TD-002 |
+| 用户数 > 50 | TD-002, TD-016 |
 | 海外用户 | TD-012 |
 | ML / 非内置语言项目 | TD-013 |
-| 任何泄露/丢数据事故 | TD-002, TD-004, TD-006 |
+| 任何泄露/丢数据事故 | TD-002, TD-004, TD-006, TD-016 |
+| 合规要求物理隔离（金融等） | TD-016 |
 | 多次重复用户反馈 | TD-003, TD-005, TD-010, TD-011, TD-015 |

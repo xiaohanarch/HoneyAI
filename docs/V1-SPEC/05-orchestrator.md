@@ -299,3 +299,12 @@ export async function reconcileLoop() {
   }, 5 * 60 * 1000)
 }
 ```
+
+## 14. 验收清单（V1.0 种子）
+
+> 见 [00-README.md §验收清单约定](./00-README.md#验收清单约定acceptance-criteria)。
+
+- [ ] **AC-05-01** `[Happy]` `[Concurrency]`：Run 处于 `pending`，用户点 [取消] → 状态 5s 内变 `canceled`，BullMQ 队列消息被 ack，无 sandbox Pod 残留
+- [ ] **AC-05-02** `[Failure]` `[Timeout]`：sandbox 节点连续 3 次 retry 失败 → Run 状态升级为 `failed`，`failure_reason='retry_exhausted'`，节点 `attempt=3` 的失败 artifact 保留可见
+- [ ] **AC-05-03** `[Concurrency]` `[Idempotency]` (consumes AC-04-02)：reconcile loop 同一时刻被双副本触发 → Redis advisory lock 保证仅 1 个实例 process 同一 Run，无重复 markRunFailed
+- [ ] **AC-05-04** `[Happy]` `[Boundary]`：Pod 还活着但 `runs.updated_at > 10min` → reconcile 检测到，发 Pod heartbeat 探测；Pod Pending > 15min → markRunFailed('sandbox_timeout')

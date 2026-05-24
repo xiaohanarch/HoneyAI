@@ -437,3 +437,50 @@ function renderField(key: string, zType: ZodTypeAny): JSX.Element {
 
 zod 校验失败时返回 `{ path: ['task_graph','nodes',0,'id'], message: 'Required' }`，
 Tiptap 在对应字段高亮 + 错误文案。Server Action 保存失败时整页 Toast。
+
+## 11. IR 版本规则（人工编辑层）
+
+### 11.1 存储模型
+- IR markdown 文档**不进 OSS**，落 PostgreSQL `ir_documents` 表 TEXT 列（详见 03 §6.6b）
+- 主键 `(run_id, stage, version)` — append-only INSERT，**不 in-place UPDATE**
+- 当前版本查询：`SELECT ... ORDER BY version DESC LIMIT 1`，配复合索引 O(1)
+
+### 11.2 版本号
+- `version` = monotonic int，初始值 1
+- save 触发 INSERT 新行，`version = COALESCE(MAX(version), 0) + 1`，由 server 在事务内分配
+- 用户 UI 可见（"v3 → v4"），便于审计
+
+### 11.3 乐观锁（保存冲突）
+- 客户端必须带"当前 version"参数提交 save
+- server 在事务内检查：若 `MAX(version) ≠ 客户端 version` → 返回 `IRVersionConflictError`，拒绝写入
+- 配合 §11.4 编辑锁通常不会触发；触发即说明锁系统失效，UI 强制刷新
+
+### 11.4 编辑锁（advisory）
+- 进入编辑模式（点击 IR 区域 [编辑] 按钮）→ server 在 Redis `SETEX ir_lock:<run>:<stage> 300 <user_id>:<expires_at>`
+- 5 分钟空闲 TTL；编辑器每 60s 发 keep-alive PATCH 续锁
+- 离开编辑（保存 / 取消 / 关闭浏览器）→ server DEL key
+- 第二人尝试编辑同一 IR → 看到 "李工正在编辑（剩余 04:32）"，按钮 [查看 / 等待 / 强抢]
+- **[强抢] 必须二次确认**："强抢将让李工的未保存内容丢失，确认？"
+- 强抢成功 → 旧锁持有者 UI 通过 SSE `ir.lock.changed` 事件收到通知，编辑器置只读
+- 所有锁状态变化广播 SSE，全 tab 实时同步
+
+### 11.5 失败场景
+- IR 编辑提交时 zod 校验失败：不写 DB，返回字段路径错误（与 §10 一致）
+- IR 编辑提交时持有锁过期且被他人抢占：返回 `IREditLockLostError`，UI 提示"编辑权已被强抢，您的内容已暂存为本地草稿"（仅浏览器 localStorage，不入 DB）
+
+### 11.6 与 artifact 的语义对比
+| 维度 | `ir_documents` | `artifacts` |
+|---|---|---|
+| 可变性 | append-only 版本流 | 写后不可变 |
+| 编辑者 | 人（Gate 期） | 机器（sandbox 节点） |
+| 存储 | PostgreSQL TEXT | OSS blob |
+| 版本/重试语义 | `version`（用户改了几次） | `attempt`（节点重试第几次） |
+| 锁 | Redis advisory lock | 无（写一次） |
+| 删除 | 与 tenant 级联 | 与 tenant 级联（与 Run 同寿命） |
+
+## 12. 验收清单（V1.0 种子）
+
+> 见 [00-README.md §验收清单约定](./00-README.md#验收清单约定acceptance-criteria)。
+
+- [ ] **AC-04-01** `[Happy]` `[Concurrency]`：用户保存 IR v3 → DB 新插入 `version=4` 行，原 v3 行保留不变；并发两人同时基于 v3 提交 → 后到者收到 `IRVersionConflictError`，DB 仅产生一个 v4
+- [ ] **AC-04-02** `[Failure]`：RequirementIR frontmatter 缺少 `acceptance_criteria` 字段提交 → zod 校验失败，返回 422 + 字段路径 `acceptance_criteria: Required`，不写 DB

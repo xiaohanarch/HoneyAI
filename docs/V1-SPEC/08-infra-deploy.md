@@ -385,10 +385,29 @@ jobs:
       - name: Patch kustomization with digests
         run: |
           cd infra/k8s/overlays/prod
+          # web / worker：标准 kustomize image patch（Deployment 自身镜像）
           kustomize edit set image \
             ghcr.io/${{ github.repository_owner }}/honeyai-web@${{ needs.build.outputs.web-digest }} \
-            ghcr.io/${{ github.repository_owner }}/honeyai-worker@${{ needs.build.outputs.worker-digest }} \
-            ghcr.io/${{ github.repository_owner }}/honeyai-sandbox@${{ needs.build.outputs.sandbox-digest }}
+            ghcr.io/${{ github.repository_owner }}/honeyai-worker@${{ needs.build.outputs.worker-digest }}
+          # sandbox：worker 通过 env 读取 digest 后在 runtime createJob 使用，不是 Deployment 镜像
+          # 用 kustomize patch 把 SANDBOX_IMAGE_DIGEST 写入 worker Deployment env
+          # （worker / sandbox 强绑定同一 release，见 ADR-005 + 02 §5.1）
+          cat <<EOF > sandbox-digest-patch.yaml
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata: { name: worker }
+          spec:
+            template:
+              spec:
+                containers:
+                  - name: worker
+                    env:
+                      - name: SANDBOX_IMAGE_DIGEST
+                        value: "${{ needs.build.outputs.sandbox-digest }}"
+                      - name: SANDBOX_IMAGE_REPO
+                        value: "ghcr.io/${{ github.repository_owner }}/honeyai-sandbox"
+          EOF
+          kustomize edit add patch --path sandbox-digest-patch.yaml --kind Deployment --name worker
       - name: kubectl apply
         run: |
           kubectl apply -k infra/k8s/overlays/prod
@@ -476,3 +495,10 @@ spec:
           readinessProbe: { httpGet: { path: /api/health, port: 3000 }, initialDelaySeconds: 10 }
           livenessProbe:  { httpGet: { path: /api/health, port: 3000 }, initialDelaySeconds: 30 }
 ```
+
+## 14. 验收清单（V1.0 种子）
+
+> 见 [00-README.md §验收清单约定](./00-README.md#验收清单约定acceptance-criteria)。
+
+- [ ] **AC-08-01** `[Idempotency]` `[Manual]`：在已 bootstrap 的 ECS 上重复执行 `02-services.sh` 3 次 → 每次均成功退出 0，k8s 资源版本/spec 无意外变更（仅 image digest 更新时 rollout）
+- [ ] **AC-08-02** `[Failure]` `[Manual]`：删除 `honeyai-secrets` 中 `GITHUB_APP_PRIVATE_KEY` 后重启 web → Pod 在 readiness 失败，日志含 `GITHUB_APP_PRIVATE_KEY required`，Service 流量不切换到该 Pod

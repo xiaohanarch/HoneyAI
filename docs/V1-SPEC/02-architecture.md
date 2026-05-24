@@ -163,6 +163,12 @@ Next.js SSE endpoint /api/runs/<id>/stream
 - 单 sandbox Run 默认 2C/2Gi（最大 4 个并发 → 8Gi）
 - 余量 ≈ 0.5-1GB
 
+### 5.1 Image digest 绑定
+- web / worker 镜像：CI `kustomize edit set image` 把 placeholder 替换为 `@sha256:<digest>`（Deployment 自身镜像）
+- sandbox 镜像：**worker Deployment 注入 `SANDBOX_IMAGE_DIGEST` env 变量**，worker createJob 时读取并写入 Job spec
+- worker / sandbox 强绑定**同一 release**（同次 deploy-prod.yml 运行内产出的 digest）
+- 详见 ADR-005 + 06 §17.4 + 08 §12.3
+
 ## 6. 关键 ADR 索引
 - ADR-001 选 Drizzle 不选 Prisma
 - ADR-002 SSE+POST 不选 WebSocket
@@ -398,3 +404,10 @@ src/
     ├── tokens.css
     └── globals.css
 ```
+
+## 10. 验收清单（V1.0 种子）
+
+> 见 [00-README.md §验收清单约定](./00-README.md#验收清单约定acceptance-criteria)。
+
+- [ ] **AC-02-01** `[Happy]` `[Cross-module]`：createRun() Server Action → INSERT runs → BullMQ enqueue → worker createJob 创建 sandbox Pod，全链路 `trace_id` 一致（可在 Loki 同 trace_id 查到 4 个 service 日志）
+- [ ] **AC-02-02** `[Failure]` `[Cross-module]`：worker `SANDBOX_IMAGE_DIGEST` env 缺失 → 启动时 fail-fast 退出，日志含 `SANDBOX_IMAGE_DIGEST required`
