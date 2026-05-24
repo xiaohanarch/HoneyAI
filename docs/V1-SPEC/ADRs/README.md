@@ -13,6 +13,7 @@
 | [ADR-005](./ADR-005-ghcr-only.md) | 镜像 registry 只用 ghcr，不用 ACR | Accepted |
 | [ADR-006](./ADR-006-bootstrap-ux.md) | Bootstrap Welcome 4 步必填 | Accepted |
 | [ADR-007](./ADR-007-run-binary-state.md) | Run 状态二元，不支持部分失败 | Accepted |
+| [ADR-008](./ADR-008-phase-1-scope.md) | Phase 1 实施范围 — monorepo 骨架 + db 全表落地 | Accepted |
 
 ## 写作模板
 

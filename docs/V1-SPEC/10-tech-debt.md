@@ -166,6 +166,33 @@
 
 ---
 
+### TD-017: Turbo cache 仅本地，不接远端
+- **V1 选择**：`turbo.json` 不配 remote cache，CI 与本地各自冷启
+- **反常规点**：CI 每 PR 全量重跑 lint / typecheck / test，浪费分钟数；多人协作 cache 不共享
+- **V1 缓解**：
+  - GitHub Actions 配 `actions/cache` 缓存 `node_modules` / `.turbo`，CI 内复用 cache 已能覆盖大头
+  - 本地 `.turbo/` 路径稳定，开发者 IDE 重启不失效
+- **V2 修复方向**：接 Vercel Remote Cache 或自托管（`turborepo-remote-cache` on R2 / S3），团队共享
+- **触发 V2 的信号**：
+  - (a) CI 总时长 > 10 min 成为瓶颈
+  - (b) 并发开发者 > 5 人，反复跑相同任务
+
+---
+
+### TD-018: 全部表塞 public schema，无按域分 schema
+- **V1 选择**：30 表全部在 `public` schema，按 Drizzle 文件按域拆分仅做代码组织
+- **反常规点**：单 schema 表数膨胀后 `\dt` 输出 / 权限管理 / dump 难度上升
+- **V1 缓解**：
+  - 表名前缀按域（`run_*` / `asset_*` / `audit_*` / `ir_*` / `cost_*`）保证视觉分组
+  - 30 表规模下 PG 性能 / 运维无差异
+- **V2 修复方向**：drizzle `pgSchema('runs')` / `pgSchema('assets')` 按域拆分，按 schema 授予 RAM 子账号最小权限
+- **触发 V2 的信号**：
+  - (a) 表数 > 60
+  - (b) 出现需要按域单独 dump / restore 的运维场景
+  - (c) RAM 子账号最小权限要求收紧（如合规）
+
+---
+
 ## 升级触发汇总表
 
 | 触发条件 | 触发的 TD 修复 |
@@ -176,5 +203,8 @@
 | 海外用户 | TD-012 |
 | ML / 非内置语言项目 | TD-013 |
 | 任何泄露/丢数据事故 | TD-002, TD-004, TD-006, TD-016 |
-| 合规要求物理隔离（金融等） | TD-016 |
+| 合规要求物理隔离（金融等） | TD-016, TD-018 |
 | 多次重复用户反馈 | TD-003, TD-005, TD-010, TD-011, TD-015 |
+| CI 总时长 > 10 min | TD-017 |
+| 并发开发者 > 5 人 | TD-017 |
+| 表数 > 60 | TD-018 |
