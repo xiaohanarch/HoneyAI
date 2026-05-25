@@ -4,6 +4,32 @@
 
 ## 2026-05-25
 
+### v0.3.0 — Phase 1 implementation
+
+10 包 pnpm/Turborepo workspace 实建；`@honeyai/db` 全量 schema + migration + repos + `withTenant`；
+`@honeyai/tools-ac-coverage` 实建；CI workflow + PR comment；ADR-009..016 入档。
+
+**Added**
+
+- 10-package pnpm/Turborepo workspace（core 最小子集 / db 全量 / tools-ac-coverage 全量 / 7 包占位 `export {}`）
+- `@honeyai/db`：30 表 Drizzle schema + drizzle-zod re-export + 首份 migration + `run_cost_summary` 物化视图单独 SQL（ADR-011）
+- `withTenant(db, tenantId)` Proxy + ESLint `no-restricted-imports` 强制业务包不准 import `rawDb` / `systemDb`
+- 种子 AC 测试：`AC-03-01` / `AC-03-02` / `AC-03-03` 全部 green（template-DB + testcontainers 模式）
+- `@honeyai/tools-ac-coverage`：spec markdown scanner + vitest title scanner + 三态 join 报表 + seed AC 退出码门禁；`pnpm ac:coverage` 在 root 暴露
+- `.github/workflows/ci.yml`：`lint` / `typecheck` / `migration-check` 并行 → `test`（postgres:17-alpine service）→ `ac-coverage`（artifact 上传）
+- `.github/workflows/pr-comment.yml`：`workflow_run` 触发，下载 `ac-coverage` artifact，`actions/github-script` 渲染 PR comment
+- ADR-009 至 ADR-016（Phase 1 拍板 8 项入档）
+
+**Changed**
+
+- `02-architecture.md §2`：`infra/migrations/` → `packages/db/drizzle/`（ADR-010）
+- `02-architecture.md §3`：包矩阵新增 `tools-ac-coverage` 行 + 新增 Phase 1 状态列
+
+**Note**
+
+- Phase 1 不动业务（orchestrator / sandbox-runner / web / github / worker / adapter-claude / adapter-opencode）；7 包仅 `export {}`，等 Phase 2+
+- `@honeyai/core` IR zod schemas 推迟 Phase 2（ADR-008 + ADR-014）
+
 ### ADR-019 — docker-compose host 端口改 5 字头非标准映射
 
 - 新增 `docs/V1-SPEC/ADRs/ADR-019-docker-compose-ports.md`：host 端口 `5432→55432` / `6379→56379` / `9000→59000` / `9001→59001`，容器内端口不变
