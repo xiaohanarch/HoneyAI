@@ -11,7 +11,8 @@ import {
   type TestPgHandle,
 } from '../test/container.js'
 import * as schema from '../schema/index.js'
-import { withTenant } from './with-tenant.js'
+import { is, Table, getTableName } from 'drizzle-orm'
+import { withTenant, SCOPED_TABLES } from './with-tenant.js'
 import { tenants, users } from '../schema/identity.js'
 import { githubInstallations, repositories } from '../schema/github.js'
 import { runs, nodes } from '../schema/runs.js'
@@ -156,6 +157,22 @@ describe('AC-03-02: cross-tenant access returns 0 rows + writes audit_log', () =
       .from(auditLog)
       .where(eq(auditLog.action, 'cross_tenant_attempt'))
     expect(logs).toHaveLength(0)
+  })
+})
+
+describe('SCOPED_TABLES reflection (G4)', () => {
+  it('matches all tables in schema that declare a tenant_id column', () => {
+    const declared = new Set<string>(
+      (Object.values(schema) as unknown[])
+        .filter((v): v is Table => is(v, Table))
+        .filter((t) => (t as unknown as Record<string, unknown>).tenantId !== undefined)
+        .map((t) => getTableName(t)),
+    )
+    expect(SCOPED_TABLES).toEqual(declared)
+    // Sanity: ensures we didn't reflect to an empty set
+    expect(SCOPED_TABLES.size).toBeGreaterThan(0)
+    // `tenants` itself must NOT be scoped (PK is id, no tenant_id column)
+    expect(SCOPED_TABLES.has('tenants')).toBe(false)
   })
 })
 

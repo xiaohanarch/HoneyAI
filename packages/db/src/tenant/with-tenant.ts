@@ -1,31 +1,24 @@
-import { and, eq, getTableName, type SQL } from 'drizzle-orm'
+import { and, eq, getTableName, is, Table, type SQL } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import type { PgTable } from 'drizzle-orm/pg-core'
-import type * as schema from '../schema/index.js'
+import * as schema from '../schema/index.js'
 import { logCrossTenantAttempt } from './audit.js'
 
 /**
- * Tables that carry a `tenant_id` column and must be auto-scoped.
+ * Set of table names that carry a `tenant_id` column and must be auto-scoped
+ * by `withTenant`. Built at module-load time by reflecting over the schema
+ * barrel — adding a new tenant-scoped table automatically extends this set
+ * with no source-of-truth duplication.
  *
- * Phase 1: hardcoded list. Task G4 will replace this with schema reflection
- * (iterate `schema` exports, detect `tenantId` column).
- *
- * Note: `tenants` itself is NOT in this set — its primary key `id` is the
- * tenant identifier (no `tenant_id` column).
+ * `tenants` itself is NOT in this set — its primary key `id` IS the tenant
+ * identifier; it has no `tenant_id` column.
  */
-const SCOPED_TABLES = new Set<string>([
-  'tenant_members',
-  'repositories',
-  'runs',
-  'artifacts',
-  'ir_documents',
-  'assets',
-  'asset_sources',
-  'asset_versions',
-  'cost_events',
-  'audit_log',
-  'activity_feed',
-])
+export const SCOPED_TABLES: ReadonlySet<string> = new Set(
+  (Object.values(schema) as unknown[])
+    .filter((v): v is Table => is(v, Table))
+    .filter((t) => (t as unknown as Record<string, unknown>).tenantId !== undefined)
+    .map((t) => getTableName(t)),
+)
 
 /**
  * Returns a Proxy over `db` that, for `select().from(scopedTable)`:
