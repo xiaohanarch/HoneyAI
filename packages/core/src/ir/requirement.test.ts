@@ -27,6 +27,7 @@ describe('RequirementIRSchema', () => {
   })
 
   it('rejects when title is missing', () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { title: _omit, ...rest } = validFrontmatter
     const r = RequirementIRSchema.safeParse(rest)
     expect(r.success).toBe(false)

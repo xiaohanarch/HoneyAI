@@ -1,5 +1,5 @@
 import matter from 'gray-matter'
-import { z, type ZodType } from 'zod'
+import { z } from 'zod'
 
 // Reusable enums (spec 04 §2.1 / §3.1 / §4.1)
 export const PrioritySchema = z.enum(['P0', 'P1', 'P2', 'P3'])
@@ -37,7 +37,10 @@ export type IRParseOutcome<T> = IRParseOk<T> | IRParseErr
  * Returns IRParseOutcome with `warnings: []` — IR-specific callers append section warnings.
  * Throws if gray-matter cannot parse YAML at all.
  */
-export function parseFrontmatter<T>(markdown: string, schema: ZodType<T>): IRParseOutcome<T> {
+export function parseFrontmatter<S extends z.ZodTypeAny>(
+  markdown: string,
+  schema: S,
+): IRParseOutcome<z.infer<S>> {
   const parsed = matter(markdown)
   const result = schema.safeParse(parsed.data)
   if (result.success) {
