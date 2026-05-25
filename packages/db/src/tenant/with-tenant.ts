@@ -1,13 +1,14 @@
-import { eq, getTableName } from 'drizzle-orm'
+import { and, eq, getTableName, type SQL } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import type { PgTable } from 'drizzle-orm/pg-core'
 import type * as schema from '../schema/index.js'
+import { logCrossTenantAttempt } from './audit.js'
 
 /**
- * Set of tables that carry a `tenant_id` column and must be auto-scoped.
+ * Tables that carry a `tenant_id` column and must be auto-scoped.
  *
- * Phase 1: hardcoded list of tenant-scoped table names. Task G4 will replace
- * this with schema reflection (iterate schema exports, detect `tenantId` column).
+ * Phase 1: hardcoded list. Task G4 will replace this with schema reflection
+ * (iterate `schema` exports, detect `tenantId` column).
  *
  * Note: `tenants` itself is NOT in this set — its primary key `id` is the
  * tenant identifier (no `tenant_id` column).
@@ -27,16 +28,25 @@ const SCOPED_TABLES = new Set<string>([
 ])
 
 /**
- * Returns a Proxy over the given drizzle db that auto-injects
- * `WHERE tenant_id = <tenantId>` for `select()` queries against scoped tables.
+ * Returns a Proxy over `db` that, for `select().from(scopedTable)`:
  *
- * AC-03-01 minimal scope: intercept `db.select().from(scopedTable)` and append
- * a tenant_id filter. Tasks G2/G3 will add cross-tenant audit logging and
- * artifact idempotency support.
+ * 1. Auto-injects `WHERE tenant_id = <tenantId>` — combined with any
+ *    user-supplied `.where()` via `and()` (so user filters don't
+ *    overwrite the tenant guard).
+ * 2. On execution, if 0 rows returned AND the user supplied a `.where()`,
+ *    probes the raw db (no tenant filter) — if the probe finds the row,
+ *    writes a `cross_tenant_attempt` audit_log entry under the
+ *    bound tenant.
  *
- * Known Phase 1 limitation (G1 only): if the caller subsequently calls
- * `.where(...)` on the returned builder, drizzle overwrites the existing
- * WHERE — that case is addressed in G2 via post-execute audit hook.
+ * Implementation notes:
+ *
+ * - `.where()` is captured (not applied) and only combined at execution
+ *   time. This survives drizzle's behaviour of overwriting WHERE on
+ *   subsequent `.where()` calls.
+ * - Execution is intercepted via `.then()` — drizzle queries are thenable;
+ *   `await q` calls into `q.then`.
+ * - The probe + audit log run *before* the awaiter resolves, so callers
+ *   that immediately read `audit_log` see the entry deterministically.
  */
 export function withTenant<S extends typeof schema>(
   db: NodePgDatabase<S>,
@@ -52,11 +62,53 @@ export function withTenant<S extends typeof schema>(
         }
         const fromOrig = builder.from.bind(builder)
         builder.from = (table: PgTable) => {
-          const q = fromOrig(table) as { where: (expr: unknown) => unknown }
-          if (SCOPED_TABLES.has(getTableName(table))) {
-            const tenantCol = (table as unknown as { tenantId: unknown }).tenantId
-            return q.where(eq(tenantCol as never, tenantId))
+          const q = fromOrig(table) as Record<string, unknown>
+          const tableName = getTableName(table)
+          if (!SCOPED_TABLES.has(tableName)) return q
+
+          const tenantCol = (table as unknown as { tenantId: unknown }).tenantId
+          const tenantFilter = eq(tenantCol as never, tenantId) as SQL
+
+          let userWhere: SQL | undefined
+          const origWhere = (q.where as (e: SQL) => unknown).bind(q)
+          q.where = (expr: SQL) => {
+            userWhere = expr
+            return q
           }
+
+          const origThen = (q.then as Promise<unknown>['then']).bind(
+            q as unknown as Promise<unknown>,
+          )
+          q.then = (onFulfilled: unknown, onRejected: unknown) => {
+            const combined = userWhere ? and(tenantFilter, userWhere) : tenantFilter
+            origWhere(combined as SQL)
+
+            const exec = origThen(undefined, undefined) as Promise<unknown[]>
+
+            const wrapped = exec.then(async (rows) => {
+              if (userWhere && rows.length === 0) {
+                const probeBuilder = (target as NodePgDatabase<S>).select().from(table) as {
+                  where: (e: SQL) => { limit: (n: number) => Promise<unknown[]> }
+                }
+                const probe = await probeBuilder.where(userWhere).limit(1)
+                if (probe.length > 0) {
+                  await logCrossTenantAttempt(
+                    target as unknown as NodePgDatabase<typeof schema>,
+                    tenantId,
+                    tableName,
+                    null,
+                  )
+                }
+              }
+              return rows
+            })
+
+            return wrapped.then(
+              onFulfilled as ((v: unknown[]) => unknown) | null | undefined,
+              onRejected as ((reason: unknown) => unknown) | null | undefined,
+            )
+          }
+
           return q
         }
         return builder as unknown
