@@ -56,8 +56,7 @@ describe('schema/encryption — round-trip', () => {
       await expect(
         db.insert(dataEncryptionKeys).values({
           id: uuidv7(),
-          // @ts-expect-error — intentionally violating NOT NULL
-          kekVersion: null,
+          kekVersion: null as unknown as number,
           encryptedDek: 'x',
         }),
       ).rejects.toThrow(/not.null|null value/i)

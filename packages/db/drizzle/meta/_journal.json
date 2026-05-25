@@ -71,6 +71,13 @@
       "when": 1779711514370,
       "tag": "0009_encryption",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1779711781929,
+      "tag": "0010_jobs",
+      "breakpoints": true
     }
   ]
 }
