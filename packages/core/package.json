@@ -14,8 +14,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "pino": "9.5.0",
     "@t3-oss/env-core": "0.11.1",
+    "gray-matter": "4.0.3",
+    "pino": "9.5.0",
     "zod": "3.24.1"
   },
   "devDependencies": {
