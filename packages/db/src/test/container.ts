@@ -80,7 +80,10 @@ export async function createTestDatabase(handle: TestPgHandle): Promise<string> 
 export async function dropTestDatabase(handle: TestPgHandle, name: string): Promise<void> {
   const admin = new Client({ connectionString: handle.adminUrl })
   await admin.connect()
-  await admin.query(`DROP DATABASE IF EXISTS ${name} WITH (FORCE)`)
+  // 不用 WITH (FORCE)：FORCE 会向 pool.end() 刚 await 完但 socket 尚未完成 FIN 的
+  // 后端发 FATAL 57P01,race 触发 pg 客户端 unhandled 'error' → vitest 非零退出。
+  // 调用方契约:先 await pool.end() 再 dropTestDatabase。残留连接时显式失败更可靠。
+  await admin.query(`DROP DATABASE IF EXISTS ${name}`)
   await admin.end()
 }
 
