@@ -620,7 +620,7 @@ services:
       POSTGRES_USER: honeyai
       POSTGRES_PASSWORD: honeyai_dev
       POSTGRES_DB: honeyai
-    ports: ['5432:5432']
+    ports: ['55432:5432'] # see ADR-019
     volumes: ['honeyai-pg-data:/var/lib/postgresql/data']
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U honeyai -d honeyai']
@@ -631,7 +631,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: honeyai-redis
-    ports: ['6379:6379']
+    ports: ['56379:6379'] # see ADR-019
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
@@ -639,13 +639,13 @@ services:
       retries: 10
 
   minio:
-    image: minio/minio:RELEASE.2024-12-18T13-15-30Z
+    image: minio/minio:RELEASE.2025-01-20T14-49-07Z # see ADR-018
     container_name: honeyai-minio
     command: server /data --console-address ':9001'
     environment:
       MINIO_ROOT_USER: honeyai
       MINIO_ROOT_PASSWORD: honeyai_dev
-    ports: ['9000:9000', '9001:9001']
+    ports: ['59000:9000', '59001:9001'] # see ADR-019
     volumes: ['honeyai-minio-data:/data']
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
@@ -661,7 +661,7 @@ volumes:
 - [ ] **Step 2: 写 `.env.example`**
 
 ```bash
-DATABASE_URL=postgresql://honeyai:honeyai_dev@localhost:5432/honeyai
+DATABASE_URL=postgresql://honeyai:honeyai_dev@localhost:55432/honeyai
 NODE_ENV=development
 LOG_LEVEL=debug
 ```

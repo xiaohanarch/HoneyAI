@@ -4,6 +4,19 @@
 
 ## 2026-05-25
 
+### ADR-019 — docker-compose host 端口改 5 字头非标准映射
+
+- 新增 `docs/V1-SPEC/ADRs/ADR-019-docker-compose-ports.md`：host 端口 `5432→55432` / `6379→56379` / `9000→59000` / `9001→59001`，容器内端口不变
+- 触发：本机 `honeybadge-postgres` / `honeybadge-redis` 已占用标准端口，B1 `docker compose up -d` 报 `port is already allocated`
+- 影响范围：`docker-compose.yml` 4 个端口行 + `.env.example` `DATABASE_URL` 主机端口 + plan §B1 字面 + `CLAUDE.md` tech stack 表
+
+### ADR-018 — docker-compose MinIO tag 改为 `RELEASE.2025-01-20T14-49-07Z`
+
+- 新增 `docs/V1-SPEC/ADRs/ADR-018-minio-image-tag.md`：MinIO 镜像 tag 由 plan §B1 原 `RELEASE.2024-12-18T13-15-30Z` 改为 `RELEASE.2025-01-20T14-49-07Z`
+- 触发：Phase 1 §B1 `docker compose up -d` 时本机阿里云镜像源对原 tag 返回 403 Forbidden
+- 影响范围：仅 `docker-compose.yml` + plan §B1 字面 + `CLAUDE.md` tech stack 表本地容器行
+- 与 Phase 1 功能无关：`@honeyai/db` 不读写 object storage，新 tag 仅满足"本机可拉 + 仍 pin 固定版本"
+
 ### ADR-017 — 本地 Node 引擎上界放宽
 
 - 新增 `docs/V1-SPEC/ADRs/ADR-017-node-engines-relaxed.md`：`engines.node` 由 `">=22.11.0 <23"` 改为 `">=22.11.0"`；CI/Prod 仍固定 22.11.0

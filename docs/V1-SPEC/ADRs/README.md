@@ -15,6 +15,8 @@
 | [ADR-007](./ADR-007-run-binary-state.md) | Run 状态二元，不支持部分失败 | Accepted |
 | [ADR-008](./ADR-008-phase-1-scope.md) | Phase 1 实施范围 — monorepo 骨架 + db 全表落地 | Accepted |
 | [ADR-017](./ADR-017-node-engines-relaxed.md) | 本地 Node 引擎上界放宽至 `>=22.11.0`（CI/Prod 仍 22.11.0） | Accepted |
+| [ADR-018](./ADR-018-minio-image-tag.md) | docker-compose MinIO tag 改为 `RELEASE.2025-01-20T14-49-07Z`（本机镜像源屏蔽 plan 原 tag） | Accepted |
+| [ADR-019](./ADR-019-docker-compose-ports.md) | docker-compose host 端口改 5 字头非标准映射（55432/56379/59000/59001） | Accepted |
 
 ## 写作模板
 
