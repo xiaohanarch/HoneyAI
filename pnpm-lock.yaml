@@ -57,6 +57,18 @@ importers:
         specifier: 2.1.8
         version: 2.1.8(@types/node@22.10.0)
 
+  packages/adapter-claude:
+    devDependencies:
+      typescript:
+        specifier: 5.7.2
+        version: 5.7.2
+
+  packages/adapter-opencode:
+    devDependencies:
+      typescript:
+        specifier: 5.7.2
+        version: 5.7.2
+
   packages/core:
     dependencies:
       '@t3-oss/env-core':
@@ -121,6 +133,36 @@ importers:
       vitest:
         specifier: 2.1.8
         version: 2.1.8(@types/node@22.10.0)
+
+  packages/github:
+    devDependencies:
+      typescript:
+        specifier: 5.7.2
+        version: 5.7.2
+
+  packages/orchestrator:
+    devDependencies:
+      typescript:
+        specifier: 5.7.2
+        version: 5.7.2
+
+  packages/sandbox-runner:
+    devDependencies:
+      typescript:
+        specifier: 5.7.2
+        version: 5.7.2
+
+  packages/web:
+    devDependencies:
+      typescript:
+        specifier: 5.7.2
+        version: 5.7.2
+
+  packages/worker:
+    devDependencies:
+      typescript:
+        specifier: 5.7.2
+        version: 5.7.2
 
 packages:
 
