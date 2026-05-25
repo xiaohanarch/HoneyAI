@@ -78,6 +78,13 @@
       "when": 1779711781929,
       "tag": "0010_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1779712000000,
+      "tag": "0011_run_cost_summary_matview",
+      "breakpoints": true
     }
   ]
 }
