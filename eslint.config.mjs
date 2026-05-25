@@ -1,5 +1,6 @@
 import tseslint from 'typescript-eslint'
 import eslint from '@eslint/js'
+import globals from 'globals'
 
 export default tseslint.config(
   {
@@ -15,6 +16,13 @@ export default tseslint.config(
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    files: ['**/*.{cjs,js}'],
+    languageOptions: {
+      globals: { ...globals.node },
+      sourceType: 'commonjs',
+    },
+  },
   {
     rules: {
       '@typescript-eslint/consistent-type-imports': 'warn',
