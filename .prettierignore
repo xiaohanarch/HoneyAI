@@ -1,0 +1,14 @@
+node_modules
+dist
+.turbo
+.next
+coverage
+pnpm-lock.yaml
+**/*.min.js
+**/drizzle/**/*.sql
+
+# Read-only legacy
+prototype
+
+# Read-only spec (frozen; see CLAUDE.md §3)
+docs/V1-SPEC
