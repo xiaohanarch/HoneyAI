@@ -26,6 +26,12 @@
 | [ADR-018](./ADR-018-minio-image-tag.md) | docker-compose MinIO tag 改为 `RELEASE.2025-01-20T14-49-07Z`（本机镜像源屏蔽 plan 原 tag） | Accepted |
 | [ADR-019](./ADR-019-docker-compose-ports.md) | docker-compose host 端口改 5 字头非标准映射（55432/56379/59000/59001） | Accepted |
 | [ADR-020](./ADR-020-sandbox-mvp-local-docker.md) | Sandbox MVP 用本地 Docker（替代 spec 06 §k3s,V1.0 仍回 K8s） | Accepted |
+| [ADR-021](./ADR-021-gray-matter-frontmatter-parser.md) | Markdown frontmatter 解析库选 `gray-matter` | Accepted |
+| [ADR-022](./ADR-022-ir-three-files-plus-shared.md) | `packages/core/src/ir/` 按 IR 拆 3 文件 + 1 共享 | Accepted |
+| [ADR-023](./ADR-023-body-section-warnings-not-zod.md) | IR 正文 H2 section 仅 warning,不进 zod 强校验 | Accepted |
+| [ADR-024](./ADR-024-parse-stringify-in-core.md) | `parseIR` / `stringifyIR` 内化到 `@honeyai/core` | Accepted |
+| [ADR-025](./ADR-025-no-version-runtime-in-phase-2-0.md) | IR 版本规则运行时逻辑不在 Phase 2.0,延后切片 1 | Accepted |
+| [ADR-026](./ADR-026-no-tiptap-generator-in-core.md) | Tiptap 表单 generator 不进 `@honeyai/core`,延后切片 4 | Accepted |
 
 ## 写作模板
 

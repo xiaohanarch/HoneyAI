@@ -2,6 +2,33 @@
 
 > 本文档记录 spec 自身的变更。代码层变更走 git 提交，不在此记录。
 
+## 2026-05-26
+
+### v0.4.0 — Phase 2.0 切片 0:`@honeyai/core` IR zod schemas
+
+3 个 IR(Requirement / Design / Implementation)zod schema + parse/stringify 工具 + spec §8 golden roundtrip 测试落地。
+不含版本规则运行时(Q5=B,切片 1)、不含 Tiptap generator(Q6=B,切片 4)、不含 ir_documents 持久化(切片 1)。
+
+**Added**
+
+- `@honeyai/core/src/ir/shared.ts`:Priority / Complexity / RiskLevel / FindingSeverity enums + `IRParseOutcome<T>` discriminated union + 内部 `parseFrontmatter` / `stringifyFrontmatter` helper(gray-matter wrapper)
+- `@honeyai/core/src/ir/requirement.ts`:`RequirementIRSchema` + `parseRequirementIR` + `stringifyRequirementIR` + `REQUIRED_REQUIREMENT_SECTIONS` 常量(对齐 spec 04 §2.1 / §2.2)
+- `@honeyai/core/src/ir/design.ts`:`DesignIRSchema` + `parseDesignIR` + `stringifyDesignIR`(对齐 spec 04 §3.1)
+- `@honeyai/core/src/ir/implementation.ts`:`ImplementationIRSchema` + `parseImplementationIR` + `stringifyImplementationIR`(对齐 spec 04 §4.1)
+- `@honeyai/core/src/ir/index.ts`:IR 模块 barrel
+- 单元测试:每 schema happy + failure case + spec §8.1 / §8.2 / §8.3 golden roundtrip
+- ADR-021 至 ADR-026:Phase 2.0 Q1-Q6 拍板入档
+
+**Changed**
+
+- `@honeyai/core/package.json`:新增 `gray-matter 4.0.3` 依赖
+- `@honeyai/core/src/index.ts`:根 barrel 追加 IR 模块再导出
+
+**Note**
+
+- IR 正文 H2 section(spec 04 §2.2)仅返回 warning,**不**进 zod 强校验(ADR-023)
+- Phase 2.0 PR 不含 orchestrator / adapter / sandbox / web / github / worker 任何代码;以上交付按 `decisions/phase-2-open-questions.md §M1` 切片顺序后续推进
+
 ## 2026-05-25
 
 ### v0.3.0 — Phase 1 implementation
