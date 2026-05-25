@@ -66,3 +66,9 @@ export const costEvents = pgTable(
     byOccurredBrin: index('cost_events_occurred_brin').using('brin', t.occurredAt),
   }),
 )
+
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
+export const insertPricingBookSchema = createInsertSchema(pricingBook)
+export const selectPricingBookSchema = createSelectSchema(pricingBook)
+export const insertCostEventsSchema = createInsertSchema(costEvents)
+export const selectCostEventsSchema = createSelectSchema(costEvents)

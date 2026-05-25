@@ -69,3 +69,9 @@ export const artifacts = pgTable(
     ),
   }),
 )
+
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
+export const insertArtifactBlobsSchema = createInsertSchema(artifactBlobs)
+export const selectArtifactBlobsSchema = createSelectSchema(artifactBlobs)
+export const insertArtifactsSchema = createInsertSchema(artifacts)
+export const selectArtifactsSchema = createSelectSchema(artifacts)

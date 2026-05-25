@@ -87,3 +87,15 @@ export const tenantMembers = pgTable(
     byUser: index('tenant_members_by_user').on(t.userId),
   }),
 )
+
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
+export const insertUsersSchema = createInsertSchema(users)
+export const selectUsersSchema = createSelectSchema(users)
+export const insertAccountsSchema = createInsertSchema(accounts)
+export const selectAccountsSchema = createSelectSchema(accounts)
+export const insertSessionsSchema = createInsertSchema(sessions)
+export const selectSessionsSchema = createSelectSchema(sessions)
+export const insertTenantsSchema = createInsertSchema(tenants)
+export const selectTenantsSchema = createSelectSchema(tenants)
+export const insertTenantMembersSchema = createInsertSchema(tenantMembers)
+export const selectTenantMembersSchema = createSelectSchema(tenantMembers)

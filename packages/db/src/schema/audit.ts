@@ -31,3 +31,9 @@ export const activityFeed = pgTable('activity_feed', {
   summary: text('summary').notNull(),
   occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
 })
+
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
+export const insertAuditLogSchema = createInsertSchema(auditLog)
+export const selectAuditLogSchema = createSelectSchema(auditLog)
+export const insertActivityFeedSchema = createInsertSchema(activityFeed)
+export const selectActivityFeedSchema = createSelectSchema(activityFeed)

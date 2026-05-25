@@ -33,3 +33,11 @@ export const assetSyncQueue = pgTable('asset_sync_queue', {
   lastResult: jsonb('last_result'),
   ...tsCols,
 })
+
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
+export const insertJobsSchema = createInsertSchema(jobs)
+export const selectJobsSchema = createSelectSchema(jobs)
+export const insertJobLocksSchema = createInsertSchema(jobLocks)
+export const selectJobLocksSchema = createSelectSchema(jobLocks)
+export const insertAssetSyncQueueSchema = createInsertSchema(assetSyncQueue)
+export const selectAssetSyncQueueSchema = createSelectSchema(assetSyncQueue)

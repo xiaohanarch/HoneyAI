@@ -83,3 +83,11 @@ export const assetVersions = pgTable(
     uniqVersion: uniqueIndex('asset_versions_uniq').on(t.assetId, t.version),
   }),
 )
+
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
+export const insertAssetSourcesSchema = createInsertSchema(assetSources)
+export const selectAssetSourcesSchema = createSelectSchema(assetSources)
+export const insertAssetsSchema = createInsertSchema(assets)
+export const selectAssetsSchema = createSelectSchema(assets)
+export const insertAssetVersionsSchema = createInsertSchema(assetVersions)
+export const selectAssetVersionsSchema = createSelectSchema(assetVersions)

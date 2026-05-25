@@ -39,3 +39,9 @@ export const sandboxCredentials = pgTable('sandbox_credentials', {
   injectedAt: timestamp('injected_at', { withTimezone: true }).notNull().defaultNow(),
   redactedAt: timestamp('redacted_at', { withTimezone: true }),
 })
+
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
+export const insertSandboxesSchema = createInsertSchema(sandboxes)
+export const selectSandboxesSchema = createSelectSchema(sandboxes)
+export const insertSandboxCredentialsSchema = createInsertSchema(sandboxCredentials)
+export const selectSandboxCredentialsSchema = createSelectSchema(sandboxCredentials)

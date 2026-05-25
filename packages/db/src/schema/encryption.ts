@@ -9,3 +9,7 @@ export const dataEncryptionKeys = pgTable('data_encryption_keys', {
   ...tsCols,
   rotatedAt: timestamp('rotated_at', { withTimezone: true }),
 })
+
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
+export const insertDataEncryptionKeysSchema = createInsertSchema(dataEncryptionKeys)
+export const selectDataEncryptionKeysSchema = createSelectSchema(dataEncryptionKeys)

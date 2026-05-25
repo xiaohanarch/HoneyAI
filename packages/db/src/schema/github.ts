@@ -55,3 +55,11 @@ export const githubTokens = pgTable('github_tokens', {
   expiresAt: timestamp('expires_at', { withTimezone: true }),
   ...tsCols,
 })
+
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
+export const insertGithubInstallationsSchema = createInsertSchema(githubInstallations)
+export const selectGithubInstallationsSchema = createSelectSchema(githubInstallations)
+export const insertRepositoriesSchema = createInsertSchema(repositories)
+export const selectRepositoriesSchema = createSelectSchema(repositories)
+export const insertGithubTokensSchema = createInsertSchema(githubTokens)
+export const selectGithubTokensSchema = createSelectSchema(githubTokens)

@@ -38,3 +38,7 @@ export const irDocuments = pgTable(
     byTenant: index('ir_documents_by_tenant_created').on(t.tenantId, t.createdAt.desc()),
   }),
 )
+
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
+export const insertIrDocumentsSchema = createInsertSchema(irDocuments)
+export const selectIrDocumentsSchema = createSelectSchema(irDocuments)

@@ -147,3 +147,15 @@ export const nodeRetries = pgTable('node_retries', {
   finishedAt: timestamp('finished_at', { withTimezone: true }),
   configOverride: jsonb('config_override').notNull().default({}),
 })
+
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
+export const insertRunsSchema = createInsertSchema(runs)
+export const selectRunsSchema = createSelectSchema(runs)
+export const insertNodesSchema = createInsertSchema(nodes)
+export const selectNodesSchema = createSelectSchema(nodes)
+export const insertGatesSchema = createInsertSchema(gates)
+export const selectGatesSchema = createSelectSchema(gates)
+export const insertEventsSchema = createInsertSchema(events)
+export const selectEventsSchema = createSelectSchema(events)
+export const insertNodeRetriesSchema = createInsertSchema(nodeRetries)
+export const selectNodeRetriesSchema = createSelectSchema(nodeRetries)
