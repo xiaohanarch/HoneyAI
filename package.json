@@ -13,7 +13,7 @@
     "test:watch": "vitest",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md,yaml,yml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md,yaml,yml}\"",
-    "ac:coverage": "tsx packages/tools/ac-coverage/src/cli.ts",
+    "ac:coverage": "tsx packages/tools-ac-coverage/src/index.ts",
     "db:migrate": "pnpm --filter @honeyai/db drizzle-kit migrate",
     "db:generate": "pnpm --filter @honeyai/db drizzle-kit generate",
     "db:check": "pnpm --filter @honeyai/db drizzle-kit check",
