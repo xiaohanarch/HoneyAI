@@ -29,4 +29,30 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     },
   },
+  // G5: Forbid business packages from importing the raw drizzle client.
+  // The only legitimate entry-point for query execution is `withTenant()`.
+  // `packages/db/**` itself is whitelisted via the override block below.
+  {
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@honeyai/db/client',
+              importNames: ['rawDb', 'systemDb'],
+              message:
+                'Do not import rawDb / systemDb directly. Use `withTenant(db, tenantId)` from @honeyai/db so tenant scoping and audit logging are enforced.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['packages/db/**'],
+    rules: {
+      'no-restricted-imports': 'off',
+    },
+  },
 )
