@@ -2,7 +2,9 @@
   "name": "honeyai-monorepo",
   "private": true,
   "packageManager": "pnpm@9.15.0",
-  "engines": { "node": ">=22.11.0" },
+  "engines": {
+    "node": ">=22.11.0"
+  },
   "scripts": {
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",

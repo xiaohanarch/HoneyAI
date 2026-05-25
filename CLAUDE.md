@@ -70,44 +70,44 @@
 
 9 个 packages（来源：`02-architecture.md §2.1+§3`；shared 内容并入 `core` 是 Phase 1 用户决策，需同 PR patch 进 spec）：
 
-| Package | Phase 1 归属 | 职责 |
-|---|---|---|
-| `@honeyai/core` | **实建（最小子集）** | errors / log / env / constants（IR schemas 推迟） |
-| `@honeyai/db` | **实建（全量）** | 30 表 Drizzle schema + migration + `withTenant` + repos |
-| `@honeyai/orchestrator` | 占位 | Run/Node FSM、Gate、retry、reconcile |
-| `@honeyai/adapter-claude` | 占位 | Claude Code CLI 适配 |
-| `@honeyai/adapter-opencode` | 占位 | opencode 适配（V1 build-time 不上线） |
-| `@honeyai/github` | 占位 | GitHub App + OAuth + 客户端 |
-| `@honeyai/web` | 占位 | Next.js 15 主应用 |
-| `@honeyai/worker` | 占位 | BullMQ worker 进程 |
-| `@honeyai/sandbox-runner` | 占位 | sandbox 内 Node CLI |
+| Package                     | Phase 1 归属         | 职责                                                    |
+| --------------------------- | -------------------- | ------------------------------------------------------- |
+| `@honeyai/core`             | **实建（最小子集）** | errors / log / env / constants（IR schemas 推迟）       |
+| `@honeyai/db`               | **实建（全量）**     | 30 表 Drizzle schema + migration + `withTenant` + repos |
+| `@honeyai/orchestrator`     | 占位                 | Run/Node FSM、Gate、retry、reconcile                    |
+| `@honeyai/adapter-claude`   | 占位                 | Claude Code CLI 适配                                    |
+| `@honeyai/adapter-opencode` | 占位                 | opencode 适配（V1 build-time 不上线）                   |
+| `@honeyai/github`           | 占位                 | GitHub App + OAuth + 客户端                             |
+| `@honeyai/web`              | 占位                 | Next.js 15 主应用                                       |
+| `@honeyai/worker`           | 占位                 | BullMQ worker 进程                                      |
+| `@honeyai/sandbox-runner`   | 占位                 | sandbox 内 Node CLI                                     |
 
 ## Tech Stack
 
 只列 spec 明确定义的。spec 未指定的标 `TBD — Superpowers plan 阶段确认`，**不准默默补全**。
 
-| 维度 | 选型 | 来源 |
-|---|---|---|
-| Node | 22 LTS（CI/Prod 固定 22.11.0；本地放行 `>=22.11.0`，见 `ADR-017`） | `ADR-008` + decisions §A5 + `ADR-017` |
-| 包管理 | pnpm（`packageManager` 字段锁版本） | decisions §A1+A5 |
-| Postgres | 17（本地 `postgres:17-alpine` / CI `services: postgres:17`） | `ADR-008` + decisions §C2/F2 |
-| Monorepo | Turborepo（local cache only） | `ADR-008` + decisions §A8 |
-| ORM | Drizzle | `ADR-001` |
-| Migration | drizzle-kit generate + migrate | decisions §C1 |
-| Zod 生成 | drizzle-zod + `.extend()` 业务 refine | decisions §D6 |
-| TS 严格度 | `strict: true`（其余 strict flag 由 ADR-009 决定） | decisions §A2 |
-| ESLint preset | typescript-eslint | decisions §A3 |
-| Prettier | 2 space / printWidth 100 / trailingComma 'all' / singleQuote / no semi | decisions §A4 |
-| 测试 | Vitest workspace mode + `@testcontainers/postgresql` + 模板库 | decisions §E1+E3 |
-| Hook 工具 | husky + lint-staged + commitlint config-conventional | decisions §A6+A7 |
-| Env | `@t3-oss/env-core` + zod，fail-fast at boot | decisions §G4 |
-| Log | pino（dev 用 pino-pretty） | decisions §G3 |
-| UUID | 客户端 `uuidv7()`（`uuid@9`） | decisions §B2 |
-| 本地容器 | docker-compose（PG + Redis + MinIO） | decisions §C3 |
-| CI | GitHub Actions，Node 22，ubuntu-latest only | decisions §F1 |
-| 各依赖具体 minor / patch 版本号 | TBD — Superpowers plan 阶段确认 | spec 未指定 |
-| Redis 镜像版本 / MinIO 镜像版本 | TBD — Superpowers plan 阶段确认 | spec 未指定 |
-| `@honeyai/tools-ac-coverage` Phase 1 范围 | TBD — Superpowers plan 阶段确认 | 见 §10 |
+| 维度                                      | 选型                                                                   | 来源                                  |
+| ----------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------- |
+| Node                                      | 22 LTS（CI/Prod 固定 22.11.0；本地放行 `>=22.11.0`，见 `ADR-017`）     | `ADR-008` + decisions §A5 + `ADR-017` |
+| 包管理                                    | pnpm（`packageManager` 字段锁版本）                                    | decisions §A1+A5                      |
+| Postgres                                  | 17（本地 `postgres:17-alpine` / CI `services: postgres:17`）           | `ADR-008` + decisions §C2/F2          |
+| Monorepo                                  | Turborepo（local cache only）                                          | `ADR-008` + decisions §A8             |
+| ORM                                       | Drizzle                                                                | `ADR-001`                             |
+| Migration                                 | drizzle-kit generate + migrate                                         | decisions §C1                         |
+| Zod 生成                                  | drizzle-zod + `.extend()` 业务 refine                                  | decisions §D6                         |
+| TS 严格度                                 | `strict: true`（其余 strict flag 由 ADR-009 决定）                     | decisions §A2                         |
+| ESLint preset                             | typescript-eslint                                                      | decisions §A3                         |
+| Prettier                                  | 2 space / printWidth 100 / trailingComma 'all' / singleQuote / no semi | decisions §A4                         |
+| 测试                                      | Vitest workspace mode + `@testcontainers/postgresql` + 模板库          | decisions §E1+E3                      |
+| Hook 工具                                 | husky + lint-staged + commitlint config-conventional                   | decisions §A6+A7                      |
+| Env                                       | `@t3-oss/env-core` + zod，fail-fast at boot                            | decisions §G4                         |
+| Log                                       | pino（dev 用 pino-pretty）                                             | decisions §G3                         |
+| UUID                                      | 客户端 `uuidv7()`（`uuid@9`）                                          | decisions §B2                         |
+| 本地容器                                  | docker-compose（PG + Redis + MinIO）                                   | decisions §C3                         |
+| CI                                        | GitHub Actions，Node 22，ubuntu-latest only                            | decisions §F1                         |
+| 各依赖具体 minor / patch 版本号           | TBD — Superpowers plan 阶段确认                                        | spec 未指定                           |
+| Redis 镜像版本 / MinIO 镜像版本           | TBD — Superpowers plan 阶段确认                                        | spec 未指定                           |
+| `@honeyai/tools-ac-coverage` Phase 1 范围 | TBD — Superpowers plan 阶段确认                                        | 见 §10                                |
 
 ## Testing Rules
 
