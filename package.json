@@ -1,0 +1,42 @@
+{
+  "name": "honeyai-monorepo",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22.11.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md,yaml,yml}\"",
+    "ac:coverage": "tsx packages/tools-ac-coverage/src/index.ts",
+    "migration-check": "pnpm --filter @honeyai/db drizzle-kit check",
+    "db:migrate": "pnpm --filter @honeyai/db drizzle-kit migrate",
+    "db:generate": "pnpm --filter @honeyai/db drizzle-kit generate",
+    "db:check": "pnpm --filter @honeyai/db drizzle-kit check",
+    "db:seed": "pnpm --filter @honeyai/db db:seed",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "19.6.0",
+    "@commitlint/config-conventional": "19.6.0",
+    "@eslint/js": "9.17.0",
+    "@types/node": "22.10.0",
+    "@vitest/coverage-v8": "2.1.8",
+    "cross-env": "7.0.3",
+    "eslint": "9.17.0",
+    "globals": "15.14.0",
+    "husky": "9.1.7",
+    "lint-staged": "15.2.11",
+    "prettier": "3.4.2",
+    "tsx": "4.19.2",
+    "turbo": "2.3.3",
+    "typescript": "5.7.2",
+    "typescript-eslint": "8.18.0",
+    "vitest": "2.1.8"
+  }
+}

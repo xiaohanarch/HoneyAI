@@ -14,6 +14,17 @@
 | [ADR-006](./ADR-006-bootstrap-ux.md) | Bootstrap Welcome 4 步必填 | Accepted |
 | [ADR-007](./ADR-007-run-binary-state.md) | Run 状态二元，不支持部分失败 | Accepted |
 | [ADR-008](./ADR-008-phase-1-scope.md) | Phase 1 实施范围 — monorepo 骨架 + db 全表落地 | Accepted |
+| [ADR-009](./ADR-009-typescript-strict-flags.md) | TypeScript strict flags 推荐子集 | Accepted |
+| [ADR-010](./ADR-010-drizzle-migration-dir.md) | Drizzle migration 落 `packages/db/drizzle/` | Accepted |
+| [ADR-011](./ADR-011-run-cost-summary-matview-sql.md) | `run_cost_summary` 物化视图单独 SQL migration | Accepted |
+| [ADR-012](./ADR-012-seed-placeholder.md) | Seed 入口 Phase 1 仅占位空骨架 | Accepted |
+| [ADR-013](./ADR-013-drizzle-zod-location.md) | drizzle-zod schema 同文件 re-export | Accepted |
+| [ADR-014](./ADR-014-core-barrel-only.md) | `@honeyai/core` 仅 barrel 导出 | Accepted |
+| [ADR-015](./ADR-015-husky-dotfiles.md) | husky / lint-staged / commitlint 全独立 dotfile | Accepted |
+| [ADR-016](./ADR-016-env-minimal.md) | Phase 1 `.env.example` 极简变量集 | Accepted |
+| [ADR-017](./ADR-017-node-engines-relaxed.md) | 本地 Node 引擎上界放宽至 `>=22.11.0`（CI/Prod 仍 22.11.0） | Accepted |
+| [ADR-018](./ADR-018-minio-image-tag.md) | docker-compose MinIO tag 改为 `RELEASE.2025-01-20T14-49-07Z`（本机镜像源屏蔽 plan 原 tag） | Accepted |
+| [ADR-019](./ADR-019-docker-compose-ports.md) | docker-compose host 端口改 5 字头非标准映射（55432/56379/59000/59001） | Accepted |
 
 ## 写作模板
 

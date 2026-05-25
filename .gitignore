@@ -1,11 +1,27 @@
+# OS / editors
 .DS_Store
 Thumbs.db
-*.log
 *.swp
 .idea/
 .vscode/
+
+# Node / pnpm / turbo
 node_modules/
+.turbo/
+dist/
+.next/
+*.tsbuildinfo
+coverage/
+.vitest-cache/
+
+# Logs
+*.log
+
+# Env (allow only .env.example)
 .env
 .env.*
+!.env.example
+
+# Secrets
 *.key
 *.pem

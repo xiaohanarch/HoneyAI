@@ -20,41 +20,41 @@
 
 ### NPM 包
 
-| 包 | 推荐版本 | 用途 |
-|---|---|---|
-| `pnpm` | `9.15.0`（`packageManager` 字段锁） | 包管理 |
-| `turbo` | `2.3.3` | monorepo task runner |
-| `typescript` | `5.7.2` | 编译器 |
-| `@types/node` | `22.10.0` | Node 22 类型 |
-| `typescript-eslint` | `8.18.0`（含 `parser` + `eslint-plugin`） | ESLint preset |
-| `eslint` | `9.17.0`（flat config） | linter |
-| `prettier` | `3.4.2` | 格式化 |
-| `vitest` | `2.1.8` | 测试 runner |
-| `@vitest/coverage-v8` | `2.1.8` | 覆盖率 |
-| `drizzle-orm` | `0.36.4` | ORM |
-| `drizzle-kit` | `0.28.1` | migration 工具 |
-| `drizzle-zod` | `0.5.1` | schema → zod |
-| `@testcontainers/postgresql` | `10.16.0` | 测试 PG |
-| `pg` | `8.13.1` | PG 驱动 |
-| `pino` | `9.5.0` | logger |
-| `pino-pretty` | `13.0.0` | dev 输出 |
-| `@t3-oss/env-core` | `0.11.1` | env 校验 |
-| `zod` | `3.24.1` | schema 校验 |
-| `uuid` | `11.0.3` | uuid v7（v11 是 ESM-only，确认 ok） |
-| `husky` | `9.1.7` | git hooks |
-| `lint-staged` | `15.2.11` | staged 检查 |
-| `@commitlint/cli` | `19.6.0` | commitlint CLI |
-| `@commitlint/config-conventional` | `19.6.0` | 规约 |
-| `tsx` | `4.19.2` | seed 脚本运行 |
-| `cross-env` | `7.0.3` | 跨平台 env |
+| 包                                | 推荐版本                                  | 用途                                |
+| --------------------------------- | ----------------------------------------- | ----------------------------------- |
+| `pnpm`                            | `9.15.0`（`packageManager` 字段锁）       | 包管理                              |
+| `turbo`                           | `2.3.3`                                   | monorepo task runner                |
+| `typescript`                      | `5.7.2`                                   | 编译器                              |
+| `@types/node`                     | `22.10.0`                                 | Node 22 类型                        |
+| `typescript-eslint`               | `8.18.0`（含 `parser` + `eslint-plugin`） | ESLint preset                       |
+| `eslint`                          | `9.17.0`（flat config）                   | linter                              |
+| `prettier`                        | `3.4.2`                                   | 格式化                              |
+| `vitest`                          | `2.1.8`                                   | 测试 runner                         |
+| `@vitest/coverage-v8`             | `2.1.8`                                   | 覆盖率                              |
+| `drizzle-orm`                     | `0.36.4`                                  | ORM                                 |
+| `drizzle-kit`                     | `0.28.1`                                  | migration 工具                      |
+| `drizzle-zod`                     | `0.5.1`                                   | schema → zod                        |
+| `@testcontainers/postgresql`      | `10.16.0`                                 | 测试 PG                             |
+| `pg`                              | `8.13.1`                                  | PG 驱动                             |
+| `pino`                            | `9.5.0`                                   | logger                              |
+| `pino-pretty`                     | `13.0.0`                                  | dev 输出                            |
+| `@t3-oss/env-core`                | `0.11.1`                                  | env 校验                            |
+| `zod`                             | `3.24.1`                                  | schema 校验                         |
+| `uuid`                            | `11.0.3`                                  | uuid v7（v11 是 ESM-only，确认 ok） |
+| `husky`                           | `9.1.7`                                   | git hooks                           |
+| `lint-staged`                     | `15.2.11`                                 | staged 检查                         |
+| `@commitlint/cli`                 | `19.6.0`                                  | commitlint CLI                      |
+| `@commitlint/config-conventional` | `19.6.0`                                  | 规约                                |
+| `tsx`                             | `4.19.2`                                  | seed 脚本运行                       |
+| `cross-env`                       | `7.0.3`                                   | 跨平台 env                          |
 
 ### 容器镜像
 
-| 镜像 | 推荐 tag | 用途 |
-|---|---|---|
-| `postgres` | `17-alpine` | 主 DB（开放问题 #2 已锁） |
-| `redis` | `7-alpine` | BullMQ broker（Phase 1 仅起，不消费） |
-| `minio/minio` | `RELEASE.2024-12-18T13-15-30Z` | OSS local（Phase 1 仅起，不消费） |
+| 镜像          | 推荐 tag                       | 用途                                  |
+| ------------- | ------------------------------ | ------------------------------------- |
+| `postgres`    | `17-alpine`                    | 主 DB（开放问题 #2 已锁）             |
+| `redis`       | `7-alpine`                     | BullMQ broker（Phase 1 仅起，不消费） |
+| `minio/minio` | `RELEASE.2024-12-18T13-15-30Z` | OSS local（Phase 1 仅起，不消费）     |
 
 **确认这些版本 = ok 前别动 execution。** 任何替换在审核时直接指出。
 
@@ -89,79 +89,79 @@ L. Spec patch + CHANGELOG +   （CLAUDE.md step 12）
 
 ## Task Index
 
-| # | Title | TDD? | Spec / Decision Source |
-|---|---|---|---|
-| **Section A — Workspace 基础设施** | | | |
-| A1 | 创建 feature 分支 + 根 `package.json` + `pnpm-workspace.yaml` | verify | decisions §A1+A5+A11 |
-| A2 | `tsconfig.base.json` + 严格度子集 | verify | open-Q #1, decisions §A2 |
-| A3 | Prettier + EditorConfig + `.nvmrc` + `.gitignore` | verify | decisions §A4+A5, §G1 |
-| A4 | ESLint 9 flat config (typescript-eslint) | verify | decisions §A3 |
-| A5 | Turborepo `turbo.json`（local cache） | verify | ADR-008, decisions §A8 |
-| A6 | husky + lint-staged + commitlint dotfiles | verify | open-Q #9, decisions §A6+A7 |
-| A7 | `.github\pull_request_template.md` | verify | decisions §F5 |
-| A8 | Commit Section A 验证（lint + format + commit hook 触发） | verify | — |
-| **Section B — docker-compose** | | | |
-| B1 | `docker-compose.yml` + 健康检查脚本 | verify | open-Q #11, decisions §C3 |
-| **Section C — `@honeyai/core` 最小子集** | | | |
-| C1 | package 骨架 + barrel exports | verify | open-Q #8, decisions §A9+A10 |
-| C2 | `HoneyAIError` 基类 | **TDD** | decisions §D5 |
-| C3 | `CrossTenantAccessError` 子类 | **TDD** | decisions §D5, 03-data-model §9 (AC-03-02) |
-| C4 | `logger` (pino + child 接口) | **TDD** | decisions §G3+G5 |
-| C5 | `env` (@t3-oss/env-core + zod, fail-fast) | **TDD** | open-Q #11, decisions §G4 |
-| C6 | `constants` (V1 必需子集) | verify | CLAUDE.md §6 |
-| **Section D — 测试基础设施** | | | |
-| D1 | `@honeyai/db` package 骨架 + `drizzle.config.ts` | verify | open-Q #2, decisions §C1 |
-| D2 | testcontainers harness + 模板库引导 | **TDD** | decisions §E1 |
-| D3 | `vitest.workspace.ts` 根配置 | verify | decisions §E3 |
-| **Section E — 30 表 Schema TDD** | | | |
-| E1 | `_helpers.ts`（tsCols / softDelete） | **TDD** | 03-data-model §6.1 |
-| E2 | `identity.ts`（5 表） | **TDD** | 03-data-model §6.2 |
-| E3 | `github.ts`（3 表） | **TDD** | 03-data-model §6.3 |
-| E4 | `assets.ts`（3 表） | **TDD** | 03-data-model §6.4 |
-| E5 | `runs.ts`（5 表） | **TDD** | 03-data-model §6.5 |
-| E6 | `artifacts.ts`（2 表） | **TDD** | 03-data-model §6.6, 06-sandbox §16 |
-| E7 | `ir-documents.ts`（1 表） | **TDD** | 03-data-model §6.6b, 04-ir-schemas §11 |
-| E8 | `sandbox.ts`（2 表） | **TDD** | 03-data-model §6.7 |
-| E9 | `cost.ts`（2 表，含 enum） | **TDD** | 03-data-model §6.8 |
-| E10 | `audit.ts`（2 表） | **TDD** | 03-data-model §6.9 |
-| E11 | `encryption.ts`（1 表） | **TDD** | 03-data-model §6.10 |
-| E12 | `jobs.ts`（3 表） | **TDD** | 03-data-model §6.11 |
-| E13 | `schema/index.ts` relations 聚合 + drizzle-zod re-exports | **TDD** | 03-data-model §7, open-Q #7 |
-| E14 | `packages\db\README.md` 写完整 FK 行为表 | verify | open-Q #6, decisions §B5 |
-| **Section F — Migration** | | | |
-| F1 | `drizzle-kit generate` 产首份 init migration | verify | open-Q #2, decisions §C1 |
-| F2 | matview raw SQL migration（`NNNN_run_cost_summary_matview.sql`） | **TDD** | open-Q #3, decisions §B7 |
-| F3 | `factories.ts` 测试工厂（最小集） | **TDD** | decisions §E2 |
-| **Section G — withTenant Proxy + AC 转绿** | | | |
-| G1 | 写 AC-03-01 失败测试 | **TDD red** | 03-data-model §9 |
-| G2 | 写 AC-03-02 失败测试 | **TDD red** | 03-data-model §9 |
-| G3 | 写 AC-03-03 失败测试 | **TDD red** | 03-data-model §9 |
-| G4 | `withTenant` Proxy + `systemDb` 实现 → 三测试转绿 | **TDD green** | decisions §D1+D2+D3 |
-| G5 | ESLint custom rule 禁止业务包 import `rawDb` / `systemDb` | **TDD** | decisions §D2 |
-| **Section H — Repos 纯函数** | | | |
-| H1 | `repos/tenants.ts`（createTenant / getTenant） | **TDD** | decisions §D4 |
-| H2 | `repos/users.ts`（createUser） | **TDD** | decisions §D4 |
-| H3 | `repos/runs.ts`（createRun / getRun / listRuns） | **TDD** | decisions §D4 |
-| H4 | `repos/artifacts.ts`（insertArtifact 幂等 / listByNode） | **TDD** | 03-data-model §9 (AC-03-03), decisions §D4 |
-| H5 | `src/seed/index.ts` 空占位 + `db:seed` 脚本 | verify | open-Q #5, decisions §A10 |
-| **Section I — 7 占位包** | | | |
-| I1 | 创建 7 个占位包（package.json + tsconfig + src/index.ts） | verify | CLAUDE.md §6 |
-| **Section J — `@honeyai/tools-ac-coverage`** | | | |
-| J1 | package 骨架 + CLI bin | verify | open-Q #4, decisions §E4 |
-| J2 | spec markdown scanner (regex `AC-\d{2}-\d{2}`) | **TDD** | decisions §E5 |
-| J3 | vitest title scanner | **TDD** | decisions §E5 |
-| J4 | join + 三态报表（covered / missing / orphan） | **TDD** | decisions §E5 |
-| J5 | JSON output（`coverage\ac.json`） | **TDD** | decisions §E4 |
-| J6 | stdout markdown table | **TDD** | decisions §E4 |
-| J7 | seed 100% exit-code 强制 fail 逻辑 | **TDD** | decisions §E7 |
-| **Section K — CI workflow** | | | |
-| K1 | `.github\workflows\ci.yml`（lint/typecheck/migration-check 并行 → test → ac-coverage） | verify | decisions §F1-F4 |
-| K2 | PR comment 渲染（`actions/github-script` 读 `ac.json`） | verify | decisions §E4+E6 |
-| **Section L — Spec patch + ADR + CHANGELOG** | | | |
-| L1 | `02-architecture.md §3` 9 包真实状态 patch | verify | CLAUDE.md §11 |
-| L2 | `02-architecture.md §2` migration 目录路径 patch（`packages\db\drizzle\`） | verify | open-Q #2 |
-| L3 | 8 个新 ADR（ADR-009..016）+ ADRs/README.md 索引 | verify | open-Q #1-3, #5, #7-9, #11 |
-| L4 | `CHANGELOG.md` v0.3.0 条目 | verify | CLAUDE.md §11 |
+| #                                            | Title                                                                                  | TDD?          | Spec / Decision Source                     |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- | ------------- | ------------------------------------------ |
+| **Section A — Workspace 基础设施**           |                                                                                        |               |                                            |
+| A1                                           | 创建 feature 分支 + 根 `package.json` + `pnpm-workspace.yaml`                          | verify        | decisions §A1+A5+A11                       |
+| A2                                           | `tsconfig.base.json` + 严格度子集                                                      | verify        | open-Q #1, decisions §A2                   |
+| A3                                           | Prettier + EditorConfig + `.nvmrc` + `.gitignore`                                      | verify        | decisions §A4+A5, §G1                      |
+| A4                                           | ESLint 9 flat config (typescript-eslint)                                               | verify        | decisions §A3                              |
+| A5                                           | Turborepo `turbo.json`（local cache）                                                  | verify        | ADR-008, decisions §A8                     |
+| A6                                           | husky + lint-staged + commitlint dotfiles                                              | verify        | open-Q #9, decisions §A6+A7                |
+| A7                                           | `.github\pull_request_template.md`                                                     | verify        | decisions §F5                              |
+| A8                                           | Commit Section A 验证（lint + format + commit hook 触发）                              | verify        | —                                          |
+| **Section B — docker-compose**               |                                                                                        |               |                                            |
+| B1                                           | `docker-compose.yml` + 健康检查脚本                                                    | verify        | open-Q #11, decisions §C3                  |
+| **Section C — `@honeyai/core` 最小子集**     |                                                                                        |               |                                            |
+| C1                                           | package 骨架 + barrel exports                                                          | verify        | open-Q #8, decisions §A9+A10               |
+| C2                                           | `HoneyAIError` 基类                                                                    | **TDD**       | decisions §D5                              |
+| C3                                           | `CrossTenantAccessError` 子类                                                          | **TDD**       | decisions §D5, 03-data-model §9 (AC-03-02) |
+| C4                                           | `logger` (pino + child 接口)                                                           | **TDD**       | decisions §G3+G5                           |
+| C5                                           | `env` (@t3-oss/env-core + zod, fail-fast)                                              | **TDD**       | open-Q #11, decisions §G4                  |
+| C6                                           | `constants` (V1 必需子集)                                                              | verify        | CLAUDE.md §6                               |
+| **Section D — 测试基础设施**                 |                                                                                        |               |                                            |
+| D1                                           | `@honeyai/db` package 骨架 + `drizzle.config.ts`                                       | verify        | open-Q #2, decisions §C1                   |
+| D2                                           | testcontainers harness + 模板库引导                                                    | **TDD**       | decisions §E1                              |
+| D3                                           | `vitest.workspace.ts` 根配置                                                           | verify        | decisions §E3                              |
+| **Section E — 30 表 Schema TDD**             |                                                                                        |               |                                            |
+| E1                                           | `_helpers.ts`（tsCols / softDelete）                                                   | **TDD**       | 03-data-model §6.1                         |
+| E2                                           | `identity.ts`（5 表）                                                                  | **TDD**       | 03-data-model §6.2                         |
+| E3                                           | `github.ts`（3 表）                                                                    | **TDD**       | 03-data-model §6.3                         |
+| E4                                           | `assets.ts`（3 表）                                                                    | **TDD**       | 03-data-model §6.4                         |
+| E5                                           | `runs.ts`（5 表）                                                                      | **TDD**       | 03-data-model §6.5                         |
+| E6                                           | `artifacts.ts`（2 表）                                                                 | **TDD**       | 03-data-model §6.6, 06-sandbox §16         |
+| E7                                           | `ir-documents.ts`（1 表）                                                              | **TDD**       | 03-data-model §6.6b, 04-ir-schemas §11     |
+| E8                                           | `sandbox.ts`（2 表）                                                                   | **TDD**       | 03-data-model §6.7                         |
+| E9                                           | `cost.ts`（2 表，含 enum）                                                             | **TDD**       | 03-data-model §6.8                         |
+| E10                                          | `audit.ts`（2 表）                                                                     | **TDD**       | 03-data-model §6.9                         |
+| E11                                          | `encryption.ts`（1 表）                                                                | **TDD**       | 03-data-model §6.10                        |
+| E12                                          | `jobs.ts`（3 表）                                                                      | **TDD**       | 03-data-model §6.11                        |
+| E13                                          | `schema/index.ts` relations 聚合 + drizzle-zod re-exports                              | **TDD**       | 03-data-model §7, open-Q #7                |
+| E14                                          | `packages\db\README.md` 写完整 FK 行为表                                               | verify        | open-Q #6, decisions §B5                   |
+| **Section F — Migration**                    |                                                                                        |               |                                            |
+| F1                                           | `drizzle-kit generate` 产首份 init migration                                           | verify        | open-Q #2, decisions §C1                   |
+| F2                                           | matview raw SQL migration（`NNNN_run_cost_summary_matview.sql`）                       | **TDD**       | open-Q #3, decisions §B7                   |
+| F3                                           | `factories.ts` 测试工厂（最小集）                                                      | **TDD**       | decisions §E2                              |
+| **Section G — withTenant Proxy + AC 转绿**   |                                                                                        |               |                                            |
+| G1                                           | 写 AC-03-01 失败测试                                                                   | **TDD red**   | 03-data-model §9                           |
+| G2                                           | 写 AC-03-02 失败测试                                                                   | **TDD red**   | 03-data-model §9                           |
+| G3                                           | 写 AC-03-03 失败测试                                                                   | **TDD red**   | 03-data-model §9                           |
+| G4                                           | `withTenant` Proxy + `systemDb` 实现 → 三测试转绿                                      | **TDD green** | decisions §D1+D2+D3                        |
+| G5                                           | ESLint custom rule 禁止业务包 import `rawDb` / `systemDb`                              | **TDD**       | decisions §D2                              |
+| **Section H — Repos 纯函数**                 |                                                                                        |               |                                            |
+| H1                                           | `repos/tenants.ts`（createTenant / getTenant）                                         | **TDD**       | decisions §D4                              |
+| H2                                           | `repos/users.ts`（createUser）                                                         | **TDD**       | decisions §D4                              |
+| H3                                           | `repos/runs.ts`（createRun / getRun / listRuns）                                       | **TDD**       | decisions §D4                              |
+| H4                                           | `repos/artifacts.ts`（insertArtifact 幂等 / listByNode）                               | **TDD**       | 03-data-model §9 (AC-03-03), decisions §D4 |
+| H5                                           | `src/seed/index.ts` 空占位 + `db:seed` 脚本                                            | verify        | open-Q #5, decisions §A10                  |
+| **Section I — 7 占位包**                     |                                                                                        |               |                                            |
+| I1                                           | 创建 7 个占位包（package.json + tsconfig + src/index.ts）                              | verify        | CLAUDE.md §6                               |
+| **Section J — `@honeyai/tools-ac-coverage`** |                                                                                        |               |                                            |
+| J1                                           | package 骨架 + CLI bin                                                                 | verify        | open-Q #4, decisions §E4                   |
+| J2                                           | spec markdown scanner (regex `AC-\d{2}-\d{2}`)                                         | **TDD**       | decisions §E5                              |
+| J3                                           | vitest title scanner                                                                   | **TDD**       | decisions §E5                              |
+| J4                                           | join + 三态报表（covered / missing / orphan）                                          | **TDD**       | decisions §E5                              |
+| J5                                           | JSON output（`coverage\ac.json`）                                                      | **TDD**       | decisions §E4                              |
+| J6                                           | stdout markdown table                                                                  | **TDD**       | decisions §E4                              |
+| J7                                           | seed 100% exit-code 强制 fail 逻辑                                                     | **TDD**       | decisions §E7                              |
+| **Section K — CI workflow**                  |                                                                                        |               |                                            |
+| K1                                           | `.github\workflows\ci.yml`（lint/typecheck/migration-check 并行 → test → ac-coverage） | verify        | decisions §F1-F4                           |
+| K2                                           | PR comment 渲染（`actions/github-script` 读 `ac.json`）                                | verify        | decisions §E4+E6                           |
+| **Section L — Spec patch + ADR + CHANGELOG** |                                                                                        |               |                                            |
+| L1                                           | `02-architecture.md §3` 9 包真实状态 patch                                             | verify        | CLAUDE.md §11                              |
+| L2                                           | `02-architecture.md §2` migration 目录路径 patch（`packages\db\drizzle\`）             | verify        | open-Q #2                                  |
+| L3                                           | 8 个新 ADR（ADR-009..016）+ ADRs/README.md 索引                                        | verify        | open-Q #1-3, #5, #7-9, #11                 |
+| L4                                           | `CHANGELOG.md` v0.3.0 条目                                                             | verify        | CLAUDE.md §11                              |
 
 **Total tasks:** 51
 
@@ -175,6 +175,7 @@ L. Spec patch + CHANGELOG +   （CLAUDE.md step 12）
 ### Task A1: 创建 feature 分支 + 根 `package.json` + `pnpm-workspace.yaml`
 
 **Files:**
+
 - Create: `package.json`（根）
 - Create: `pnpm-workspace.yaml`
 - Verify branch: `feat/phase-1-monorepo-db-skeleton` 已从 `main` 切出
@@ -541,24 +542,31 @@ git commit -m "chore: add husky + lint-staged + commitlint dotfiles"
 
 ```markdown
 ## Summary
+
 <!-- 1-3 句话描述本 PR 做了什么、为什么 -->
 
 ## Acceptance
+
 <!-- 本 PR 自动覆盖的 AC（与 vitest title `AC-XX-YY:` 匹配） -->
+
 - AC-XX-YY: <描述>
 
 ## Manual AC
+
 <!-- 需要人工验证的 [Manual] AC，勾选 = 完成 + 粘贴证据 -->
+
 - [ ] AC-XX-YY: <描述>
   - 证据：<截图链接 / 日志片段>
 
 ## Test Plan
+
 - [ ] `pnpm typecheck`
 - [ ] `pnpm lint`
 - [ ] `pnpm test`
 - [ ] `pnpm ac:coverage` seed AC 100%
 
 ## Spec Impact
+
 <!-- 触发了哪些 ADR / spec patch / CHANGELOG 条目 -->
 ```
 
@@ -612,7 +620,7 @@ services:
       POSTGRES_USER: honeyai
       POSTGRES_PASSWORD: honeyai_dev
       POSTGRES_DB: honeyai
-    ports: ['5432:5432']
+    ports: ['55432:5432'] # see ADR-019
     volumes: ['honeyai-pg-data:/var/lib/postgresql/data']
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U honeyai -d honeyai']
@@ -623,7 +631,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: honeyai-redis
-    ports: ['6379:6379']
+    ports: ['56379:6379'] # see ADR-019
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
@@ -631,13 +639,13 @@ services:
       retries: 10
 
   minio:
-    image: minio/minio:RELEASE.2024-12-18T13-15-30Z
+    image: minio/minio:RELEASE.2025-01-20T14-49-07Z # see ADR-018
     container_name: honeyai-minio
     command: server /data --console-address ':9001'
     environment:
       MINIO_ROOT_USER: honeyai
       MINIO_ROOT_PASSWORD: honeyai_dev
-    ports: ['9000:9000', '9001:9001']
+    ports: ['59000:9000', '59001:9001'] # see ADR-019
     volumes: ['honeyai-minio-data:/data']
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
@@ -653,7 +661,7 @@ volumes:
 - [ ] **Step 2: 写 `.env.example`**
 
 ```bash
-DATABASE_URL=postgresql://honeyai:honeyai_dev@localhost:5432/honeyai
+DATABASE_URL=postgresql://honeyai:honeyai_dev@localhost:55432/honeyai
 NODE_ENV=development
 LOG_LEVEL=debug
 ```
@@ -1277,7 +1285,12 @@ git commit -m "feat(db): scaffold @honeyai/db package + drizzle.config.ts"
 ```ts
 // packages/db/src/test/container.test.ts
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { startTestPostgres, createTestDatabase, dropTestDatabase, type TestPgHandle } from './container.js'
+import {
+  startTestPostgres,
+  createTestDatabase,
+  dropTestDatabase,
+  type TestPgHandle,
+} from './container.js'
 
 describe('testcontainers harness', () => {
   let handle: TestPgHandle
@@ -1432,11 +1445,7 @@ git commit -m "feat(db): add testcontainers + template-db test harness"
 ```ts
 import { defineWorkspace } from 'vitest/config'
 
-export default defineWorkspace([
-  'packages/core',
-  'packages/db',
-  'packages/tools/ac-coverage',
-])
+export default defineWorkspace(['packages/core', 'packages/db', 'packages/tools/ac-coverage'])
 ```
 
 - [ ] **Step 2: `packages/db/vitest.config.ts`**
@@ -1605,19 +1614,19 @@ git commit -m "feat(db): add schema/_helpers (tsCols + softDelete)"
 >
 > **每个 E2-E12 任务都遵循 5 步**：write test → RED → 粘贴 schema → GREEN → commit。
 
-| Task | 文件 | 表 | 关键断言（最少） | Spec 节 |
-|---|---|---|---|---|
-| E2 | `schema/identity.ts` + `.test.ts` | users / accounts / sessions / tenants / tenantMembers | users.githubId UNIQUE / tenants.slug UNIQUE / tenant_role enum {owner, member} / tenantMembers PK (tenant,user) | §6.2 |
-| E3 | `schema/github.ts` + `.test.ts` | githubInstallations / repositories / githubTokens | repos uniq (tenantId, githubRepoId) / githubTokens PK userId | §6.3 |
-| E4 | `schema/assets.ts` + `.test.ts` | assetSources / assets / assetVersions | asset_kind enum 8 值 / asset_sync_mode enum 3 值 / assets uniq (tenantId, kind, name) | §6.4 |
-| E5 | `schema/runs.ts` + `.test.ts` | runs / nodes / gates / events / nodeRetries | run_status 7 值 / node_status 5 值 / failure_class 8 值 / events.seq bigint | §6.5 |
-| E6 | `schema/artifacts.ts` + `.test.ts` | artifactBlobs / artifacts | artifacts uniq (runId, nodeId, attempt, kind) / artifact_status enum {ok, failed} / artifact_kind enum 7 值 | §6.6 + 06-sandbox §16 |
-| E7 | `schema/ir-documents.ts` + `.test.ts` | irDocuments | PK (runId, stage, version) / ir_stage enum 3 值 / created_by_kind enum {agent, user} | §6.6b + 04-ir-schemas §11 |
-| E8 | `schema/sandbox.ts` + `.test.ts` | sandboxes / sandboxCredentials | sandboxes.runId UNIQUE / sandbox_status enum 4 值 | §6.7 |
-| E9 | `schema/cost.ts` + `.test.ts` | pricingBook / costEvents | cost_kind enum 6 值 / pricing uniq (kind, provider, sku, effectiveFrom) | §6.8 |
-| E10 | `schema/audit.ts` + `.test.ts` | auditLog / activityFeed | auditLog BRIN index on occurredAt / set null FK 行为 | §6.9 |
-| E11 | `schema/encryption.ts` + `.test.ts` | dataEncryptionKeys | algorithm default 'AES-256-GCM' / kekVersion not null | §6.10 |
-| E12 | `schema/jobs.ts` + `.test.ts` | jobs / jobLocks / assetSyncQueue | jobs.status enum 4 值 / jobLocks PK lockKey / assetSyncQueue.status enum 4 值 | §6.11 |
+| Task | 文件                                  | 表                                                    | 关键断言（最少）                                                                                                | Spec 节                   |
+| ---- | ------------------------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| E2   | `schema/identity.ts` + `.test.ts`     | users / accounts / sessions / tenants / tenantMembers | users.githubId UNIQUE / tenants.slug UNIQUE / tenant_role enum {owner, member} / tenantMembers PK (tenant,user) | §6.2                      |
+| E3   | `schema/github.ts` + `.test.ts`       | githubInstallations / repositories / githubTokens     | repos uniq (tenantId, githubRepoId) / githubTokens PK userId                                                    | §6.3                      |
+| E4   | `schema/assets.ts` + `.test.ts`       | assetSources / assets / assetVersions                 | asset_kind enum 8 值 / asset_sync_mode enum 3 值 / assets uniq (tenantId, kind, name)                           | §6.4                      |
+| E5   | `schema/runs.ts` + `.test.ts`         | runs / nodes / gates / events / nodeRetries           | run_status 7 值 / node_status 5 值 / failure_class 8 值 / events.seq bigint                                     | §6.5                      |
+| E6   | `schema/artifacts.ts` + `.test.ts`    | artifactBlobs / artifacts                             | artifacts uniq (runId, nodeId, attempt, kind) / artifact_status enum {ok, failed} / artifact_kind enum 7 值     | §6.6 + 06-sandbox §16     |
+| E7   | `schema/ir-documents.ts` + `.test.ts` | irDocuments                                           | PK (runId, stage, version) / ir_stage enum 3 值 / created_by_kind enum {agent, user}                            | §6.6b + 04-ir-schemas §11 |
+| E8   | `schema/sandbox.ts` + `.test.ts`      | sandboxes / sandboxCredentials                        | sandboxes.runId UNIQUE / sandbox_status enum 4 值                                                               | §6.7                      |
+| E9   | `schema/cost.ts` + `.test.ts`         | pricingBook / costEvents                              | cost_kind enum 6 值 / pricing uniq (kind, provider, sku, effectiveFrom)                                         | §6.8                      |
+| E10  | `schema/audit.ts` + `.test.ts`        | auditLog / activityFeed                               | auditLog BRIN index on occurredAt / set null FK 行为                                                            | §6.9                      |
+| E11  | `schema/encryption.ts` + `.test.ts`   | dataEncryptionKeys                                    | algorithm default 'AES-256-GCM' / kekVersion not null                                                           | §6.10                     |
+| E12  | `schema/jobs.ts` + `.test.ts`         | jobs / jobLocks / assetSyncQueue                      | jobs.status enum 4 值 / jobLocks PK lockKey / assetSyncQueue.status enum 4 值                                   | §6.11                     |
 
 **每张表的 INSERT/SELECT round-trip 测试范例**（以 users 为例，其他比照）：
 
@@ -1688,6 +1697,7 @@ feat(db): add schema/<domain> with INSERT/SELECT round-trip tests
 ```
 
 > **TDD 顺序内的强制 5 步**（每个 E2-E12 都严格执行）：
+>
 > 1. 写 `<domain>.test.ts`（含 metadata 断言 + round-trip + 关键约束反例）
 > 2. `pnpm --filter @honeyai/db test <domain>` → RED
 > 3. 从 03-data-model §6.X 粘贴 schema 到 `<domain>.ts` + 在 `schema/index.ts` 追加 `export * from './<domain>.js'`
@@ -1813,44 +1823,44 @@ V1 数据层（30 表 Drizzle schema + migration + `withTenant` Proxy + repos）
 
 > 默认 `restrict`（防误删），cascade 例外见下；`audit_log` 用 `set null`（保留事件）。
 
-| 子表 | FK 列 → 父表 | ON DELETE |
-|---|---|---|
-| accounts | user_id → users.id | cascade |
-| sessions | user_id → users.id | cascade |
-| tenant_members | tenant_id → tenants.id | cascade |
-| tenant_members | user_id → users.id | cascade |
-| repositories | tenant_id → tenants.id | cascade |
-| repositories | installation_id → github_installations.id | restrict |
-| github_tokens | user_id → users.id | cascade |
-| assets | tenant_id → tenants.id | cascade |
-| assets | source_id → asset_sources.id | set null |
-| asset_versions | asset_id → assets.id | cascade |
-| asset_sources | tenant_id → tenants.id | cascade |
-| runs | tenant_id → tenants.id | cascade |
-| runs | repository_id → repositories.id | restrict |
-| runs | created_by_user_id → users.id | restrict |
-| nodes | run_id → runs.id | cascade |
-| nodes | parent_node_id → nodes.id | restrict |
-| gates | node_id → nodes.id | cascade |
-| events | run_id → runs.id | cascade |
-| events | node_id → nodes.id | cascade |
-| node_retries | node_id → nodes.id | cascade |
-| artifacts | tenant_id → tenants.id | cascade |
-| artifacts | run_id → runs.id | cascade |
-| artifacts | node_id → nodes.id | set null |
-| artifacts | blob_sha256 → artifact_blobs.sha256 | restrict |
-| ir_documents | run_id → runs.id | cascade |
-| ir_documents | tenant_id → tenants.id | cascade |
-| sandboxes | run_id → runs.id | cascade |
-| sandbox_credentials | sandbox_id → sandboxes.id | cascade |
-| cost_events | tenant_id → tenants.id | cascade |
-| cost_events | run_id → runs.id | set null |
-| cost_events | node_id → nodes.id | set null |
-| audit_log | tenant_id → tenants.id | cascade |
-| audit_log | actor_user_id → users.id | set null |
-| activity_feed | tenant_id → tenants.id | cascade |
-| activity_feed | actor_user_id → users.id | set null |
-| asset_sync_queue | source_id → asset_sources.id | cascade |
+| 子表                | FK 列 → 父表                              | ON DELETE |
+| ------------------- | ----------------------------------------- | --------- |
+| accounts            | user_id → users.id                        | cascade   |
+| sessions            | user_id → users.id                        | cascade   |
+| tenant_members      | tenant_id → tenants.id                    | cascade   |
+| tenant_members      | user_id → users.id                        | cascade   |
+| repositories        | tenant_id → tenants.id                    | cascade   |
+| repositories        | installation_id → github_installations.id | restrict  |
+| github_tokens       | user_id → users.id                        | cascade   |
+| assets              | tenant_id → tenants.id                    | cascade   |
+| assets              | source_id → asset_sources.id              | set null  |
+| asset_versions      | asset_id → assets.id                      | cascade   |
+| asset_sources       | tenant_id → tenants.id                    | cascade   |
+| runs                | tenant_id → tenants.id                    | cascade   |
+| runs                | repository_id → repositories.id           | restrict  |
+| runs                | created_by_user_id → users.id             | restrict  |
+| nodes               | run_id → runs.id                          | cascade   |
+| nodes               | parent_node_id → nodes.id                 | restrict  |
+| gates               | node_id → nodes.id                        | cascade   |
+| events              | run_id → runs.id                          | cascade   |
+| events              | node_id → nodes.id                        | cascade   |
+| node_retries        | node_id → nodes.id                        | cascade   |
+| artifacts           | tenant_id → tenants.id                    | cascade   |
+| artifacts           | run_id → runs.id                          | cascade   |
+| artifacts           | node_id → nodes.id                        | set null  |
+| artifacts           | blob_sha256 → artifact_blobs.sha256       | restrict  |
+| ir_documents        | run_id → runs.id                          | cascade   |
+| ir_documents        | tenant_id → tenants.id                    | cascade   |
+| sandboxes           | run_id → runs.id                          | cascade   |
+| sandbox_credentials | sandbox_id → sandboxes.id                 | cascade   |
+| cost_events         | tenant_id → tenants.id                    | cascade   |
+| cost_events         | run_id → runs.id                          | set null  |
+| cost_events         | node_id → nodes.id                        | set null  |
+| audit_log           | tenant_id → tenants.id                    | cascade   |
+| audit_log           | actor_user_id → users.id                  | set null  |
+| activity_feed       | tenant_id → tenants.id                    | cascade   |
+| activity_feed       | actor_user_id → users.id                  | set null  |
+| asset_sync_queue    | source_id → asset_sources.id              | cascade   |
 
 ## withTenant Proxy
 
@@ -1936,8 +1946,12 @@ import {
 describe('migrations — run_cost_summary matview', () => {
   let handle: TestPgHandle
   let dbName: string
-  beforeAll(async () => { handle = await startTestPostgres() }, 60_000)
-  afterAll(async () => { await handle.stop() })
+  beforeAll(async () => {
+    handle = await startTestPostgres()
+  }, 60_000)
+  afterAll(async () => {
+    await handle.stop()
+  })
 
   it('creates matview run_cost_summary with unique index after migrate', async () => {
     dbName = await createTestDatabase(handle)
@@ -2026,7 +2040,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS run_cost_summary_uniq_tenant_run
 }
 ```
 
-> **注意**：drizzle-kit 不会自动接管 raw SQL。手动维护 _journal.json。如果 drizzle-kit 在后续 generate 时报"unknown migration"，按 0.28 文档处理 hand-rolled migration。
+> **注意**：drizzle-kit 不会自动接管 raw SQL。手动维护 \_journal.json。如果 drizzle-kit 在后续 generate 时报"unknown migration"，按 0.28 文档处理 hand-rolled migration。
 
 - [ ] **Step 4: GREEN**
 
@@ -2194,6 +2208,7 @@ git commit -m "test(db): add minimal factories (tenant/user/repo/run/node)"
 **Spec source:** `03-data-model.md §9`（AC-03-01/02/03 定义）+ `phase-1-resolved-questions.md §B5+D1-D5`。
 
 **Files:**
+
 - Create: `packages/db/src/client.ts`（导出 `rawDb` / `systemDb` / `withTenant`）
 - Create: `packages/db/src/tenant/with-tenant.ts`（Proxy 实现）
 - Create: `packages/db/src/tenant/with-tenant.test.ts`（3 条 AC 测试）
@@ -2205,6 +2220,7 @@ git commit -m "test(db): add minimal factories (tenant/user/repo/run/node)"
 ### Task G1: AC-03-01 — 自动 WHERE tenant_id 注入
 
 **Files:**
+
 - Test: `packages/db/src/tenant/with-tenant.test.ts`
 - Function under test: `withTenant(tenantId).db.select().from(runs)`
 - AC source: `03-data-model.md §9 AC-03-01`
@@ -2346,6 +2362,7 @@ git commit -m "feat(db): withTenant Proxy auto-injects tenant_id (AC-03-01)"
 ### Task G2: AC-03-02 — 跨租户查询返回 0 行 + 写 audit_log
 
 **Files:**
+
 - Test: `packages/db/src/tenant/with-tenant.test.ts`（追加 describe）
 - Function under test: `withTenant(tenantId).db.select().from(runs).where(eq(runs.id, foreignRunId))`
 - Implementation: `packages/db/src/audit.ts` + Proxy 拦截器
@@ -2444,6 +2461,7 @@ git commit -m "feat(db): cross-tenant attempt logs audit row (AC-03-02)"
 ### Task G3: AC-03-03 — Artifact idempotent insert (`ON CONFLICT DO NOTHING`)
 
 **Files:**
+
 - Test: `packages/db/src/tenant/with-tenant.test.ts`（追加 describe）
 - Function under test: `insertArtifact()` 走 `INSERT ... ON CONFLICT (node_id, name, attempt) DO NOTHING`
 - AC source: `03-data-model.md §9 AC-03-03`
@@ -2468,18 +2486,10 @@ describe('AC-03-03: artifact insert is idempotent on (node_id, name, attempt)', 
       mimeType: 'text/markdown',
     }
 
-    const first = await rawDb
-      .insert(artifacts)
-      .values(payload)
-      .onConflictDoNothing()
-      .returning()
+    const first = await rawDb.insert(artifacts).values(payload).onConflictDoNothing().returning()
     expect(first).toHaveLength(1)
 
-    const second = await rawDb
-      .insert(artifacts)
-      .values(payload)
-      .onConflictDoNothing()
-      .returning()
+    const second = await rawDb.insert(artifacts).values(payload).onConflictDoNothing().returning()
     expect(second).toHaveLength(0)
 
     const all = await rawDb.select().from(artifacts).where(eq(artifacts.nodeId, node.id))
@@ -2548,6 +2558,7 @@ git commit -m "refactor(db): reflect SCOPED_TABLES from schema (no hardcoded lis
 ### Task G5: ESLint 自定义规则 — 业务包禁止 import `rawDb`/`systemDb`
 
 **Files:**
+
 - Modify: `eslint.config.js`（追加 `no-restricted-imports` 规则）
 - Test: `packages/db/src/tenant/eslint.test.ts`（一个文本断言：违规 import 触发规则）
 
@@ -2617,6 +2628,7 @@ git commit -m "feat(eslint): forbid rawDb/systemDb imports outside @honeyai/db"
 **Spec source:** `phase-1-resolved-questions.md §D7` + `phase-1-open-questions.md #5`。
 
 **Files:**
+
 - Create: `packages/db/src/repos/tenants.ts`（`createTenant`）
 - Create: `packages/db/src/repos/users.ts`（`createUser`）
 - Create: `packages/db/src/repos/runs.ts`（`createRun` / `getRun` / `listRunsByTenant`）
@@ -2630,6 +2642,7 @@ git commit -m "feat(eslint): forbid rawDb/systemDb imports outside @honeyai/db"
 ### Task H1: `createTenant` + `createUser`
 
 **Files:**
+
 - Test: `packages/db/src/repos/tenants.test.ts` / `users.test.ts`
 - Function under test: `createTenant({ slug, name })` / `createUser({ tenantId, githubId, email })`
 - AC source: 无显式 AC；服务 G phase 测试上下文。
@@ -2687,6 +2700,7 @@ git commit -m "feat(db): repos createTenant + createUser"
 ### Task H2: `createRun` / `getRun` / `listRunsByTenant`
 
 **Files:**
+
 - Test: `packages/db/src/repos/runs.test.ts`
 - Function under test: `createRun({ tenantId, repositoryId, branch })` / `getRun(id)` / `listRunsByTenant(tenantId, { limit, offset })`
 - AC source: 无；服务 Phase 2 orchestrator 入口。
@@ -2694,9 +2708,15 @@ git commit -m "feat(db): repos createTenant + createUser"
 - [ ] **Step 1: RED — 三个测试**
 
 ```ts
-it('createRun stores a pending run', async () => { /* ... */ })
-it('getRun returns the row by id', async () => { /* ... */ })
-it('listRunsByTenant respects limit and is ordered by created_at desc', async () => { /* ... */ })
+it('createRun stores a pending run', async () => {
+  /* ... */
+})
+it('getRun returns the row by id', async () => {
+  /* ... */
+})
+it('listRunsByTenant respects limit and is ordered by created_at desc', async () => {
+  /* ... */
+})
 ```
 
 - [ ] **Step 2: 看红**
@@ -2705,11 +2725,20 @@ it('listRunsByTenant respects limit and is ordered by created_at desc', async ()
 
 ```ts
 // packages/db/src/repos/runs.ts
-export async function createRun(db, input) { /* INSERT INTO runs ... RETURNING * */ }
-export async function getRun(db, id) { /* SELECT ... WHERE id = $1 LIMIT 1 */ }
+export async function createRun(db, input) {
+  /* INSERT INTO runs ... RETURNING * */
+}
+export async function getRun(db, id) {
+  /* SELECT ... WHERE id = $1 LIMIT 1 */
+}
 export async function listRunsByTenant(db, tenantId, { limit = 20, offset = 0 } = {}) {
-  return db.select().from(runs).where(eq(runs.tenantId, tenantId))
-    .orderBy(desc(runs.createdAt)).limit(limit).offset(offset)
+  return db
+    .select()
+    .from(runs)
+    .where(eq(runs.tenantId, tenantId))
+    .orderBy(desc(runs.createdAt))
+    .limit(limit)
+    .offset(offset)
 }
 ```
 
@@ -2727,6 +2756,7 @@ git commit -m "feat(db): repos createRun/getRun/listRunsByTenant"
 ### Task H3: `insertArtifactIdempotent` + `listArtifactsByNode`
 
 **Files:**
+
 - Test: `packages/db/src/repos/artifacts.test.ts`
 - Function under test: `insertArtifactIdempotent({ tenantId, nodeId, name, attempt, ... })`（包装 ON CONFLICT DO NOTHING）
 
@@ -2741,9 +2771,16 @@ export async function insertArtifactIdempotent(db, payload) {
   const [row] = await db.insert(artifacts).values(payload).onConflictDoNothing().returning()
   if (row) return { row, created: true }
   // 命中冲突，回查现有行
-  const [existing] = await db.select().from(artifacts).where(
-    and(eq(artifacts.nodeId, payload.nodeId), eq(artifacts.name, payload.name), eq(artifacts.attempt, payload.attempt)),
-  )
+  const [existing] = await db
+    .select()
+    .from(artifacts)
+    .where(
+      and(
+        eq(artifacts.nodeId, payload.nodeId),
+        eq(artifacts.name, payload.name),
+        eq(artifacts.attempt, payload.attempt),
+      ),
+    )
   return { row: existing, created: false }
 }
 ```
@@ -2762,6 +2799,7 @@ git commit -m "feat(db): repos insertArtifactIdempotent + listArtifactsByNode"
 ### Task H4: Repos barrel + 包出口
 
 **Files:**
+
 - Create: `packages/db/src/repos/index.ts` — `export * from './tenants'` 等
 - Modify: `packages/db/src/index.ts` — 追加 `export * as repos from './repos'`
 
@@ -2779,6 +2817,7 @@ git commit -m "chore(db): barrel exports for repos"
 ### Task H5: Seed 入口空骨架
 
 **Files:**
+
 - Create: `packages/db/src/seed/index.ts`
 - Modify: `packages/db/package.json` — 追加 `"db:seed": "tsx src/seed/index.ts"`
 
@@ -2830,6 +2869,7 @@ git commit -m "chore(db): seed placeholder (no-op for Phase 1)"
 ### Task I1: 7 个占位包一次性建出
 
 **Files (× 7):**
+
 - `packages/orchestrator/{package.json,tsconfig.json,src/index.ts}`
 - `packages/adapter-claude/{package.json,tsconfig.json,src/index.ts}`
 - `packages/adapter-opencode/{package.json,tsconfig.json,src/index.ts}`
@@ -2902,6 +2942,7 @@ git commit -m "chore: scaffold 7 placeholder packages (Phase 1 leaves bodies emp
 **Spec source:** `phase-1-open-questions.md #4` + `phase-1-resolved-questions.md §E4+E6+E7`。
 
 **Files:**
+
 - `packages/tools-ac-coverage/package.json`
 - `packages/tools-ac-coverage/src/index.ts`（CLI 入口）
 - `packages/tools-ac-coverage/src/scan-spec.ts`（扫 markdown）
@@ -2914,6 +2955,7 @@ git commit -m "chore: scaffold 7 placeholder packages (Phase 1 leaves bodies emp
 ### Task J1: 包骨架 + CLI 入口
 
 **Files:**
+
 - Create: `packages/tools-ac-coverage/package.json`
 - Create: `packages/tools-ac-coverage/src/index.ts`
 
@@ -2952,6 +2994,7 @@ git commit -m "chore(tools): scaffold ac-coverage package"
 ### Task J2: `scanSpec()` — 扫 V1-SPEC markdown 中的 `AC-XX-YY` 标识
 
 **Files:**
+
 - Test: `packages/tools-ac-coverage/src/scan-spec.test.ts`
 - Function under test: `scanSpec(rootDir): Promise<Map<string, SpecAC>>`
 
@@ -3023,6 +3066,7 @@ git commit -m "feat(tools): ac-coverage scanSpec"
 ### Task J3: `scanTests()` — 扫 vitest title
 
 **Files:**
+
 - Test: `packages/tools-ac-coverage/src/scan-tests.test.ts`
 - Function under test: `scanTests(rootDir): Promise<Map<string, TestAC[]>>`
 
@@ -3056,6 +3100,7 @@ git commit -m "feat(tools): ac-coverage scanTests"
 ### Task J4: `report()` — 三态 join + markdown 表 + JSON
 
 **Files:**
+
 - Test: `packages/tools-ac-coverage/src/report.test.ts`
 - Function under test: `report({ spec, tests, seed }) => { markdown, json, exitCode }`
 
@@ -3064,8 +3109,34 @@ git commit -m "feat(tools): ac-coverage scanTests"
 ```ts
 describe('report', () => {
   it('classifies covered / missing / orphan', () => {
-    const spec = new Map([['AC-03-01', {/*...*/}], ['AC-03-02', {/*...*/}]])
-    const tests = new Map([['AC-03-01', [/*...*/]], ['AC-99-99', [/*...*/]]])
+    const spec = new Map([
+      [
+        'AC-03-01',
+        {
+          /*...*/
+        },
+      ],
+      [
+        'AC-03-02',
+        {
+          /*...*/
+        },
+      ],
+    ])
+    const tests = new Map([
+      [
+        'AC-03-01',
+        [
+          /*...*/
+        ],
+      ],
+      [
+        'AC-99-99',
+        [
+          /*...*/
+        ],
+      ],
+    ])
     const r = report({ spec, tests, seed: ['AC-03-01', 'AC-03-02'] })
     expect(r.json.covered).toEqual(['AC-03-01'])
     expect(r.json.missing).toEqual(['AC-03-02'])
@@ -3102,6 +3173,7 @@ git commit -m "feat(tools): ac-coverage report (covered/missing/orphan + exit co
 ### Task J5: CLI run() — 串起来
 
 **Files:**
+
 - Create: `packages/tools-ac-coverage/src/run.ts`
 - Test: `packages/tools-ac-coverage/src/run.test.ts`（端到端：在临时目录跑，检 `coverage/ac.json` 出现）
 
@@ -3153,8 +3225,8 @@ git commit -m "feat(tools): ac-coverage CLI"
 // 追加 root package.json scripts
 {
   "scripts": {
-    "ac:coverage": "pnpm --filter @honeyai/tools-ac-coverage exec tsx src/index.ts"
-  }
+    "ac:coverage": "pnpm --filter @honeyai/tools-ac-coverage exec tsx src/index.ts",
+  },
 }
 ```
 
@@ -3185,6 +3257,7 @@ git commit -m "chore: expose pnpm ac:coverage from root"
 **Spec source:** `phase-1-resolved-questions.md §F1-F4`。
 
 **Files:**
+
 - Create: `.github/workflows/ci.yml`
 - Create: `.github/workflows/pr-comment.yml`（用 `actions/github-script` 把 `coverage/ac.json` 渲染为 PR comment）
 
@@ -3336,6 +3409,7 @@ git commit -m "ci: render ac-coverage as PR comment"
 **Spec source:** `CLAUDE.md §13` + `phase-1-open-questions.md §拍板后操作` + `02-architecture.md §3`。
 
 **Files (write-only, no TDD — 文档变更):**
+
 - Modify: `docs/V1-SPEC/02-architecture.md`（§2 migration 路径 + §3 9 包真实状态）
 - Modify: `docs/V1-SPEC/CHANGELOG.md`（追加 v0.3.0）
 - Create: `docs/V1-SPEC/ADRs/ADR-009-typescript-strict-flags.md`
@@ -3379,17 +3453,21 @@ git commit -m "docs(spec): patch §2 migration dir + §3 9-pkg layout (Phase 1 i
 - 日期: 2026-05-25
 
 ## Context
+
 <引用 phase-1-open-questions.md 第 N 章节问题>
 
 ## Decision
+
 <拍板（A/B/...）+ 生效配置摘要>
 
 ## Consequences
+
 - 正面:
 - 负面:
 - 后续影响:
 
 ## Related
+
 - phase-1-open-questions.md §N
 - phase-1-resolved-questions.md §X
 - 受影响包 / 文件
@@ -3397,16 +3475,16 @@ git commit -m "docs(spec): patch §2 migration dir + §3 9-pkg layout (Phase 1 i
 
 **8 个 ADR 一一对应：**
 
-| ADR | 主题 | 拍板 | 锁定文件 |
-|---|---|---|---|
-| ADR-009 | TS strict flags 推荐子集 | B | `tsconfig.base.json` |
-| ADR-010 | Drizzle migration 落 `packages/db/drizzle/` | A | `packages/db/drizzle.config.ts` |
-| ADR-011 | `run_cost_summary` matview 单独 SQL migration | A | `packages/db/drizzle/0001_run_cost_summary_matview.sql` |
-| ADR-012 | Seed 入口 Phase 1 仅空骨架 | A | `packages/db/src/seed/index.ts` |
-| ADR-013 | drizzle-zod 同 schema 文件 re-export | A | `packages/db/src/schema/*.ts` 末尾 |
-| ADR-014 | `@honeyai/core` 仅 barrel 导出 | A | `packages/core/src/index.ts` |
-| ADR-015 | husky / lint-staged / commitlint 全独立 dotfile | A | `.husky/*` + `.lintstagedrc.json` + `commitlint.config.cjs` |
-| ADR-016 | `.env.example` 极简（DATABASE_URL + NODE_ENV + LOG_LEVEL） | A | `.env.example` + `packages/core/src/env/index.ts` |
+| ADR     | 主题                                                       | 拍板 | 锁定文件                                                    |
+| ------- | ---------------------------------------------------------- | ---- | ----------------------------------------------------------- |
+| ADR-009 | TS strict flags 推荐子集                                   | B    | `tsconfig.base.json`                                        |
+| ADR-010 | Drizzle migration 落 `packages/db/drizzle/`                | A    | `packages/db/drizzle.config.ts`                             |
+| ADR-011 | `run_cost_summary` matview 单独 SQL migration              | A    | `packages/db/drizzle/0001_run_cost_summary_matview.sql`     |
+| ADR-012 | Seed 入口 Phase 1 仅空骨架                                 | A    | `packages/db/src/seed/index.ts`                             |
+| ADR-013 | drizzle-zod 同 schema 文件 re-export                       | A    | `packages/db/src/schema/*.ts` 末尾                          |
+| ADR-014 | `@honeyai/core` 仅 barrel 导出                             | A    | `packages/core/src/index.ts`                                |
+| ADR-015 | husky / lint-staged / commitlint 全独立 dotfile            | A    | `.husky/*` + `.lintstagedrc.json` + `commitlint.config.cjs` |
+| ADR-016 | `.env.example` 极简（DATABASE_URL + NODE_ENV + LOG_LEVEL） | A    | `.env.example` + `packages/core/src/env/index.ts`           |
 
 - [ ] **Step 1:** 逐文件写 8 份 ADR（每份 < 50 行）
 - [ ] **Step 2:** 修 `docs/V1-SPEC/ADRs/README.md` 追加 8 行索引
@@ -3433,6 +3511,7 @@ git commit -m "docs(spec): ADR-009..016 (Phase 1 拍板入档)"
 ## v0.3.0 — 2026-05-25 (Phase 1 implementation)
 
 ### Added
+
 - 9-package pnpm/Turborepo workspace skeleton (core + db real; 7 placeholders; tools-ac-coverage real)
 - `@honeyai/db`: 30-table Drizzle schema + drizzle-zod schemas + first migration + `run_cost_summary` matview
 - `withTenant` Proxy + seed AC-03-01/02/03 green
@@ -3441,10 +3520,12 @@ git commit -m "docs(spec): ADR-009..016 (Phase 1 拍板入档)"
 - ADR-009..016 (Phase 1 拍板入档)
 
 ### Changed
+
 - §2 migration directory: `infra/migrations/` → `packages/db/drizzle/`
 - §3 package layout: 8 → 9 packages (shared merged into core; tools-ac-coverage added)
 
 ### Note
+
 - Phase 1 does not touch business logic (orchestrator/sandbox/web/github/worker). 7 placeholders remain `export {}`.
 ```
 
@@ -3468,27 +3549,33 @@ git commit -m "docs(spec): CHANGELOG v0.3.0 (Phase 1 implementation)"
 Closes ADR-008.
 
 ## Scope (ADR-008)
+
 1. pnpm + Turborepo + 9 packages
 2. `@honeyai/db` 30 tables + migration + matview
 3. `withTenant` Proxy + AC-03-01/02/03 green
 4. `@honeyai/tools-ac-coverage` + CI
 
 ## ADRs landed
+
 ADR-009..016 (see `docs/V1-SPEC/ADRs/`)
 
 ## Spec patches
+
 - §2 migration dir → `packages/db/drizzle/`
 - §3 9-package layout
 - CHANGELOG v0.3.0
 
 ## FK behavior table
+
 （粘 `packages/db/README.md` 中的 FK 行为表整张表）
 
 ## Test results
+
 - `pnpm test`: <N> passed
 - `pnpm ac:coverage`: seed 3/3 covered (100%)
 
 ## Out of scope (Phase 2+)
+
 - orchestrator FSM, sandbox runner, web UI, BullMQ worker, GitHub App, infra bootstrap
 ```
 

@@ -59,19 +59,22 @@ D:\code\ai-devops\
 ├── legacy/                  ← 原 HTML 原型（视觉参考，不进生产构建）
 ├── packages/
 │   ├── core/                ← 共享类型、常量、zod schema、错误类
-│   ├── db/                  ← Drizzle schema + 迁移 + repository
+│   ├── db/                  ← Drizzle schema + drizzle/ (生成 SQL) + repository
 │   ├── orchestrator/        ← Run/Node FSM、Gate、重试、reconcile
 │   ├── adapter-claude/      ← Claude Code CLI 适配器（V1 默认）
 │   ├── adapter-opencode/    ← opencode CLI 适配器（代码存在但 build-time 不上线）
 │   ├── github/              ← GitHub App + OAuth + API 客户端
 │   ├── web/                 ← Next.js 15 主应用
 │   ├── worker/              ← BullMQ worker 进程（reconcile/cost rollup）
-│   └── sandbox-runner/      ← Sandbox 内 Node CLI（stream-json → 标准 JSONL）
+│   ├── sandbox-runner/      ← Sandbox 内 Node CLI（stream-json → 标准 JSONL）
+│   └── tools-ac-coverage/   ← AC 覆盖率扫描器（spec ↔ vitest title 三态 join，见 ADR-008）
 ├── infra/
 │   ├── k8s/                 ← Kustomize manifests (base + overlays)
 │   ├── docker/              ← Dockerfile.web / Dockerfile.worker / Dockerfile.sandbox
-│   ├── bootstrap/           ← 01-host.sh / 02-services.sh
-│   └── migrations/          ← Drizzle generated SQL
+│   └── bootstrap/           ← 01-host.sh / 02-services.sh
+│
+│ (Drizzle 生成 SQL 落 `packages/db/drizzle/`，见 ADR-010；
+│  原 `infra/migrations/` 路径已废弃。)
 ├── docs/V1-SPEC/            ← 本文档
 ├── package.json             ← pnpm workspace root
 ├── pnpm-workspace.yaml
@@ -80,17 +83,18 @@ D:\code\ai-devops\
 
 ## 3. 包职责矩阵
 
-| Package | 职责 | 依赖 |
-|---|---|---|
-| core | zod schemas, error classes, constants | (无) |
-| db | Drizzle schemas, migrations, repos, transaction helper | core |
-| orchestrator | Run/Node FSM, Gate, retry, reconcile loop | core, db, github, adapter-claude |
-| adapter-claude | exec Claude Code CLI, parse stream-json | core |
-| adapter-opencode | exec opencode CLI（V1 不上线） | core |
-| github | App auth, OAuth, REST/GraphQL client, webhook verify | core |
-| web | Next.js UI + Server Actions + SSE endpoints | core, db, orchestrator, github |
-| worker | BullMQ jobs: reconcile / cost rollup / asset sync | core, db, orchestrator, github |
-| sandbox-runner | 沙箱内 Node CLI, 译 stream-json → JSONL events | core |
+| Package | 职责 | 依赖 | Phase 1 状态 |
+|---|---|---|---|
+| core | zod schemas, error classes, constants, logger, env | (无) | **实建（最小子集）** — errors / log / env / constants；IR zod schemas 推迟 Phase 2（见 ADR-014） |
+| db | Drizzle schemas, migrations, repos, `withTenant` Proxy | core | **实建（全量）** — 30 表 schema + drizzle migration + repos + 模板库测试基础设施 |
+| orchestrator | Run/Node FSM, Gate, retry, reconcile loop | core, db, github, adapter-claude | 占位（`export {}`） |
+| adapter-claude | exec Claude Code CLI, parse stream-json | core | 占位（`export {}`） |
+| adapter-opencode | exec opencode CLI（V1 不上线） | core | 占位（`export {}`） |
+| github | App auth, OAuth, REST/GraphQL client, webhook verify | core | 占位（`export {}`） |
+| web | Next.js UI + Server Actions + SSE endpoints | core, db, orchestrator, github | 占位（`export {}`） |
+| worker | BullMQ jobs: reconcile / cost rollup / asset sync | core, db, orchestrator, github | 占位（`export {}`） |
+| sandbox-runner | 沙箱内 Node CLI, 译 stream-json → JSONL events | core | 占位（`export {}`） |
+| tools-ac-coverage | spec markdown ↔ vitest title 三态 join + JSON/markdown 报表 + seed-AC 退出码门禁 | (无 — 仅 fast-glob) | **实建（全量）** — `pnpm ac:coverage` 在 CI 强制 seed 100% covered |
 
 ## 4. 数据流
 
