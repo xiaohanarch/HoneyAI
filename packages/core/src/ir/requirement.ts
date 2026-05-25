@@ -1,5 +1,13 @@
 import { z } from 'zod'
-import { PrioritySchema, ComplexitySchema, RiskLevelSchema } from './shared.js'
+import {
+  PrioritySchema,
+  ComplexitySchema,
+  RiskLevelSchema,
+  parseFrontmatter,
+  stringifyFrontmatter,
+  type IRParseOutcome,
+  type IRParseWarning,
+} from './shared.js'
 
 export const RequirementIRSchema = z.object({
   title: z.string().min(1).max(200),
@@ -39,3 +47,31 @@ export const RequirementIRSchema = z.object({
 })
 
 export type RequirementIR = z.infer<typeof RequirementIRSchema>
+
+export const REQUIRED_REQUIREMENT_SECTIONS = [
+  '背景',
+  '用户故事',
+  '验收标准明细',
+  '开放问题',
+] as const
+
+function findMissingSections(body: string, required: readonly string[]): IRParseWarning[] {
+  const headings = new Set<string>()
+  for (const match of body.matchAll(/^##\s+(.+?)\s*$/gm)) {
+    if (match[1]) headings.add(match[1].trim())
+  }
+  return required
+    .filter((s) => !headings.has(s))
+    .map<IRParseWarning>((s) => ({ kind: 'missing_section', section: s }))
+}
+
+export function parseRequirementIR(markdown: string): IRParseOutcome<RequirementIR> {
+  const base = parseFrontmatter(markdown, RequirementIRSchema)
+  if (!base.ok) return base
+  const warnings = findMissingSections(base.body, REQUIRED_REQUIREMENT_SECTIONS)
+  return { ...base, warnings }
+}
+
+export function stringifyRequirementIR(data: RequirementIR, body: string): string {
+  return stringifyFrontmatter(data, body)
+}
