@@ -50,6 +50,13 @@
       "when": 1779710738174,
       "tag": "0006_sandbox",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1779711204263,
+      "tag": "0007_cost",
+      "breakpoints": true
     }
   ]
 }
