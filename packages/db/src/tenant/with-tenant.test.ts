@@ -14,8 +14,9 @@ import * as schema from '../schema/index.js'
 import { withTenant } from './with-tenant.js'
 import { tenants, users } from '../schema/identity.js'
 import { githubInstallations, repositories } from '../schema/github.js'
-import { runs } from '../schema/runs.js'
+import { runs, nodes } from '../schema/runs.js'
 import { auditLog } from '../schema/audit.js'
+import { artifactBlobs, artifacts } from '../schema/artifacts.js'
 
 let handle: TestPgHandle
 let dbName: string
@@ -155,5 +156,55 @@ describe('AC-03-02: cross-tenant access returns 0 rows + writes audit_log', () =
       .from(auditLog)
       .where(eq(auditLog.action, 'cross_tenant_attempt'))
     expect(logs).toHaveLength(0)
+  })
+})
+
+describe('AC-03-03: artifact insert is idempotent on (run_id, node_id, attempt, kind)', () => {
+  it('second insert with same triple returns 0 rows via ON CONFLICT DO NOTHING', async () => {
+    const { tenantA, runA } = await seedTwoTenants(rawDb)
+
+    const nodeId = uuidv7()
+    await rawDb.insert(nodes).values({
+      id: nodeId,
+      runId: runA.id,
+      stage: 2,
+      ordinal: 1,
+      name: 'design',
+      kind: 'agent',
+    })
+
+    const sha = 'd'.repeat(64)
+    await rawDb.insert(artifactBlobs).values({
+      sha256: sha,
+      byteSize: 100n,
+      ossKey: `${tenantA.id}/blobs/${sha.slice(0, 2)}/${sha.slice(2)}`,
+    })
+
+    const payload = {
+      tenantId: tenantA.id,
+      runId: runA.id,
+      nodeId,
+      attempt: 1,
+      kind: 'design_ir' as const,
+      blobSha256: sha,
+      authorKind: 'agent' as const,
+    }
+
+    const first = await rawDb
+      .insert(artifacts)
+      .values({ id: uuidv7(), ...payload })
+      .onConflictDoNothing()
+      .returning()
+    expect(first).toHaveLength(1)
+
+    const second = await rawDb
+      .insert(artifacts)
+      .values({ id: uuidv7(), ...payload })
+      .onConflictDoNothing()
+      .returning()
+    expect(second).toHaveLength(0)
+
+    const all = await rawDb.select().from(artifacts).where(eq(artifacts.nodeId, nodeId))
+    expect(all).toHaveLength(1)
   })
 })
