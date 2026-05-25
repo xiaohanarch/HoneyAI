@@ -215,3 +215,86 @@ op
     }
   })
 })
+
+const SPEC_8_1_REQUIREMENT_MD = `---
+title: 给 /health 端点添加 db/redis 状态返回
+one_liner: "GET /health 返回 200 + {db: ok/down, redis: ok/down}"
+priority: P2
+estimated_complexity: XS
+in_scope:
+  - 修改 /health 路由
+  - 加 db ping
+  - 加 redis ping
+  - 加单元测试
+out_of_scope:
+  - 鉴权
+  - rate limit
+  - 历史指标
+success_criteria:
+  - GET /health 始终返回 200
+  - body 字段 db 和 redis 各自为 'ok' 或 'down'
+  - db/redis 不可用时不抛 500
+  - 测试覆盖率 >= 80%
+constraints:
+  - kind: tech
+    statement: 必须复用现有 db.pool 和 redis.client,不要新建连接
+  - kind: tech
+    statement: 返回格式参考 k8s liveness probe 风格(短字符串)
+risks:
+  - description: redis 不可达时 ping 阻塞影响 /health 响应时间
+    likelihood: medium
+    impact: medium
+    mitigation: ping 加 500ms 超时
+impact_surface:
+  - src/routes/health.ts
+  - src/health/db_check.ts
+  - src/health/redis_check.ts
+  - tests/health.test.ts
+related: []
+---
+
+## 背景
+当前 /health 仅返回 200 OK 字符串,监控系统无法判断 db 和 redis 是否健康。
+SRE 反馈需要细化健康状态。
+
+## 用户故事
+As a SRE 工程师
+I want /health 返回结构化健康信息
+So that 我能在监控面板分别看到 db/redis 状态
+
+## 验收标准明细
+1. 正常情况: \`{db: 'ok', redis: 'ok'}\` 200
+2. db 挂: \`{db: 'down', redis: 'ok'}\` 200
+
+## 开放问题
+- 是否需要返回版本号 / 启动时间?→ 暂不(out_of_scope)
+`
+
+describe('RequirementIR — spec §8.1 golden fixture', () => {
+  it('parses the spec example without errors and warnings', () => {
+    const out = parseRequirementIR(SPEC_8_1_REQUIREMENT_MD)
+    expect(out.ok).toBe(true)
+    if (out.ok) {
+      expect(out.data.title).toBe('给 /health 端点添加 db/redis 状态返回')
+      expect(out.data.priority).toBe('P2')
+      expect(out.data.estimated_complexity).toBe('XS')
+      expect(out.data.in_scope).toHaveLength(4)
+      expect(out.data.constraints).toHaveLength(2)
+      expect(out.data.risks).toHaveLength(1)
+      expect(out.data.risks[0]?.likelihood).toBe('medium')
+      expect(out.warnings).toEqual([])
+    }
+  })
+
+  it('roundtrips: parse → stringify → parse → data preserved', () => {
+    const first = parseRequirementIR(SPEC_8_1_REQUIREMENT_MD)
+    expect(first.ok).toBe(true)
+    if (!first.ok) return
+    const back = stringifyRequirementIR(first.data, first.body)
+    const second = parseRequirementIR(back)
+    expect(second.ok).toBe(true)
+    if (second.ok) {
+      expect(second.data).toEqual(first.data)
+    }
+  })
+})
