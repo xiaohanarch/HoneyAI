@@ -88,7 +88,7 @@
 
 | 维度 | 选型 | 来源 |
 |---|---|---|
-| Node | 22 LTS | `ADR-008` + decisions §A5 |
+| Node | 22 LTS（CI/Prod 固定 22.11.0；本地放行 `>=22.11.0`，见 `ADR-017`） | `ADR-008` + decisions §A5 + `ADR-017` |
 | 包管理 | pnpm（`packageManager` 字段锁版本） | decisions §A1+A5 |
 | Postgres | 17（本地 `postgres:17-alpine` / CI `services: postgres:17`） | `ADR-008` + decisions §C2/F2 |
 | Monorepo | Turborepo（local cache only） | `ADR-008` + decisions §A8 |

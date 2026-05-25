@@ -2,6 +2,14 @@
 
 > 本文档记录 spec 自身的变更。代码层变更走 git 提交，不在此记录。
 
+## 2026-05-25
+
+### ADR-017 — 本地 Node 引擎上界放宽
+
+- 新增 `docs/V1-SPEC/ADRs/ADR-017-node-engines-relaxed.md`：`engines.node` 由 `">=22.11.0 <23"` 改为 `">=22.11.0"`；CI/Prod 仍固定 22.11.0
+- 触发：Phase 1 §A1 启动时本地 Node v24，原上界阻塞 pnpm install
+- 影响范围：仅 root `package.json` + `CLAUDE.md` tech stack 表 Node 行
+
 ## 2026-05-24
 
 ### v0.2.0 — Audit P0 闭环（artifact 版本规则 + 验收清单框架）
