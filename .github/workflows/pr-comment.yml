@@ -1,0 +1,70 @@
+name: pr-ac-comment
+
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+
+permissions:
+  pull-requests: write
+  issues: write
+  actions: read
+
+jobs:
+  comment:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download ac-coverage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ac-coverage
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Render PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs')
+            const data = JSON.parse(fs.readFileSync('ac.json', 'utf8'))
+            const t = data.totals ?? {}
+            const seedStatus = (data.seedMissing ?? []).length === 0 ? '✅' : '❌'
+            const seedLine = (data.seedMissing ?? []).length === 0
+              ? `seed ACs: **${(data.seedCovered ?? []).length} covered** ${seedStatus}`
+              : `seed ACs **missing**: ${(data.seedMissing ?? []).join(', ')} ${seedStatus}`
+            const body = [
+              `## AC Coverage`,
+              ``,
+              seedLine,
+              ``,
+              `| status | count |`,
+              `|---|---|`,
+              `| covered | ${(data.covered ?? []).length} |`,
+              `| missing | ${(data.missing ?? []).length} |`,
+              `| orphan  | ${(data.orphan  ?? []).length} |`,
+              ``,
+              `<details><summary>details</summary>`,
+              ``,
+              '```json',
+              JSON.stringify(data, null, 2),
+              '```',
+              ``,
+              `</details>`,
+            ].join('\n')
+            const { data: pulls } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: `${context.repo.owner}:${context.payload.workflow_run.head_branch}`,
+              state: 'open',
+            })
+            if (!pulls.length) {
+              core.info('No open PR for head branch; skipping comment.')
+              return
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pulls[0].number,
+              body,
+            })
