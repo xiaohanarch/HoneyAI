@@ -148,6 +148,9 @@ importers:
       '@honeyai/core':
         specifier: workspace:*
         version: link:../core
+      uuid:
+        specifier: 11.0.3
+        version: 11.0.3
     devDependencies:
       typescript:
         specifier: 5.7.2

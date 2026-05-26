@@ -14,7 +14,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@honeyai/core": "workspace:*"
+    "@honeyai/core": "workspace:*",
+    "uuid": "11.0.3"
   },
   "devDependencies": {
     "typescript": "5.7.2",
