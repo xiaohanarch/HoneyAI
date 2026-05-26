@@ -201,6 +201,9 @@ importers:
       clsx:
         specifier: 2.1.1
         version: 2.1.1
+      drizzle-orm:
+        specifier: 0.36.4
+        version: 0.36.4(@types/pg@8.11.10)(@types/react@19.1.0)(pg@8.13.1)(react@19.1.0)
       lucide-react:
         specifier: ^1.16.0
         version: 1.16.0(react@19.1.0)
@@ -262,6 +265,9 @@ importers:
       typescript:
         specifier: 5.7.2
         version: 5.7.2
+      uuid:
+        specifier: 11.0.3
+        version: 11.0.3
       vitest:
         specifier: 2.1.8
         version: 2.1.8(@types/node@22.15.0)(jsdom@26.1.0)(lightningcss@1.29.2)
