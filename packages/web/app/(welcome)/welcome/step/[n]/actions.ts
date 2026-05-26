@@ -55,3 +55,30 @@ export async function submitStep1(
   })
   redirect('/welcome/step/2')
 }
+
+const step2Schema = z.object({ confirm: z.literal('on') })
+
+export async function submitStep2(
+  _prev: WelcomeActionResult,
+  fd: FormData,
+): Promise<WelcomeActionResult> {
+  const ctx = await requireTenantCtx()
+  if ('error' in ctx) return ctx.error
+
+  const existing = await getTenantBootstrap(ctx.tenantId)
+  if (existing?.bootstrap?.completedAt) {
+    return { ok: false, code: 'BOOTSTRAP_ALREADY_COMPLETE' }
+  }
+  if (!existing?.bootstrap?.anthropicKeyCiphertext) {
+    return { ok: false, code: 'INTERNAL_ERROR', message: '请先完成第 1 步' }
+  }
+  const parsed = step2Schema.safeParse({ confirm: fd.get('confirm') })
+  if (!parsed.success) return { ok: false, code: 'INTERNAL_ERROR' }
+
+  await patchBootstrap(ctx.tenantId, {
+    ...existing.bootstrap,
+    githubAppInstalled: true,
+    githubAppMarkedAt: new Date().toISOString(),
+  })
+  redirect('/welcome/step/3')
+}
