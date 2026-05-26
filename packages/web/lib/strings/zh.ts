@@ -29,3 +29,36 @@ export const zh = {
 } as const
 
 export type ZhStrings = typeof zh
+
+export const zhWelcome = {
+  step1: {
+    title: '第 1 步：填入 Anthropic API Key',
+    keyLabel: 'API Key',
+    keyHint: '以 sk-ant- 开头，至少 39 字符',
+    submit: '保存并继续',
+  },
+  step2: {
+    title: '第 2 步：安装 GitHub App',
+    install: '前往 GitHub 安装',
+    confirm: '我已完成安装',
+  },
+  step3: {
+    title: '第 3 步：选择 GitHub 仓库',
+    repoLabel: '仓库 (owner/name)',
+    submit: '保存并继续',
+  },
+  step4: {
+    title: '第 4 步：导入默认 Skills',
+    import: '导入 5 个默认',
+    skip: '跳过',
+  },
+} as const
+
+export const zhErrorsWelcome: Record<string, string> = {
+  INVALID_KEY_FORMAT: 'Anthropic Key 格式不正确',
+  INVALID_REPO_FORMAT: '仓库格式不正确，应为 owner/name',
+  BOOTSTRAP_ALREADY_COMPLETE: '引导已完成，无法重复提交',
+  UNAUTHENTICATED: '请先登录',
+  TENANT_NOT_FOUND: '找不到对应租户',
+  INTERNAL_ERROR: '系统内部错误，请稍后重试',
+}

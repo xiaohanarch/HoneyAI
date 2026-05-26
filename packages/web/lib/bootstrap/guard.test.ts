@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { beforeEach, describe, it, expect, vi } from 'vitest'
 
 vi.mock('next/navigation', () => ({
   redirect: vi.fn((url: string) => {
@@ -15,6 +15,12 @@ import { getTenantBootstrap } from './read'
 import { requireBootstrapComplete, requireBootstrapIncomplete } from './guard'
 
 describe('AC-01-04: bootstrap guard redirect matrix', () => {
+  // Reset call history between tests so `expect(redirect).not.toHaveBeenCalled()`
+  // assertions stay order-independent under future --sequence.shuffle runs.
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('AC-01-04: requireBootstrapComplete passes when completedAt set', async () => {
     vi.mocked(getTenantBootstrap).mockResolvedValue({
       slug: 'alice',
@@ -26,6 +32,11 @@ describe('AC-01-04: bootstrap guard redirect matrix', () => {
 
   it('AC-01-04: requireBootstrapComplete redirects to /welcome when incomplete', async () => {
     vi.mocked(getTenantBootstrap).mockResolvedValue({ slug: 'alice', bootstrap: null })
+    await expect(requireBootstrapComplete('t1')).rejects.toThrow('REDIRECT:/welcome')
+  })
+
+  it('AC-01-04: requireBootstrapComplete redirects to /welcome when tenant missing', async () => {
+    vi.mocked(getTenantBootstrap).mockResolvedValue(null)
     await expect(requireBootstrapComplete('t1')).rejects.toThrow('REDIRECT:/welcome')
   })
 
