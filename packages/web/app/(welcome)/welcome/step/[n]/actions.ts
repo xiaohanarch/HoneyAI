@@ -10,6 +10,7 @@ import { auth } from '@/lib/auth'
 import { encryptAnthropicKey } from '@honeyai/core'
 import { getTenantBootstrap } from '@/lib/bootstrap/read'
 import type { WelcomeActionResult } from '@/lib/errors/welcome-errors'
+import { zhWelcomeServerMessages } from '@/lib/strings/zh'
 
 const KEY_RE = /^sk-ant-[A-Za-z0-9_-]{32,}$/
 const step1Schema = z.object({ key: z.string().regex(KEY_RE) })
@@ -70,7 +71,7 @@ export async function submitStep2(
     return { ok: false, code: 'BOOTSTRAP_ALREADY_COMPLETE' }
   }
   if (!existing?.bootstrap?.anthropicKeyCiphertext) {
-    return { ok: false, code: 'INTERNAL_ERROR', message: '请先完成第 1 步' }
+    return { ok: false, code: 'INTERNAL_ERROR', message: zhWelcomeServerMessages.step2Prereq }
   }
   const parsed = step2Schema.safeParse({ confirm: fd.get('confirm') })
   if (!parsed.success) return { ok: false, code: 'INTERNAL_ERROR' }

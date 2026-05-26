@@ -44,6 +44,7 @@ export const zhWelcome = {
     title: '第 2 步：安装 GitHub App',
     install: '前往 GitHub 安装',
     confirm: '我已完成安装',
+    submitting: '保存中…',
   },
   step3: {
     title: '第 3 步：选择 GitHub 仓库',
@@ -55,6 +56,15 @@ export const zhWelcome = {
     import: '导入 5 个默认',
     skip: '跳过',
   },
+} as const
+
+// Server-side message strings surfaced via WelcomeActionResult.message.
+// Kept separate from zhErrorsWelcome because these are step-precondition hints,
+// not error-code translations — they piggy-back on INTERNAL_ERROR's banner slot.
+export const zhWelcomeServerMessages = {
+  step2Prereq: '请先完成第 1 步',
+  step3Prereq: '请先完成第 2 步',
+  step4Prereq: '请先完成第 3 步',
 } as const
 
 // Exhaustive map keyed by WelcomeErrorCode — typo / missing code = compile error.

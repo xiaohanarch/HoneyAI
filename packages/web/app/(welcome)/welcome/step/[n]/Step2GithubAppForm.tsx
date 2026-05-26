@@ -42,7 +42,7 @@ export function Step2GithubAppForm() {
       <input type="hidden" name="confirm" value="on" />
 
       <Button type="submit" disabled={isPending}>
-        {isPending ? zhWelcome.step1.submitting : zhWelcome.step2.confirm}
+        {isPending ? zhWelcome.step2.submitting : zhWelcome.step2.confirm}
       </Button>
     </form>
   )
