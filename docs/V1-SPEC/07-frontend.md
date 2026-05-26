@@ -140,9 +140,23 @@ GET /api/runs/<id>/stream
 - 顶部 source 标识（手写 / mirror / import-once）
 - mirror 模式下编辑器只读 + 提示 "此 Asset 由 GitHub mirror，请到源 repo 修改"
 
-### 8.4 Bootstrap Welcome
-- 4 张卡片，每张完成后变 ✓
-- 4 张全 ✓ → [开始使用] 按钮可点
+### 8.4 Welcome Screen
+
+Welcome 引导使用 `(welcome)` route group，布局为 `grid grid-cols-[1fr_320px]`：左侧为当前步骤表单，右侧为 `ProgressCards` 侧边栏。
+
+#### ProgressCards (PI3)
+
+4 张卡片对应 4 个步骤，每张有三态：
+
+| 状态 | 视觉 | aria |
+|------|------|------|
+| `idle` | 灰边框 + 低不透明度 | — |
+| `running` | 蓝边框 + 浅蓝背景 | `aria-current="step"` |
+| `done` | 绿边框 + 浅绿背景 | — |
+
+状态切换通过 CSS `transition-all duration-300` 实现（AN2）。颜色来自 tokens.css 设计令牌：`--status-done` / `--status-run` / `--status-idle-soft`。
+
+> 实现参见 `packages/web/components/welcome/ProgressCards.tsx`。
 
 ## 9. 构建输出
 

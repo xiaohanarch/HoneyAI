@@ -2,6 +2,25 @@
 
 > 本文档记录 spec 自身的变更。代码层变更走 git 提交，不在此记录。
 
+## [0.9.0] - 2026-05-26
+
+### Added
+
+- Slice 4.3 Welcome 4-step bootstrap wizard (AC-01-04..AC-01-12)
+- 4 server actions: `submitStep1..4` (Anthropic key / GitHub App / repo / default skills)
+- `requireWritableBootstrap()` helper — auth + completedAt + prereq guard, shared across all step actions
+- `requireBootstrapComplete` / `requireBootstrapIncomplete` layout guards (ADR-039)
+- `getTenantBootstrap()` React cache() reader (ADR-040)
+- `ProgressCards` 4-state sidebar component with CSS AN2 transitions (ADR-044/045)
+- Three-layer error.tsx boundaries: root / (welcome) / step/[n] (ADR-041)
+- 5 default skill seeds: code-review-assistant, no-pii-in-logs, run-tests, prefer-server-components, pre-commit-format (ADR-038)
+- 17 ADRs: ADR-032..ADR-048
+
+### Implementation Notes
+
+- Redirect target: `/t/[slug]` (spec says `/t/[slug]/runs`; `/runs` deferred to slice 4.x, tracked in ADR-043 V3)
+- Cross-tenant isolation enforced at application layer via session JWT; `tenants` table not in SCOPED_TABLES by design
+
 ## 2026-05-26
 
 ### v0.8.0 — Phase 2.4 切片 4.2 — `@honeyai/web` shadcn 基础组件 + AppBar
