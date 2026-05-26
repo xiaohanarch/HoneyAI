@@ -50,6 +50,7 @@ export const zhWelcome = {
     title: '第 3 步：选择 GitHub 仓库',
     repoLabel: '仓库 (owner/name)',
     submit: '保存并继续',
+    submitting: '保存中…',
   },
   step4: {
     title: '第 4 步：导入默认 Skills',
