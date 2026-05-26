@@ -147,6 +147,15 @@ describe('passGate', () => {
     expect(result).toEqual({ ok: false, reason: 'not_viewed' })
   })
 
+  it('throws when gate row does not exist', async () => {
+    // Arrange — seed gives us a valid nodeId but we do NOT call pauseRunAtGate,
+    // so no gates row is inserted for that nodeId.
+    const { userId, nodeId } = await seedDb(db)
+
+    // Act & Assert
+    await expect(passGate(db, nodeId, userId)).rejects.toThrow('gate not found')
+  })
+
   it('returns {ok: true} and updates run.status to running + gates.passed_at when gate has been viewed', async () => {
     // Arrange
     const { userId, runId, nodeId } = await seedDb(db)
@@ -198,5 +207,17 @@ describe('resumeFromGate', () => {
     // Assert
     const runRows = await db.query.runs.findMany({ where: (r, { eq }) => eq(r.id, runId) })
     expect(runRows[0]!.status).toBe('cancelled')
+  })
+
+  it('approve: returns not_viewed when gate not viewed', async () => {
+    // Arrange — gate row exists (pauseRunAtGate) but viewedAt is null
+    const { userId, runId, nodeId } = await seedDb(db)
+    await pauseRunAtGate(db, runId, nodeId)
+
+    // Act
+    const result = await resumeFromGate(db, runId, nodeId, userId, 'approve')
+
+    // Assert
+    expect(result).toEqual({ ok: false, reason: 'not_viewed' })
   })
 })

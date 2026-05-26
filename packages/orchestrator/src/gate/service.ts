@@ -16,10 +16,13 @@ export type PassGateResult = { ok: true } | { ok: false; reason: 'not_viewed' }
 
 /**
  * pauseRunAtGate — INSERT gates row with openedAt=now(), UPDATE run.status → 'paused_at_gate'.
+ * Both mutations are wrapped in a transaction to guarantee atomicity.
  */
 export async function pauseRunAtGate(db: AnyDb, runId: string, nodeId: string): Promise<void> {
-  await db.insert(gates).values({ nodeId, openedAt: new Date() })
-  await db.update(runs).set({ status: 'paused_at_gate' }).where(eq(runs.id, runId))
+  await db.transaction(async (tx) => {
+    await tx.insert(gates).values({ nodeId, openedAt: new Date() })
+    await tx.update(runs).set({ status: 'paused_at_gate' }).where(eq(runs.id, runId))
+  })
 }
 
 /**
@@ -33,29 +36,29 @@ export async function viewGate(db: AnyDb, nodeId: string): Promise<void> {
  * passGate — Guard: viewedAt must be set first.
  * On success: UPDATE gates SET passed_at=now(), passed_by_user_id=userId;
  *             UPDATE runs SET status='running' WHERE id=(node's runId).
+ * The gate update, node lookup, and run update are wrapped in a single transaction.
+ * Throws if the gate row or node row does not exist.
+ * // TODO Phase 2.3: add versionMismatch check + pinnedArtifactId validation
  */
 export async function passGate(db: AnyDb, nodeId: string, userId: string): Promise<PassGateResult> {
-  // SELECT the gate row
+  // SELECT the gate row — done outside the transaction so we can return early without aborting
   const gateRows = await db.select().from(gates).where(eq(gates.nodeId, nodeId))
   const gate = gateRows[0]
 
-  if (!gate || gate.viewedAt === null || gate.viewedAt === undefined) {
-    return { ok: false, reason: 'not_viewed' }
-  }
+  if (!gate) throw new Error(`passGate: gate not found for nodeId=${nodeId}`)
+  if (!gate.viewedAt) return { ok: false, reason: 'not_viewed' }
 
-  // Mark gate as passed
-  await db
-    .update(gates)
-    .set({ passedAt: new Date(), passedByUserId: userId })
-    .where(eq(gates.nodeId, nodeId))
+  await db.transaction(async (tx) => {
+    await tx
+      .update(gates)
+      .set({ passedAt: new Date(), passedByUserId: userId })
+      .where(eq(gates.nodeId, nodeId))
 
-  // Look up the runId from the node
-  const nodeRows = await db.select().from(nodes).where(eq(nodes.id, nodeId))
-  const node = nodeRows[0]
-
-  if (node) {
-    await db.update(runs).set({ status: 'running' }).where(eq(runs.id, node.runId))
-  }
+    const nodeRows = await tx.select({ runId: nodes.runId }).from(nodes).where(eq(nodes.id, nodeId))
+    const node = nodeRows[0]
+    if (!node) throw new Error(`passGate: node not found for nodeId=${nodeId}`)
+    await tx.update(runs).set({ status: 'running' }).where(eq(runs.id, node.runId))
+  })
 
   return { ok: true }
 }
