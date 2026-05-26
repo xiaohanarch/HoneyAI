@@ -65,7 +65,7 @@ describe('createPR', () => {
 
       const requestMock = octokit.request as ReturnType<typeof vi.fn>
       const pullsCall = requestMock.mock.calls.find(
-        ([route]: [string]) => route === 'POST /repos/{owner}/{repo}/pulls',
+        (args: unknown[]) => args[0] === 'POST /repos/{owner}/{repo}/pulls',
       )
       expect(pullsCall).toBeDefined()
       expect(pullsCall![1]).toMatchObject({
@@ -84,7 +84,7 @@ describe('createPR', () => {
 
       const requestMock = octokit.request as ReturnType<typeof vi.fn>
       const pullsCall = requestMock.mock.calls.find(
-        ([route]: [string]) => route === 'POST /repos/{owner}/{repo}/pulls',
+        (args: unknown[]) => args[0] === 'POST /repos/{owner}/{repo}/pulls',
       )
       const body: string = pullsCall![1].body as string
       expect(body).toContain('run-1')
@@ -97,7 +97,7 @@ describe('createPR', () => {
 
       const requestMock = octokit.request as ReturnType<typeof vi.fn>
       const pullsCall = requestMock.mock.calls.find(
-        ([route]: [string]) => route === 'POST /repos/{owner}/{repo}/pulls',
+        (args: unknown[]) => args[0] === 'POST /repos/{owner}/{repo}/pulls',
       )
       const body: string = pullsCall![1].body as string
       expect(body).toContain('HoneyAI')
