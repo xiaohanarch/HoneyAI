@@ -4,6 +4,42 @@
 
 ## 2026-05-26
 
+### v0.7.0 — Phase 2.4 切片 4.1:`@honeyai/web` Next.js 骨架 + Auth + tokens
+
+`@honeyai/web` 从 Phase 1 占位包升级为真实 Next.js 15.3 App Router 包；NextAuth v5 Credentials dev provider(ADR-029)+ 完整 OKLCH tokens(spec 07 §10)+ 登录页 + zh 字符串表 + middleware 占位 + shadcn 脚手架。
+
+**Added**
+
+- `@honeyai/web/styles/tokens.css`:50 个 CSS 自定义属性 verbatim 来自 spec §10(4 surface + 4 text + 5 status + 7 agent = 20 OKLCH 颜色;8 font-size + 3 font-family = 11 typography;8 spacing + 4 radius + 2 shadow + 5 motion = 19 structural);`.bg-atmosphere` + `.grain::before` + `@keyframes pulse-run`
+- `@honeyai/web/styles/globals.css`:Tailwind v4 `@import` + 全局 reset
+- `@honeyai/web/lib/auth/index.ts`:NextAuth v5 配置(JWT strategy + userId/tenantId callbacks);仅在 `NODE_ENV=development && DEV_AUTH_ENABLED=true` 时启用 Credentials provider(ADR-029)
+- `@honeyai/web/lib/auth/dev-credentials.ts`:固定用户 alice/bob/carol/dave + `authorizeDevCredentials`;模块级 guard 在生产环境抛错
+- `@honeyai/web/lib/auth/types.ts`:NextAuth v5 模块增强(`Session.user.tenantId` + `JWT` from `@auth/core/jwt`)
+- `@honeyai/web/lib/strings/zh.ts`:zh-CN UI 字符串集中表(Q10)
+- `@honeyai/web/lib/utils.ts`:shadcn `cn` 工具(clsx + tailwind-merge)
+- `@honeyai/web/app/layout.tsx`:`lang="zh-CN"` 根 RSC layout + globals.css import + Inter 字体
+- `@honeyai/web/app/page.tsx`:欢迎首页引用 token CSS vars
+- `@honeyai/web/app/(auth)/login/page.tsx` + `LoginForm.tsx`:登录页 + 客户端表单(controlled inputs + useTransition + signIn redirect:false)
+- `@honeyai/web/app/(welcome)/layout.tsx` + `app/t/[slug]/layout.tsx`:路由组占位(4.3 / 4.5 后续填充)
+- `@honeyai/web/app/api/auth/[...nextauth]/route.ts`:NextAuth v5 catch-all 路由 handler
+- `@honeyai/web/middleware.ts`:passthrough 占位(tenant routing 在 4.5 实现)
+- `@honeyai/web/components.json`:shadcn 配置(slice 4.2 添加 Button/Card 等)
+- `@honeyai/web/next.config.mjs` + `postcss.config.mjs` + `vitest.config.ts`:Next 15 standalone + Tailwind v4 + Vitest jsdom(singleFork pool 绕过 Windows OOM)
+- `.env.example`:`NEXTAUTH_SECRET` / `NEXTAUTH_URL` / `DEV_AUTH_ENABLED` 条目
+- 17 个 Vitest + jsdom 单元测试(8 dev-credentials + 3 auth + 2 layout + 4 login)100% 通过
+
+**Changed**
+
+- `@honeyai/web/package.json`:新增运行时依赖 `next@15.3.2` / `next-auth@5.0.0-beta.25` / `react@19.1.0` / `react-dom@19.1.0` / `clsx@2.1.1` / `tailwind-merge@2.6.0`;dev 依赖 `@auth/core@0.37.2` / `@tailwindcss/postcss@4.1.6` / `@testing-library/jest-dom@6.6.3` / `@testing-library/react@16.3.0` / `@vitejs/plugin-react@4.4.1` / `jsdom@26.1.0` / `tailwindcss@4.1.6` / `vitest@2.1.8`
+- `@honeyai/web/tsconfig.json`:Bundler 模块解析 + `@/*` paths alias + Next plugin
+
+**ADRs referenced**:ADR-029(Credentials dev provider)、ADR-031(RSC + Server Actions no tRPC)、ADR-003(unified Next.js)、ADR-006(Welcome layout stub)
+
+**Note**
+
+- 切片 4.1 不含 shadcn UI 组件(Button/Card 等),不含 tenant routing,不含 Welcome 4-step 流程,不含 GitHub OAuth provider — 以上按 slice 4.2 / 4.3 / 4.5 / 3.x 后续推进
+- `output: 'standalone'` 在 Windows 本地需要 admin/开发者模式以创建 symlink;CI(Linux)无此限制
+
 ### v0.4.0 — Phase 2.0 切片 0:`@honeyai/core` IR zod schemas
 
 3 个 IR(Requirement / Design / Implementation)zod schema + parse/stringify 工具 + spec §8 golden roundtrip 测试落地。
