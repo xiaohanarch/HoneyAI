@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
-import RootLayout from './layout.js'
+import RootLayout from './layout'
 
 // Mock next/font to avoid network calls in tests
 vi.mock('next/font/google', () => ({

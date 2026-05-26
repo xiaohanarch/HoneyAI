@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { signIn } from 'next-auth/react'
-import { zh } from '@/lib/strings/zh.js'
+import { zh } from '@/lib/strings/zh'
 
 export default function LoginForm() {
   const [username, setUsername] = useState('')

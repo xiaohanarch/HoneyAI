@@ -6,13 +6,13 @@
 
 import NextAuth from 'next-auth'
 import type { NextAuthConfig } from 'next-auth'
-import './types.js'
+import './types'
 
 // Conditionally load dev credentials — throws in production (guard in dev-credentials.ts)
 async function buildProviders() {
   if (process.env['NODE_ENV'] === 'development' && process.env['DEV_AUTH_ENABLED'] === 'true') {
     const Credentials = (await import('next-auth/providers/credentials')).default
-    const { authorizeDevCredentials } = await import('./dev-credentials.js')
+    const { authorizeDevCredentials } = await import('./dev-credentials')
     return [
       Credentials({
         name: 'Dev Credentials',
@@ -20,7 +20,7 @@ async function buildProviders() {
           username: { label: 'Username', type: 'text' },
           password: { label: 'Password', type: 'password' },
         },
-        authorize: async (credentials, request) => {
+        authorize: async (credentials, _request) => {
           // NextAuth v5 expects (credentials, request) signature
           // Ignore request, delegate to authorizeDevCredentials
           // credentials comes in as Partial<Record<K, unknown>>; cast to Record<string, string>

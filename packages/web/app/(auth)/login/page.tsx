@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
-import LoginForm from './LoginForm.js'
-import { zh } from '@/lib/strings/zh.js'
+import LoginForm from './LoginForm'
+import { zh } from '@/lib/strings/zh'
 
 export const metadata: Metadata = {
   title: `${zh.login.title} — HoneyAI`,

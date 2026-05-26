@@ -1,6 +1,6 @@
 // packages/web/app/page.tsx
 import Link from 'next/link'
-import { zh } from '@/lib/strings/zh.js'
+import { zh } from '@/lib/strings/zh'
 
 export default function HomePage() {
   return (

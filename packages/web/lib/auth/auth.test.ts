@@ -34,7 +34,7 @@ describe('auth config', () => {
   })
 
   it('exports handlers, auth, signIn, signOut', async () => {
-    const mod = await import('./index.js')
+    const mod = await import('./index')
     expect(typeof mod.handlers).toBe('object')
     expect(typeof mod.auth).toBe('function')
     expect(typeof mod.signIn).toBe('function')
@@ -42,13 +42,13 @@ describe('auth config', () => {
   })
 
   it('auth() returns null when no session exists (mocked)', async () => {
-    const { auth } = await import('./index.js')
+    const { auth } = await import('./index')
     const session = await auth()
     expect(session).toBeNull()
   })
 
   it('includes Credentials provider when NODE_ENV=development and DEV_AUTH_ENABLED=true', async () => {
-    const mod = await import('./index.js')
+    const mod = await import('./index')
     expect(mod.handlers).toBeDefined()
   })
 })

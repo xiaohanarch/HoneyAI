@@ -13,7 +13,7 @@ vi.mock('next/navigation', () => ({
 }))
 
 // Import the client LoginForm directly (the page wraps it)
-import LoginForm from './LoginForm.js'
+import LoginForm from './LoginForm'
 
 describe('LoginForm', () => {
   it('renders a username input field', () => {

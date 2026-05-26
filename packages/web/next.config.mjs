@@ -2,10 +2,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  experimental: {
-    // pg native bindings require external package handling
-    serverComponentsExternalPackages: ['pg', 'pg-native'],
-  },
+  // pg native bindings require external package handling (Next 15: moved out of experimental)
+  serverExternalPackages: ['pg', 'pg-native'],
 }
 
 export default nextConfig
