@@ -15,9 +15,13 @@ export default async function TenantLayout({
   if (!session?.user?.tenantId) redirect('/login')
   await requireBootstrapComplete(session.user.tenantId)
 
+  // Second read for slug resolution. React cache() deduplicates within the RSC
+  // pass in production. The notFound() guard is defensive: requireBootstrapComplete
+  // above would have redirected if the row were absent, so this path only fires
+  // on data-consistency anomalies (e.g. row deleted between the two reads).
   const r = await getTenantBootstrap(session.user.tenantId)
   if (!r) notFound()
-  if (r.slug !== slug) redirect(`/t/${r.slug}`) // AC-01-12
+  if (r.slug !== slug) redirect(`/t/${r.slug}`) // AC-01-12: slug mismatch → canonical slug
 
   return <>{children}</>
 }

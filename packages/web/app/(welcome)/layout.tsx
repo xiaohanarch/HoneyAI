@@ -1,3 +1,4 @@
+// packages/web/app/(welcome)/layout.tsx
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { requireBootstrapIncomplete } from '@/lib/bootstrap/guard'

@@ -41,6 +41,13 @@ describe('TenantLayout', () => {
     ).rejects.toThrow('REDIRECT:/login')
   })
 
+  it('redirects to /login when tenantId missing from session', async () => {
+    mockGetSession.mockResolvedValue({ user: { id: 'u1' }, expires: '2099-01-01' })
+    await expect(
+      TenantLayout({ children: null, params: Promise.resolve({ slug: 'alice' }) }),
+    ).rejects.toThrow('REDIRECT:/login')
+  })
+
   it('AC-01-04: incomplete bootstrap redirects to /welcome', async () => {
     mockGetSession.mockResolvedValue({
       user: { id: 'u1', tenantId: 'tenant-1' },

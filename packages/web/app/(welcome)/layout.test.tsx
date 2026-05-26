@@ -45,7 +45,7 @@ describe('WelcomeLayout', () => {
     expect(requireBootstrapIncomplete).toHaveBeenCalledWith('tenant-1')
   })
 
-  it('AC-01-04: bootstrap-complete user visiting welcome → redirects to /t/alice', async () => {
+  it('AC-01-04: propagates guard rejection when bootstrap is complete', async () => {
     mockGetSession.mockResolvedValue({
       user: { id: 'u1', tenantId: 'tenant-1' },
       expires: '2099-01-01',
