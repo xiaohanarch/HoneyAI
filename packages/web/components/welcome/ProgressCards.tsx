@@ -24,17 +24,35 @@ export function ProgressCards({
           : s.n === currentStep
             ? 'running'
             : 'idle'
+        // Border/background driven by design tokens (styles/tokens.css):
+        //   data-state=done    → --status-done   (green)
+        //   data-state=running → --status-run    (amber, pulse-run animation)
+        //   data-state=idle    → --status-idle-soft
+        // Keeps state colors in one source of truth instead of hardcoded Tailwind.
+        const tokenStyle: React.CSSProperties =
+          state === 'done'
+            ? {
+                borderColor: 'var(--status-done)',
+                background: 'color-mix(in oklch, var(--status-done) 12%, var(--bg-card))',
+              }
+            : state === 'running'
+              ? {
+                  borderColor: 'var(--status-run)',
+                  background: 'color-mix(in oklch, var(--status-run) 12%, var(--bg-card))',
+                }
+              : {
+                  borderColor: 'var(--status-idle-soft)',
+                  background: 'var(--bg-card)',
+                  opacity: 0.6,
+                }
         return (
           <li
             key={s.n}
             data-state={state}
             role="listitem"
-            className={cn(
-              'rounded-md border p-3 transition-all duration-300',
-              state === 'done' && 'border-emerald-300 bg-emerald-50',
-              state === 'running' && 'border-amber-300 bg-amber-50',
-              state === 'idle' && 'border-neutral-200 bg-neutral-50 opacity-60',
-            )}
+            aria-current={state === 'running' ? 'step' : undefined}
+            style={tokenStyle}
+            className={cn('rounded-md border p-3 transition-all duration-300')}
           >
             <div className="text-sm font-medium">{s.label}</div>
             <div className="text-xs text-muted-foreground">

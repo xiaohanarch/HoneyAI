@@ -29,4 +29,12 @@ describe('ProgressCards (ADR-044/045)', () => {
     const cards = screen.getAllByRole('listitem')
     expect(cards[3]?.getAttribute('data-state')).toBe('idle')
   })
+
+  it('running step exposes aria-current="step" (a11y)', () => {
+    render(<ProgressCards currentStep={2} completed={[1]} />)
+    const cards = screen.getAllByRole('listitem')
+    expect(cards[1]?.getAttribute('aria-current')).toBe('step')
+    expect(cards[0]?.getAttribute('aria-current')).toBeNull()
+    expect(cards[2]?.getAttribute('aria-current')).toBeNull()
+  })
 })
