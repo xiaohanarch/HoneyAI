@@ -190,4 +190,28 @@ describe('reconcileSweep', () => {
     expect(rows[0]!.status).toBe('running')
     expect(rows[0]!.finishedAt).toBeNull()
   })
+
+  it('AC-05-04: stale run + pod failed → status=failed, failureClass=sandbox_died, failureMessage forwarded', async () => {
+    // Arrange
+    const { tenantId, runId } = await seedDb(db)
+    await setRunStatus(db, runId, 'running')
+    await makeStale(db, runId)
+
+    const checker: PodChecker = vi
+      .fn()
+      .mockResolvedValue({ status: 'failed', message: 'OOMKilled' })
+
+    // Act
+    const processed = await reconcileSweep(db, checker)
+
+    // Assert
+    expect(processed).toBe(1)
+    expect(checker).toHaveBeenCalledWith(tenantId, runId)
+
+    const rows = await db.query.runs.findMany({ where: (r, { eq }) => eq(r.id, runId) })
+    expect(rows[0]!.status).toBe('failed')
+    expect(rows[0]!.failureClass).toBe('sandbox_died')
+    expect(rows[0]!.failureMessage).toBe('OOMKilled')
+    expect(rows[0]!.finishedAt).toBeInstanceOf(Date)
+  })
 })

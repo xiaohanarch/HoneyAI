@@ -56,11 +56,16 @@ export async function reconcileSweep(db: AnyDb, checker: PodChecker): Promise<nu
   let processed = 0
 
   for (const run of staleRuns) {
-    const pod = await checker(run.tenantId, run.id)
-    const next = buildFailedState(run, pod)
-    if (next) {
-      await persistRun(db, run.id, next)
-      processed++
+    try {
+      const pod = await checker(run.tenantId, run.id)
+      const next = buildFailedState(run, pod)
+      if (next) {
+        await persistRun(db, run.id, next)
+        processed++
+      }
+    } catch (err) {
+      // pino will be wired in Phase 2.3 — console.warn for now
+      console.warn(`[reconcile] pod check failed for run ${run.id}:`, err)
     }
   }
 
