@@ -3,7 +3,7 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 
-export default function RootError({ reset }: { error: Error; reset: () => void }) {
+export default function RootError({ error: _error, reset }: { error: Error; reset?: () => void }) {
   return (
     <main className="min-h-screen flex items-center justify-center p-8">
       <div className="flex flex-col gap-4 max-w-sm w-full">

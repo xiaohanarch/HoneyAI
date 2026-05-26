@@ -3,9 +3,9 @@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 
-export default function StepError({ reset }: { error: Error; reset: () => void }) {
+export default function StepError({ error: _error, reset }: { error: Error; reset?: () => void }) {
   return (
-    <div className="flex flex-col gap-4 max-w-sm w-full">
+    <div className="flex flex-col gap-4 max-w-sm w-full mx-auto">
       <Alert variant="destructive">
         <AlertTitle>本步出错</AlertTitle>
         <AlertDescription>请重试当前步骤</AlertDescription>
