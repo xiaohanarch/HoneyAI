@@ -10,7 +10,11 @@ describe('getDb', () => {
   })
 
   it('throws "DATABASE_URL is not set" when env unset', async () => {
-    delete process.env['DATABASE_URL']
+    // Use vi.stubEnv('', '') instead of `delete process.env[...]` so cleanup
+    // is handled by afterEach(vi.unstubAllEnvs). Empty string is falsy so the
+    // `if (!url)` guard in getDb still throws. Matches dev-credentials.test.ts
+    // pattern; future-proofs against any singleFork pool change in this pkg.
+    vi.stubEnv('DATABASE_URL', '')
     const { getDb } = await import('./client.js')
     expect(() => getDb()).toThrow('getDb: DATABASE_URL is not set')
   })

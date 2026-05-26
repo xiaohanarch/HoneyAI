@@ -5,13 +5,16 @@ import { seedDevTenants } from './dev-seed'
 
 describe('seedDevTenants', () => {
   beforeEach(() => {
+    // resetModules MUST come before stubEnv so the dynamic import() inside
+    // seedDevTenants loads a fresh dev-credentials module against the already-
+    // stubbed env. Matches dev-credentials.test.ts canonical pattern.
+    vi.resetModules()
     vi.stubEnv('NODE_ENV', 'development')
     vi.stubEnv('DEV_AUTH_ENABLED', 'true')
   })
 
   afterEach(() => {
     vi.unstubAllEnvs()
-    vi.resetModules()
   })
 
   it('inserts 4 tenants + 4 users + 4 memberships when DEV_AUTH_ENABLED=true', async () => {

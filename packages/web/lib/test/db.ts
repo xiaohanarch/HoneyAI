@@ -6,9 +6,9 @@ import {
   createTestDatabase,
   dropTestDatabase,
   testDatabaseUrl,
+  withTestDb as withDbPkgTestDb,
   type TestPgHandle,
 } from '@honeyai/db/test'
-import { withTestDb as withDbPkgTestDb } from '@honeyai/db/test'
 
 let _handle: TestPgHandle | null = null
 let _startPromise: Promise<TestPgHandle> | null = null
