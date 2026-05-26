@@ -17,7 +17,7 @@ export function makeRun(overrides?: Partial<RunState>): RunState {
 /**
  * makeNode — 创建 NodeState fixture。
  * 默认 kind='agent'，status='pending'，retryCount=0。
- * 对应 spec 03 §6.5 nodes 表结构（快Snapshot层）。
+ * 对应 spec 03 §6.5 nodes 表结构（快照层）。
  */
 export function makeNode(overrides?: Partial<NodeState> & { kind?: NodeKind }): NodeState {
   return {
