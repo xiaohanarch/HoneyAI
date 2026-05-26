@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { reduceNode } from './node.js'
 import { makeNode } from '../test/fixtures.js'
-import type { NodeState } from '../types.js'
 
 // ─── agent 节点 happy path（spec 05 §10.2） ───────────────────────────────────
 
