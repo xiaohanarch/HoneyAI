@@ -144,10 +144,17 @@ importers:
         version: 5.7.2
 
   packages/orchestrator:
+    dependencies:
+      '@honeyai/core':
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       typescript:
         specifier: 5.7.2
         version: 5.7.2
+      vitest:
+        specifier: 2.1.8
+        version: 2.1.8(@types/node@22.10.0)
 
   packages/sandbox-runner:
     devDependencies:
