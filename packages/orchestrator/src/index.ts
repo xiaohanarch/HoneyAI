@@ -38,3 +38,7 @@ export type {
 export { reduceRun } from './fsm/run.js'
 export { reduceNode } from './fsm/node.js'
 export { assertNever } from './fsm/assertNever.js'
+
+// Gate FSM (spec §10.3)
+export { reduceGate } from './gate/reduce.js'
+export type { GateStatus, GateState, GateEvent } from './gate/types.js'
