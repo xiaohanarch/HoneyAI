@@ -2,6 +2,8 @@
 // All zh-CN UI strings for @honeyai/web (Q10 — no next-intl, V1 single language).
 // Add keys as new components are built; do NOT scatter hardcoded strings in JSX.
 
+import type { WelcomeErrorCode } from '../errors/welcome-errors'
+
 export const zh = {
   common: {
     appName: 'HoneyAI',
@@ -54,7 +56,8 @@ export const zhWelcome = {
   },
 } as const
 
-export const zhErrorsWelcome: Record<string, string> = {
+// Exhaustive map keyed by WelcomeErrorCode — typo / missing code = compile error.
+export const zhErrorsWelcome: Record<WelcomeErrorCode, string> = {
   INVALID_KEY_FORMAT: 'Anthropic Key 格式不正确',
   INVALID_REPO_FORMAT: '仓库格式不正确，应为 owner/name',
   BOOTSTRAP_ALREADY_COMPLETE: '引导已完成，无法重复提交',
