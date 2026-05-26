@@ -3,7 +3,7 @@
 import { z } from 'zod'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { getDb } from '@honeyai/db'
 import { tenants } from '@honeyai/db/schema'
 import { auth } from '@/lib/auth'
@@ -32,7 +32,7 @@ async function patchBootstrap(tenantId: string, patch: Record<string, unknown>) 
     .set({
       settings: sql`COALESCE(${tenants.settings}, '{}'::jsonb) || ${JSON.stringify({ bootstrap: patch })}::jsonb`,
     })
-    .where(sql`${tenants.id} = ${tenantId}`)
+    .where(eq(tenants.id, tenantId))
   revalidatePath('/welcome', 'layout')
 }
 

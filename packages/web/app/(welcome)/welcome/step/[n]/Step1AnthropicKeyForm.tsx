@@ -49,7 +49,7 @@ export function Step1AnthropicKeyForm() {
       </div>
 
       <Button type="submit" disabled={isPending}>
-        {isPending ? '保存中…' : zhWelcome.step1.submit}
+        {isPending ? zhWelcome.step1.submitting : zhWelcome.step1.submit}
       </Button>
     </form>
   )

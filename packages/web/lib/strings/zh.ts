@@ -38,6 +38,7 @@ export const zhWelcome = {
     keyLabel: 'API Key',
     keyHint: '以 sk-ant- 开头，至少 39 字符',
     submit: '保存并继续',
+    submitting: '保存中…',
   },
   step2: {
     title: '第 2 步：安装 GitHub App',
