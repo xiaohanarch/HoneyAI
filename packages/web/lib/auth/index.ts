@@ -57,16 +57,32 @@ export async function jwtCallback({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const jwtCallbackForConfig = jwtCallback as any
 
+/**
+ * Named session callback — extracted for testability (ADR-048 review followup).
+ * Propagates id, tenantId, and tenantSlug from the JWT token into the Session user object.
+ */
+export async function sessionCallback({
+  session,
+  token,
+}: {
+  session: { user: Record<string, unknown>; expires: string }
+  token: Record<string, unknown>
+}): Promise<typeof session> {
+  session.user.id = String(token['id'] ?? '')
+  session.user.tenantId = (token['tenantId'] as string | null) ?? null
+  session.user.tenantSlug = (token['tenantSlug'] as string | null) ?? null
+  return session
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const sessionCallbackForConfig = sessionCallback as any
+
 const config: NextAuthConfig = {
   providers: await buildProviders(),
   session: { strategy: 'jwt' },
   callbacks: {
     jwt: jwtCallbackForConfig,
-    session({ session, token }) {
-      session.user.id = String(token['id'] ?? '')
-      session.user.tenantId = (token['tenantId'] as string | null) ?? null
-      return session
-    },
+    session: sessionCallbackForConfig,
   },
   pages: {
     signIn: '/login',

@@ -50,3 +50,25 @@ describe('auth jwtCallback (ADR-048 JT3)', () => {
     expect((token as any).tenantId).toBe('t1')
   })
 })
+
+describe('auth sessionCallback (ADR-048 review followup)', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    vi.stubEnv('NODE_ENV', 'development')
+    vi.stubEnv('DEV_AUTH_ENABLED', 'true')
+  })
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('sessionCallback propagates tenantSlug from token to session', async () => {
+    const { sessionCallback } = await import('./index')
+    const session = await sessionCallback({
+      session: { user: {}, expires: '' },
+      token: { id: 'u1', tenantId: 't1', tenantSlug: 'alice' },
+    } as any)
+    expect((session as any).user.id).toBe('u1')
+    expect((session as any).user.tenantId).toBe('t1')
+    expect((session as any).user.tenantSlug).toBe('alice')
+  })
+})

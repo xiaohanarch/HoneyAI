@@ -9,6 +9,7 @@ declare module 'next-auth' {
     user: {
       id: string
       tenantId: string | null
+      tenantSlug: string | null
     } & DefaultSession['user']
   }
 }
@@ -17,6 +18,7 @@ declare module '@auth/core/jwt' {
   interface JWT {
     id: string
     tenantId: string | null
+    tenantSlug: string | null
   }
 }
 

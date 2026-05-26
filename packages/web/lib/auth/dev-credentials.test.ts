@@ -81,6 +81,8 @@ describe('dev-credentials guard', () => {
 
 describe('dev-credentials uuid + tenantId (ADR-048 U1 / JT3)', () => {
   beforeEach(() => {
+    // resetModules MUST come before stubEnv so the dynamic import() in each
+    // test body loads a fresh module against the already-stubbed environment.
     vi.resetModules()
     vi.stubEnv('NODE_ENV', 'development')
     vi.stubEnv('DEV_AUTH_ENABLED', 'true')
