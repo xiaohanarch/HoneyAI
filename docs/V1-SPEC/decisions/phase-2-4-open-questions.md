@@ -13,7 +13,7 @@
 |---|---|---|---|
 | 4.1 | Next.js 骨架 + Auth + tokens | App Router 目录 / NextAuth Credentials dev / tokens.css / shadcn 初装 | core(已并) + db(已并) |
 | 4.2 | shadcn 基础组件 + AppBar | Button / Card / Dropdown / AppBar / 暗色 placeholder | 4.1 |
-| 4.3 | Welcome 4 步引导 | spec 01 §welcome / ADR-006 4 步必填 | 4.2 |
+| 4.3 ✅ | Welcome 4 步引导（slice 完成，参见 `docs/V1-SPEC/decisions/phase-2-4-3-open-questions.md`） | spec 01 §welcome / ADR-006 4 步必填 | 4.2 |
 | 4.4 | Run 列表 + tenant routing | `/t/[slug]/runs` 列表页 + fixture seed | 4.2(并行) |
 | 4.5 | 多租户 middleware + 切换 | slug 冲突解析 / AppBar dropdown 切换 | 4.4 |
 | 4.6 | Tiptap generator(可选) | 手工 mapping table + zod type guards | 4.2;切片 5 可吸收 |
@@ -56,12 +56,13 @@
   - 暗色 placeholder:`styles/tokens.css` `@media (prefers-color-scheme: dark)` 块预留
 - **AC 范围**:Storybook-less 视觉自查(暂不引 Storybook,推迟到 V1.0)
 
-## 子切片 4.3 — Welcome 4 步引导
+## 子切片 4.3 ✅ — Welcome 4 步引导（已完成）
 
 - **范围**:
-  - 4 步必填(ADR-006):tenant 创建 / GitHub repo 选择 / Claude API key / 启动确认
+  - 4 步必填(ADR-006):Anthropic API Key / GitHub App 安装 / GitHub Repo 选择 / Default Skills 导入
   - 每步独立 Server Action + zod 校验
-- **AC 范围**:4 步 happy + 第 N 步刷新页面状态保持(URL 参数驱动)
+- **AC 范围**:AC-01-04..AC-01-12（见 `docs/V1-SPEC/decisions/phase-2-4-3-open-questions.md`）
+- **完成状态**:slice 4.3 PR 已合并；详见 `docs/V1-SPEC/CHANGELOG.md v0.9.0`
 
 ## 子切片 4.4 — Run 列表 + tenant routing
 

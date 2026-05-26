@@ -14,38 +14,49 @@ export type DevUser = {
   password: string
   name: string
   email: string
+  tenantId: string
+  tenantSlug: string
 }
 
 // Fixture users — alice / bob / carol / dave.
 // Passwords are non-secret dev values; documented in .env.example.
+// IDs and tenantIds are stable hardcoded uuidv7-shaped strings (not generated at runtime).
 export const DEV_USERS: DevUser[] = [
   {
-    id: 'dev-user-alice',
+    id: '01914aa0-0001-7000-8000-000000000001',
     username: 'alice',
     password: 'dev-alice',
     name: 'alice',
     email: 'alice@dev.local',
+    tenantId: '01914ab0-0001-7000-8000-000000000001',
+    tenantSlug: 'alice',
   },
   {
-    id: 'dev-user-bob',
+    id: '01914aa0-0002-7000-8000-000000000002',
     username: 'bob',
     password: 'dev-bob',
     name: 'bob',
     email: 'bob@dev.local',
+    tenantId: '01914ab0-0002-7000-8000-000000000002',
+    tenantSlug: 'bob',
   },
   {
-    id: 'dev-user-carol',
+    id: '01914aa0-0003-7000-8000-000000000003',
     username: 'carol',
     password: 'dev-carol',
     name: 'carol',
     email: 'carol@dev.local',
+    tenantId: '01914ab0-0003-7000-8000-000000000003',
+    tenantSlug: 'carol',
   },
   {
-    id: 'dev-user-dave',
+    id: '01914aa0-0004-7000-8000-000000000004',
     username: 'dave',
     password: 'dev-dave',
     name: 'dave',
     email: 'dave@dev.local',
+    tenantId: '01914ab0-0004-7000-8000-000000000004',
+    tenantSlug: 'dave',
   },
 ]
 
@@ -56,10 +67,24 @@ export const DEV_USERS: DevUser[] = [
  */
 export async function authorizeDevCredentials(
   credentials: Record<string, string> | undefined,
-): Promise<{ id: string; name: string; email: string } | null> {
+): Promise<{
+  id: string
+  name: string
+  email: string
+  tenantId: string
+  tenantSlug: string
+} | null> {
   if (!credentials) return null
   const { username, password } = credentials
   const found = DEV_USERS.find((u) => u.username === username && u.password === password)
   if (!found) return null
-  return { id: found.id, name: found.name, email: found.email }
+  return {
+    id: found.id,
+    name: found.name,
+    email: found.email,
+    tenantId: found.tenantId,
+    tenantSlug: found.tenantSlug,
+  }
 }
+
+export const authorizeDevUser = authorizeDevCredentials

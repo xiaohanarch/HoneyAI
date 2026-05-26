@@ -9,7 +9,14 @@ import {
   type TestPgHandle,
 } from '../test/container.js'
 import { withTestDb } from '../test/push-schema.js'
-import { users, tenants, tenantMembers, tenantRoleEnum } from './identity.js'
+import {
+  users,
+  tenants,
+  tenantMembers,
+  tenantRoleEnum,
+  type TenantSettings,
+  type TenantBootstrapState,
+} from './identity.js'
 
 describe('schema/identity — metadata', () => {
   it('tenant_role enum has values [owner, member]', () => {
@@ -93,6 +100,58 @@ describe('schema/identity — round-trip', () => {
       await expect(
         db.insert(tenantMembers).values({ tenantId, userId, role: 'member' }),
       ).rejects.toThrow(/duplicate|unique|primary/i)
+    })
+  })
+})
+
+describe('tenants.settings TenantBootstrapState shape', () => {
+  let handle: TestPgHandle
+  let dbName: string
+
+  beforeAll(async () => {
+    handle = await startTestPostgres()
+  }, 90_000)
+  afterAll(async () => {
+    await handle.stop()
+  })
+  beforeEach(async () => {
+    dbName = await createTestDatabase(handle)
+  })
+  afterEach(async () => {
+    await dropTestDatabase(handle, dbName)
+  })
+
+  it('round-trips a tenant with full TenantBootstrapState in settings', async () => {
+    const url = testDatabaseUrl(handle, dbName)
+    await withTestDb(url, async (db) => {
+      const id = uuidv7()
+      const slug = `t-${id.slice(0, 8)}`
+      const bootstrap: TenantBootstrapState = {
+        anthropicKeyCiphertext: 'v1:abc',
+        githubAppInstalled: true,
+        githubAppMarkedAt: '2026-05-26T00:00:00Z',
+        pendingRepoOwnerName: 'octocat/Hello-World',
+        defaultSkillsApplied: 'imported',
+        completedAt: '2026-05-26T00:01:00Z',
+      }
+      const settings: TenantSettings = { bootstrap }
+      await db.insert(tenants).values({ id, slug, name: slug, kind: 'personal', settings })
+      const rows = await db.select().from(tenants).where(eq(tenants.id, id))
+      expect(rows).toHaveLength(1)
+      expect(rows[0]?.settings.bootstrap).toEqual(bootstrap)
+    })
+  })
+
+  it('round-trips a tenant with no settings override — settings defaults to {}', async () => {
+    const url = testDatabaseUrl(handle, dbName)
+    await withTestDb(url, async (db) => {
+      const id = uuidv7()
+      const slug = `t-${id.slice(0, 8)}`
+      await db.insert(tenants).values({ id, slug, name: slug, kind: 'personal' })
+      const rows = await db.select().from(tenants).where(eq(tenants.id, id))
+      expect(rows).toHaveLength(1)
+      expect(rows[0]?.settings).toEqual({})
+      expect(rows[0]?.settings.bootstrap).toBeUndefined()
     })
   })
 })

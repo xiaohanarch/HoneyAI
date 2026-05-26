@@ -33,24 +33,56 @@ async function buildProviders() {
   return []
 }
 
+/**
+ * Named JWT callback — extracted for testability (ADR-048 JT3).
+ * Propagates id, tenantId, and tenantSlug from the User object into the JWT token
+ * on first sign-in. Subsequent calls (no user) return the token unchanged.
+ */
+export async function jwtCallback({
+  token,
+  user,
+}: {
+  token: Record<string, unknown>
+  user?: { id?: string; tenantId?: string | null; tenantSlug?: string | null }
+}): Promise<Record<string, unknown>> {
+  if (user) {
+    // user.id is set by Credentials authorize return value
+    token['id'] = user.id ?? ''
+    token['tenantId'] = user.tenantId ?? null
+    token['tenantSlug'] = user.tenantSlug ?? null
+  }
+  return token
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const jwtCallbackForConfig = jwtCallback as any
+
+/**
+ * Named session callback — extracted for testability (ADR-048 review followup).
+ * Propagates id, tenantId, and tenantSlug from the JWT token into the Session user object.
+ */
+export async function sessionCallback({
+  session,
+  token,
+}: {
+  session: { user: Record<string, unknown>; expires: string }
+  token: Record<string, unknown>
+}): Promise<typeof session> {
+  session.user.id = String(token['id'] ?? '')
+  session.user.tenantId = (token['tenantId'] as string | null) ?? null
+  session.user.tenantSlug = (token['tenantSlug'] as string | null) ?? null
+  return session
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const sessionCallbackForConfig = sessionCallback as any
+
 const config: NextAuthConfig = {
   providers: await buildProviders(),
   session: { strategy: 'jwt' },
   callbacks: {
-    jwt({ token, user }) {
-      if (user) {
-        // user.id is set by Credentials authorize return value
-        token['id'] = user.id ?? ''
-        // tenantId: null in slice 4.1; resolved in slice 4.5 when middleware parses slug
-        token['tenantId'] = null
-      }
-      return token
-    },
-    session({ session, token }) {
-      session.user.id = String(token['id'] ?? '')
-      session.user.tenantId = (token['tenantId'] as string | null) ?? null
-      return session
-    },
+    jwt: jwtCallbackForConfig,
+    session: sessionCallbackForConfig,
   },
   pages: {
     signIn: '/login',

@@ -78,3 +78,41 @@ describe('dev-credentials guard', () => {
     expect(result).toBeNull()
   })
 })
+
+describe('dev-credentials uuid + tenantId (ADR-048 U1 / JT3)', () => {
+  beforeEach(() => {
+    // resetModules MUST come before stubEnv so the dynamic import() in each
+    // test body loads a fresh module against the already-stubbed environment.
+    vi.resetModules()
+    vi.stubEnv('NODE_ENV', 'development')
+    vi.stubEnv('DEV_AUTH_ENABLED', 'true')
+  })
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('all 4 dev users have uuid v7-shaped ids', async () => {
+    const { DEV_USERS } = await import('./dev-credentials')
+    for (const u of DEV_USERS) {
+      expect(u.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)
+      expect(u.tenantId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      )
+      expect(u.tenantSlug).toMatch(/^[a-z]+$/)
+    }
+  })
+
+  it('authorize returns tenantId + tenantSlug for matching credentials', async () => {
+    const { authorizeDevUser, DEV_USERS } = await import('./dev-credentials')
+    const u = await authorizeDevUser({ username: 'alice', password: 'dev-alice' })
+    expect(u).toBeTruthy()
+    expect(u!.tenantId).toBe(DEV_USERS[0]!.tenantId)
+    expect(u!.tenantSlug).toBe('alice')
+  })
+
+  it('alice / bob / carol / dave have distinct tenant ids', async () => {
+    const { DEV_USERS } = await import('./dev-credentials')
+    const ids = new Set(DEV_USERS.map((u) => u.tenantId))
+    expect(ids.size).toBe(4)
+  })
+})

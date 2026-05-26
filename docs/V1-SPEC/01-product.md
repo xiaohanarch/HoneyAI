@@ -245,3 +245,12 @@
 - [ ] **AC-01-01** `[Happy]`：黄金路径 A（/health 端点增强，XS 复杂度）→ 中位完成时长 ≤ 8 分钟、成本 ≤ $0.50、PR 状态 = open 且 CI 绿
 - [ ] **AC-01-02** `[Happy]`：黄金路径 B（logout 按钮，M 复杂度）→ 实现 PR 包含 ≥ 2 个文件改动且单测覆盖 ≥ 80%
 - [ ] **AC-01-03** `[Failure]` `[Manual]`：Bootstrap 4 步任一步未完成 → 访问 `/t/<slug>/runs` 被 redirect 回 `/welcome`，已填字段断点续传保留
+- [ ] **AC-01-04** `[Failure][Happy]`：已完成 bootstrap 的用户访问 `/welcome` → layout guard redirect `/t/[slug]`；未完成 bootstrap 的用户访问 `/t/[slug]` → layout guard redirect `/welcome` | Guard |
+- [ ] **AC-01-05** `[Happy]`：Step 1 合法 Anthropic key → jsonb 写入 `anthropicKeyCiphertext` + redirect step 2 | Step 1 |
+- [ ] **AC-01-06** `[Happy]`：Step 2 GitHub App checkbox → jsonb `githubAppInstalled=true` + redirect step 3 | Step 2 |
+- [ ] **AC-01-07** `[Happy]`：Step 3 repo `owner/name` 合法 → jsonb `pendingRepoOwnerName` + redirect step 4 | Step 3 |
+- [ ] **AC-01-08** `[Happy]`：Step 4 import → seed 5 default skills + `completedAt` 写入 + redirect `/t/[slug]` | Step 4 |
+- [ ] **AC-01-09** `[Happy]`：Step 4 seed import 幂等 — re-import 不重复写入 | Seeds |
+- [ ] **AC-01-10** `[Failure]`：Step 1 非法 key 格式 → `INVALID_KEY_FORMAT` error，字段高亮 | Validation |
+- [ ] **AC-01-11** `[Failure]`：Cross-tenant 隔离：`getTenantBootstrap(aliceId)` 不返回 bob 的 bootstrap | Isolation |
+- [ ] **AC-01-12** `[Failure]`：Slug mismatch：用户 A 访问 `/t/{B-slug}` → redirect 到 `/t/{A-slug}` | Slug guard |
