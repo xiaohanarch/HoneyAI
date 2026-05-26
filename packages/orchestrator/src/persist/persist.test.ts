@@ -110,6 +110,7 @@ describe('persistRun', () => {
     // Assert
     const rows = await db.query.runs.findMany({ where: (r, { eq }) => eq(r.id, runId) })
     expect(rows[0]!.status).toBe('running')
+    expect(rows[0]!.startedAt).toBeInstanceOf(Date)
     expect(rows[0]!.finishedAt).toBeNull()
   })
 
@@ -179,6 +180,7 @@ describe('persistNode', () => {
     const rows = await db.query.nodes.findMany({ where: (n, { eq }) => eq(n.id, nodeId) })
     expect(rows[0]!.status).toBe('running')
     expect(rows[0]!.retryCount).toBe(1)
+    expect(rows[0]!.startedAt).toBeInstanceOf(Date)
     expect(rows[0]!.finishedAt).toBeNull()
     // suppress unused variable warning
     void runId

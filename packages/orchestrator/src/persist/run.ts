@@ -25,6 +25,7 @@ export async function persistRun(db: AnyDb, runId: string, next: RunState): Prom
       failureClass: next.failureClass ?? null,
       failureMessage: next.failureMessage ?? null,
       ...(TERMINAL_RUN_STATUSES.has(next.status) ? { finishedAt: now } : {}),
+      ...(next.status === 'running' ? { startedAt: now } : {}),
     })
     .where(eq(runs.id, runId))
 }

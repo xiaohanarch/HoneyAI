@@ -28,6 +28,7 @@ export async function persistNode(db: AnyDb, nodeId: string, next: NodeState): P
       status: next.status,
       retryCount: next.retryCount,
       ...(TERMINAL_NODE_STATUSES.has(next.status) ? { finishedAt: now } : {}),
+      ...(next.status === 'running' ? { startedAt: now } : {}),
     })
     .where(eq(nodes.id, nodeId))
 }
