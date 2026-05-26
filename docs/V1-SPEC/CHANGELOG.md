@@ -4,6 +4,28 @@
 
 ## 2026-05-26
 
+### v0.8.0 — Phase 2.4 切片 4.2 — `@honeyai/web` shadcn 基础组件 + AppBar
+
+**Added**
+
+- 5 shadcn/ui 基础组件已安装到 `packages/web/components/ui/`：`Button`、`Card`、`DropdownMenu`、`Avatar`、`Skeleton`（通过 `pnpm dlx shadcn@latest add` 安装）
+- `packages/web/components/ui/AppBar.tsx` — 表现层 header 组件，含文字 logo（`HoneyAI`，使用 `--font-display`）、租户下拉菜单（当 `tenants.length === 1` 时按 Q9 拍板自动崩塌为静态标签）、用户头像降级菜单 + 退出登录
+- 全部 5 个基础组件的冒烟测试（5 个文件，~120 行）
+- AppBar 的 6 个行为单元测试，覆盖：logo 渲染、单租户崩塌、多租户下拉菜单、`onTenantChange` 回调、头像降级首字母、`onSignOut` 回调
+- `@testing-library/user-event@14.5.2` devDep，用于下拉菜单点击交互测试
+- `lib/strings/zh.ts` 新增 `appBar` 命名空间（`switchTenant`、`userMenu`、`signOut`）
+
+**Changed**
+
+- `packages/web/styles/tokens.css` — 尾部追加 `@media (prefers-color-scheme: dark) { :root { /* TODO V1.1 */ } }` 占位块，符合 spec 07 §7（"深色变量留好不暴露切换"）
+- `packages/web/styles/globals.css` — shadcn CLI 自动在开头追加默认浅色主题 HSL CSS 变量块（`--background`、`--foreground`、`--primary` 等）
+- `packages/web/package.json` — shadcn CLI 添加的运行时依赖：`@radix-ui/react-slot`、`@radix-ui/react-dropdown-menu`、`@radix-ui/react-avatar`、`class-variance-authority`、`lucide-react`
+
+**Note**
+
+- AppBar 尚未接入任何路由 layout；与 `app/t/[slug]/layout.tsx` 的集成将于切片 4.5 与多租户中间件一并落地（Q3 用户决策）
+- 无新增 ADR — Q3/Q4/Q9/Q11 已在 `decisions/phase-2-4-open-questions.md` 中拍板
+
 ### v0.7.0 — Phase 2.4 切片 4.1:`@honeyai/web` Next.js 骨架 + Auth + tokens
 
 `@honeyai/web` 从 Phase 1 占位包升级为真实 Next.js 15.3 App Router 包；NextAuth v5 Credentials dev provider(ADR-029)+ 完整 OKLCH tokens(spec 07 §10)+ 登录页 + zh 字符串表 + middleware 占位 + shadcn 脚手架。

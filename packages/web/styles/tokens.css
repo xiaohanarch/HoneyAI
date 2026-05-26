@@ -105,3 +105,10 @@
 .pulse-run {
   animation: pulse-run 2s var(--ease-in-out) infinite;
 }
+
+/* Dark theme — TODO V1.1 (spec 07 §7: 深色变量留好不暴露切换) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* TODO V1.1 — dark mode OKLCH values to be designed */
+  }
+}

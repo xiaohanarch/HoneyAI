@@ -21,6 +21,11 @@ export const zh = {
     subheading: '多智能体 AI 数字研发产线',
     loginLink: '去登录',
   },
+  appBar: {
+    switchTenant: '切换租户',
+    userMenu: '用户菜单',
+    signOut: '退出登录',
+  },
 } as const
 
 export type ZhStrings = typeof zh
