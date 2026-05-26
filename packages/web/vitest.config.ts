@@ -12,6 +12,14 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
+    // Windows + jsdom workers OOM on parallel multi-file runs.
+    // singleFork serializes test files in one process — stable on Win/CI.
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true,
+      },
+    },
   },
   resolve: {
     alias: {
