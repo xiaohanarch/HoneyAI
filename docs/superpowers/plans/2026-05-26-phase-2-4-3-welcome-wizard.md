@@ -203,10 +203,8 @@ Write to `docs/V1-SPEC/ADRs/ADR-032-welcome-4-step-jsonb-persistence.md`:
 ```markdown
 # ADR-032: Welcome 4-step wizard persists to `tenants.settings.bootstrap` jsonb
 
-- **Status:** Accepted
-- **Date:** 2026-05-26
-- **Phase:** 2.4.3 (Web slice — Welcome wizard)
-- **Source:** `docs/V1-SPEC/decisions/phase-2-4-3-open-questions.md` Q1 + Q2
+- 状态: Accepted
+- 日期: 2026-05-26
 
 ## Context
 
@@ -218,18 +216,23 @@ The 4 steps are: (1) Anthropic API key (2) GitHub App install (3) GitHub repo sl
 
 ## Consequences
 
-- Page reload at `/welcome/step/3` shows already-filled key/installed-app state.
-- No new migration; type only.
-- Server is the single source of truth for "what's done"; URL is "what's being viewed".
+**正面**: 页面 reload 后能命中已填字段;无 migration。
+**负面**: jsonb 形状漂移风险 — 由 `TenantBootstrapState` TS 类型约束兜底。
+**后续影响**: Phase 3 加 budget / model 字段时直接扩 `TenantBootstrapState`,无需 schema 变更。
 
-## References
+## Alternatives Considered
 
-- `phase-2-4-3-open-questions.md` Q1 / Q2 / O1 (nested-key interpretation locked 2026-05-26).
+- URL-only state: 不能跨设备续传,违反 AC-01-03。
+- 新增 SQL 列: 增加 migration 成本,与 jsonb 设计哲学冲突。
+
+## Related
+
+- 触发决策: `docs/V1-SPEC/decisions/phase-2-4-3-open-questions.md §Q1` + `§Q2` + O1 (nested-key interpretation locked 2026-05-26)
 ```
 
 - [ ] **Step 2: Create ADR-033 through ADR-048**
 
-Use the same `# ADR-NNN: <title>` + `Status: Accepted` + `Date: 2026-05-26` + `Source:` + `Context` / `Decision` / `Consequences` / `References` skeleton. Each ADR is ≤30 lines. Map titles to:
+Use the existing repo convention (matches ADR-031): Chinese `- 状态: Accepted` / `- 日期: 2026-05-26` metadata + 5 sections `## Context` / `## Decision` / `## Consequences` (with `**正面**:` / `**负面**:` / `**后续影响**:` bold lines) / `## Alternatives Considered` / `## Related` (with `触发决策:` link to `decisions/phase-2-4-3-open-questions.md §Q<N>`). Each ADR is ≤45 lines (relaxed from initial ≤30 to allow embedded code blocks for type unions, regex constants, and seed snippets that aid future reference). Map titles to:
 
 | ADR | Title                                                  | Q ref | Key decision                                                                                      |
 | --- | ------------------------------------------------------ | ----- | ------------------------------------------------------------------------------------------------- |
