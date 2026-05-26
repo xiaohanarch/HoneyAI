@@ -77,3 +77,54 @@ export const zhErrorsWelcome: Record<WelcomeErrorCode, string> = {
   TENANT_NOT_FOUND: '找不到对应租户',
   INTERNAL_ERROR: '系统内部错误，请稍后重试',
 }
+
+export const zhRuns = {
+  list: {
+    heading: '所有 Run',
+    empty: '暂无 Run，点击右上角创建',
+    newRun: '新建 Run',
+    colStatus: '状态',
+    colTitle: '标题',
+    colCreatedAt: '创建时间',
+  },
+  new: {
+    heading: '新建 Run',
+    titleLabel: '标题',
+    titlePlaceholder: '简短描述这次任务',
+    oneLinerLabel: '一句话需求',
+    oneLinerPlaceholder: '详细描述你想要实现的功能…',
+    submit: '创建并启动',
+    submitting: '创建中…',
+    examples: [
+      '为用户登录添加 JWT 刷新机制',
+      '将首页图片懒加载改为优先加载',
+      '给订单列表页加上按状态筛选',
+    ],
+  },
+  detail: {
+    status: '状态',
+    cost: '已花费',
+    cancel: '终止',
+    retry: '重试节点',
+    approve: '通过 Gate ✓',
+    reject: '拒绝 Gate ✗',
+    rejectReason: '拒绝原因',
+    rejectSubmit: '确认拒绝',
+  },
+  status: {
+    created: '已创建',
+    scheduling: '调度中',
+    running: '运行中',
+    paused_at_gate: '等待审批',
+    completed: '已完成',
+    failed: '失败',
+    cancelled: '已取消',
+  },
+  nodeStatus: {
+    pending: '待运行',
+    running: '运行中',
+    success: '已完成',
+    failed: '失败',
+    skipped: '已跳过',
+  },
+} as const
