@@ -32,6 +32,11 @@
 | [ADR-024](./ADR-024-parse-stringify-in-core.md) | `parseIR` / `stringifyIR` 内化到 `@honeyai/core` | Accepted |
 | [ADR-025](./ADR-025-no-version-runtime-in-phase-2-0.md) | IR 版本规则运行时逻辑不在 Phase 2.0,延后切片 1 | Accepted |
 | [ADR-026](./ADR-026-no-tiptap-generator-in-core.md) | Tiptap 表单 generator 不进 `@honeyai/core`,延后切片 4 | Accepted |
+| [ADR-027](./ADR-027-orchestrator-fsm-switch-reducer.md) | Orchestrator FSM 用 TypeScript exhaustive switch reducer | Accepted |
+| [ADR-028](./ADR-028-testcontainers-redis-concurrency.md) | 并发 AC 测试用 `@testcontainers/redis`,仅 `*.redis.test.ts` 用 | Accepted |
+| [ADR-029](./ADR-029-nextauth-credentials-dev.md) | Dev 模式用 NextAuth v5 Credentials provider 替代 GitHub OAuth | Accepted |
+| [ADR-030](./ADR-030-tiptap-manual-mapping-table.md) | Tiptap generator 用手工 mapping table 而非 zod `_def` 递归 | Accepted |
+| [ADR-031](./ADR-031-web-rsc-server-action-no-trpc.md) | Web 数据获取用 RSC + Server Action,不引 tRPC / TanStack Query | Accepted |
 
 ## 写作模板
 
