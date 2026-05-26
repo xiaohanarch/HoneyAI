@@ -15,9 +15,13 @@
   },
   "dependencies": {
     "@honeyai/core": "workspace:*",
+    "@honeyai/db": "workspace:*",
+    "drizzle-orm": "0.36.4",
     "uuid": "11.0.3"
   },
   "devDependencies": {
+    "@types/pg": "8.11.10",
+    "pg": "8.13.1",
     "typescript": "5.7.2",
     "vitest": "2.1.8"
   }
