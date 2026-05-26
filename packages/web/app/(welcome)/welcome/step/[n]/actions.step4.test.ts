@@ -203,6 +203,23 @@ describe('submitStep4 server action', () => {
     })
   })
 
+  describe('slug null guard — returns INTERNAL_ERROR instead of /t/null', () => {
+    it('returns INTERNAL_ERROR when tenantSlug is null', async () => {
+      vi.doMock('@/lib/bootstrap/read', () => ({
+        getTenantBootstrap: vi.fn().mockResolvedValue(BOOTSTRAP_WITH_REPO),
+      }))
+      mockGetSession.mockResolvedValue({
+        user: { id: 'user-1', tenantId: 'tenant-1', tenantSlug: null },
+        expires: '2099-01-01',
+      })
+      const { submitStep4 } = await import('./actions')
+      const fd = new FormData()
+      fd.set('action', 'skip')
+      const result = await submitStep4({ ok: true } as WelcomeActionResult, fd)
+      expect(result).toEqual({ ok: false, code: 'INTERNAL_ERROR' })
+    })
+  })
+
   describe('AC-01-08: happy path — skip → redirect to /t/alice', () => {
     it('AC-01-08: redirects to /t/alice on skip action', async () => {
       vi.doMock('@/lib/bootstrap/read', () => ({

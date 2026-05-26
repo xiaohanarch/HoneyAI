@@ -199,7 +199,12 @@ export async function submitStep4(
       })
       .where(eq(tenants.id, guard.ctx.tenantId))
   })
+  // tenantSlug is required to redirect to the tenant dashboard; guard against
+  // null/undefined to avoid a silent /t/null redirect.
+  const slug = guard.ctx.tenantSlug
+  if (!slug) return { ok: false, code: 'INTERNAL_ERROR' }
+
   revalidatePath('/welcome', 'layout')
-  revalidatePath(`/t/${guard.ctx.tenantSlug}`, 'layout')
-  redirect(`/t/${guard.ctx.tenantSlug}`)
+  revalidatePath(`/t/${slug}`, 'layout')
+  redirect(`/t/${slug}`)
 }
