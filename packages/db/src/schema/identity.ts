@@ -53,6 +53,19 @@ export const sessions = pgTable('sessions', {
   expires: timestamp('expires', { withTimezone: true }).notNull(),
 })
 
+export type TenantBootstrapState = {
+  anthropicKeyCiphertext?: string
+  githubAppInstalled?: boolean
+  githubAppMarkedAt?: string
+  pendingRepoOwnerName?: string
+  defaultSkillsApplied?: 'skipped' | 'imported'
+  completedAt?: string
+}
+
+export type TenantSettings = {
+  bootstrap?: TenantBootstrapState
+}
+
 export const tenants = pgTable('tenants', {
   id: uuid('id').primaryKey(),
   slug: text('slug').notNull().unique(),
@@ -62,7 +75,7 @@ export const tenants = pgTable('tenants', {
     .default('personal'),
   defaultRepoId: uuid('default_repo_id'),
   budgetMicroUsdMonthly: bigint('budget_micro_usd_monthly', { mode: 'bigint' }),
-  settings: jsonb('settings').notNull().default({}),
+  settings: jsonb('settings').$type<TenantSettings>().notNull().default({}),
   ...tsCols,
   ...softDelete,
 })
