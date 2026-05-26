@@ -162,3 +162,44 @@ export async function submitStep3(
   })
   redirect('/welcome/step/4')
 }
+
+// ---------------------------------------------------------------------------
+// Step 4 — Default skills import / skip
+// ---------------------------------------------------------------------------
+
+export async function submitStep4(
+  _prev: WelcomeActionResult,
+  fd: FormData,
+): Promise<WelcomeActionResult> {
+  const guard = await requireWritableBootstrap({
+    requireKey: 'pendingRepoOwnerName',
+    prereqMessage: zhWelcomeServerMessages.step4Prereq,
+  })
+  if (!guard.ok) return guard.result
+
+  const action = fd.get('action')
+  const applied = action === 'import' ? 'imported' : ('skipped' as const)
+
+  const db = getDb()
+  await db.transaction(async (tx) => {
+    if (action === 'import') {
+      const { importDefaultSkills } = await import('@/lib/seeds/default-skills')
+      await importDefaultSkills(tx, guard.ctx.tenantId)
+    }
+    await tx
+      .update(tenants)
+      .set({
+        settings: sql`COALESCE(${tenants.settings}, '{}'::jsonb) || ${JSON.stringify({
+          bootstrap: {
+            ...(guard.bootstrap ?? {}),
+            defaultSkillsApplied: applied,
+            completedAt: new Date().toISOString(),
+          },
+        })}::jsonb`,
+      })
+      .where(eq(tenants.id, guard.ctx.tenantId))
+  })
+  revalidatePath('/welcome', 'layout')
+  revalidatePath(`/t/${guard.ctx.tenantSlug}`, 'layout')
+  redirect(`/t/${guard.ctx.tenantSlug}`)
+}
