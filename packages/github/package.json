@@ -10,9 +10,18 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@octokit/app": "^16.1.0",
+    "@octokit/auth-app": "^7.1.0",
+    "@octokit/core": "^6.1.0"
   },
   "devDependencies": {
-    "typescript": "5.7.2"
+    "@types/node": "^22.0.0",
+    "typescript": "5.7.2",
+    "vitest": "2.1.8"
   }
 }
