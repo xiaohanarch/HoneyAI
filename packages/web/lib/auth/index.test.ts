@@ -72,3 +72,13 @@ describe('auth sessionCallback (ADR-048 review followup)', () => {
     expect((session as any).user.tenantSlug).toBe('alice')
   })
 })
+
+// AC-07-05: handlers are exported and functional
+describe('AC-07-05: NextAuth handlers exported', () => {
+  it('AC-07-05: handlers.GET and handlers.POST are defined', async () => {
+    const { handlers } = await import('./index')
+    expect(handlers).toBeDefined()
+    expect(typeof handlers.GET).toBe('function')
+    expect(typeof handlers.POST).toBe('function')
+  })
+})

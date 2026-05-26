@@ -10,10 +10,12 @@ import './types'
 
 // Conditionally load dev credentials — throws in production (guard in dev-credentials.ts)
 async function buildProviders() {
+  const providers = []
+
   if (process.env['NODE_ENV'] === 'development' && process.env['DEV_AUTH_ENABLED'] === 'true') {
     const Credentials = (await import('next-auth/providers/credentials')).default
     const { authorizeDevCredentials } = await import('./dev-credentials')
-    return [
+    providers.push(
       Credentials({
         name: 'Dev Credentials',
         credentials: {
@@ -27,10 +29,21 @@ async function buildProviders() {
           return authorizeDevCredentials(credentials as Record<string, string>)
         },
       }),
-    ]
+    )
   }
-  // Production: GitHub OAuth provider will be added in slice 3 (ADR-029 §consequences)
-  return []
+
+  // GitHub OAuth provider — when client credentials are present
+  if (process.env['GITHUB_CLIENT_ID'] && process.env['GITHUB_CLIENT_SECRET']) {
+    const GitHub = (await import('next-auth/providers/github')).default
+    providers.push(
+      GitHub({
+        clientId: process.env['GITHUB_CLIENT_ID'],
+        clientSecret: process.env['GITHUB_CLIENT_SECRET'],
+      }),
+    )
+  }
+
+  return providers
 }
 
 /**
@@ -81,6 +94,26 @@ const config: NextAuthConfig = {
   providers: await buildProviders(),
   session: { strategy: 'jwt' },
   callbacks: {
+    async signIn({ account, profile }) {
+      if (account?.provider === 'github' && profile) {
+        const { upsertGitHubUser } = await import('./github-profile')
+        // GitHub profile fields (id is numeric, login is the handle, avatar_url from OAuth)
+         
+        const ghProfile = profile as unknown as {
+          id: number
+          login: string
+          avatar_url?: string
+        }
+        await upsertGitHubUser({
+          githubId: ghProfile.id,
+          githubLogin: ghProfile.login,
+          name: profile.name ?? null,
+          email: profile.email ?? null,
+          avatarUrl: ghProfile.avatar_url ?? null,
+        })
+      }
+      return true
+    },
     jwt: jwtCallbackForConfig,
     session: sessionCallbackForConfig,
   },
