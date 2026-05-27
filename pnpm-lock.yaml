@@ -221,6 +221,9 @@ importers:
       '@honeyai/db':
         specifier: workspace:*
         version: link:../db
+      '@honeyai/worker':
+        specifier: workspace:*
+        version: link:../worker
       '@radix-ui/react-avatar':
         specifier: ^1.1.11
         version: 1.1.11(@types/react-dom@19.1.0(@types/react@19.1.0))(@types/react@19.1.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -233,6 +236,9 @@ importers:
       '@radix-ui/react-slot':
         specifier: ^1.2.4
         version: 1.2.4(@types/react@19.1.0)(react@19.1.0)
+      bullmq:
+        specifier: ^5.28.0
+        version: 5.77.4
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -251,6 +257,9 @@ importers:
       next-auth:
         specifier: 5.0.0-beta.25
         version: 5.0.0-beta.25(next@15.3.2(@babel/core@7.29.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)
+      pg:
+        specifier: 8.13.1
+        version: 8.13.1
       react:
         specifier: 19.1.0
         version: 19.1.0
@@ -288,6 +297,9 @@ importers:
       '@types/node':
         specifier: 22.15.0
         version: 22.15.0
+      '@types/pg':
+        specifier: 8.11.10
+        version: 8.11.10
       '@types/react':
         specifier: 19.1.0
         version: 19.1.0
@@ -6714,14 +6726,6 @@ snapshots:
     optionalDependencies:
       vite: 5.4.21(@types/node@22.10.0)(lightningcss@1.29.2)
 
-  '@vitest/mocker@2.1.8(vite@5.4.21(@types/node@22.15.0)(lightningcss@1.29.2))':
-    dependencies:
-      '@vitest/spy': 2.1.8
-      estree-walker: 3.0.3
-      magic-string: 0.30.21
-    optionalDependencies:
-      vite: 5.4.21(@types/node@22.15.0)(lightningcss@1.29.2)
-
   '@vitest/pretty-format@2.1.8':
     dependencies:
       tinyrainbow: 1.2.0
@@ -9014,7 +9018,7 @@ snapshots:
   vitest@2.1.8(@types/node@22.15.0)(jsdom@26.1.0)(lightningcss@1.29.2):
     dependencies:
       '@vitest/expect': 2.1.8
-      '@vitest/mocker': 2.1.8(vite@5.4.21(@types/node@22.15.0)(lightningcss@1.29.2))
+      '@vitest/mocker': 2.1.8(vite@5.4.21(@types/node@22.10.0)(lightningcss@1.29.2))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.8
       '@vitest/snapshot': 2.1.8
