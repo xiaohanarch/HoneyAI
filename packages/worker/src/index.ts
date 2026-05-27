@@ -1,5 +1,10 @@
 // @honeyai/worker — Phase 2.7 barrel export
-export type { RuntimeAdapter, NodeEvent, ExecuteNodeParams } from './types.js'
+export type {
+  RuntimeAdapter,
+  StreamingNodeEvent,
+  ExecuteNodeParams,
+  ExecutionKind,
+} from './types.js'
 export type { ScheduleRunJob, AdvanceRunJob } from './queues.js'
 export { SCHEDULE_RUN_QUEUE, ADVANCE_RUN_QUEUE } from './queues.js'
 export { pgNotify } from './notify.js'

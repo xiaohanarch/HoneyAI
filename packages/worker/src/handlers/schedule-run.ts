@@ -15,7 +15,7 @@ import { eq } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '@honeyai/db/schema'
 import { persistRun, persistNode, pauseRunAtGate } from '@honeyai/orchestrator'
-import type { RuntimeAdapter } from '../types.js'
+import type { RuntimeAdapter, StreamingNodeEvent } from '../types.js'
 import type { ScheduleRunJob } from '../queues.js'
 import { pgNotify } from '../notify.js'
 import { handleFailure } from './failure.js'
@@ -71,15 +71,21 @@ export async function handleScheduleRun(deps: ScheduleRunDeps, job: ScheduleRunJ
   })
 
   let seq = 0n
-  let finishContent: string | undefined
+  const allEvents: StreamingNodeEvent[] = []
 
   try {
     for await (const event of generator) {
-      // Build a typed payload to avoid unsafe double-cast
+      allEvents.push(event)
+
+      // Build payload from all real StreamingNodeEvent fields
       const payload: Record<string, unknown> = {
         ts: event.ts,
         kind: event.kind,
         ...(event.content !== undefined ? { content: event.content } : {}),
+        ...(event.tool !== undefined ? { tool: event.tool } : {}),
+        ...(event.args !== undefined ? { args: event.args } : {}),
+        ...(event.outputLen !== undefined ? { outputLen: event.outputLen } : {}),
+        ...(event.reason !== undefined ? { reason: event.reason } : {}),
         ...(event.inputTokens !== undefined ? { inputTokens: event.inputTokens } : {}),
         ...(event.outputTokens !== undefined ? { outputTokens: event.outputTokens } : {}),
       }
@@ -98,11 +104,6 @@ export async function handleScheduleRun(deps: ScheduleRunDeps, job: ScheduleRunJ
       await pgNotify(db, `run:${runId}`, { type: 'node_event', event })
 
       seq++
-
-      // Capture finish content
-      if (event.kind === 'finish' && event.content !== undefined) {
-        finishContent = event.content
-      }
     }
   } catch (err) {
     await handleFailure(db, err, runId, nodeId, 'agent', 0)
@@ -110,8 +111,11 @@ export async function handleScheduleRun(deps: ScheduleRunDeps, job: ScheduleRunJ
   }
 
   // 6. On finish: INSERT artifact_blobs + artifacts, UPDATE node status='success'
-  if (finishContent !== undefined) {
-    const buf = Buffer.from(finishContent, 'utf-8')
+  // IR content comes from the last 'text' event (finish event has no content field)
+  const textEvents = allEvents.filter((e) => e.kind === 'text' && e.content !== undefined)
+  const irContent = textEvents.length > 0 ? textEvents[textEvents.length - 1]!.content! : undefined
+  if (irContent !== undefined) {
+    const buf = Buffer.from(irContent, 'utf-8')
     const sha256 = createHash('sha256').update(buf).digest('hex')
     const ossKey = `ir/${tenantId}/${runId}/${nodeId}/requirement_ir.md`
 

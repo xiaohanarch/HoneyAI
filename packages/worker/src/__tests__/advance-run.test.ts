@@ -23,7 +23,7 @@ import {
   artifacts,
 } from '@honeyai/db/schema'
 import { pauseRunAtGate } from '@honeyai/orchestrator'
-import type { RuntimeAdapter, NodeEvent } from '../types.js'
+import type { RuntimeAdapter, StreamingNodeEvent } from '../types.js'
 import type { AdvanceRunDeps } from '../handlers/advance-run.js'
 import { handleAdvanceRun } from '../handlers/advance-run.js'
 
@@ -42,7 +42,7 @@ async function createDb(url: string): Promise<{ db: TestDb; end: () => Promise<v
 
 // ─── mock adapter factory ─────────────────────────────────────────────────────
 
-function makeAdapter(events: NodeEvent[]): RuntimeAdapter {
+function makeAdapter(events: StreamingNodeEvent[]): RuntimeAdapter {
   return {
     async *executeNode() {
       for (const e of events) {
@@ -213,8 +213,9 @@ describe('handleAdvanceRun', () => {
 
     const designIrContent = '# Design IR\nSystem components: AuthService, UserRepo'
     const adapter = makeAdapter([
-      { kind: 'text', ts: new Date().toISOString(), content: 'thinking about design...' },
-      { kind: 'finish', ts: new Date().toISOString(), content: designIrContent },
+      { kind: 'thinking', ts: new Date().toISOString(), content: 'thinking about design...' },
+      { kind: 'text', ts: new Date().toISOString(), content: designIrContent },
+      { kind: 'finish', ts: new Date().toISOString(), reason: 'end_turn' },
     ])
 
     const createPRMock = vi.fn()
@@ -256,14 +257,15 @@ describe('handleAdvanceRun', () => {
     expect(stage2GateNode!.name).toBe('stage2.gate')
     expect(stage2GateNode!.status).toBe('pending')
 
-    // Assert — events inserted for design stage
+    // Assert — events inserted for design stage (thinking + text + finish)
     const eventRows = await db.query.events.findMany({
       where: (e, { eq }) => eq(e.nodeId, designNode!.id),
       orderBy: (e, { asc }) => [asc(e.seq)],
     })
-    expect(eventRows).toHaveLength(2)
-    expect(eventRows[0]!.kind).toBe('text')
-    expect(eventRows[1]!.kind).toBe('finish')
+    expect(eventRows).toHaveLength(3)
+    expect(eventRows[0]!.kind).toBe('thinking')
+    expect(eventRows[1]!.kind).toBe('text')
+    expect(eventRows[2]!.kind).toBe('finish')
 
     // Assert — design_ir artifact inserted
     const buf = Buffer.from(designIrContent, 'utf-8')
@@ -436,10 +438,11 @@ describe('handleAdvanceRun', () => {
     // pause at stage2 gate
     await pauseRunAtGate(db, runId, stage2GateId)
 
-    // Mock adapter — just a finish event for implement stage
+    // Mock adapter — text event carries IR content; finish has no content
     const implIrContent = '# Impl IR\nFiles: src/auth/service.ts'
     const adapter = makeAdapter([
-      { kind: 'finish', ts: new Date().toISOString(), content: implIrContent },
+      { kind: 'text', ts: new Date().toISOString(), content: implIrContent },
+      { kind: 'finish', ts: new Date().toISOString(), reason: 'end_turn' },
     ])
 
     const createPRMock = vi.fn().mockResolvedValue({

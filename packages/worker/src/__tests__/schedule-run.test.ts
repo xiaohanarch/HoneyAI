@@ -13,7 +13,7 @@ import {
   type TestPgHandle,
 } from '@honeyai/db/test'
 import { tenants, users, githubInstallations, repositories, runs } from '@honeyai/db/schema'
-import type { RuntimeAdapter, NodeEvent } from '../types.js'
+import type { RuntimeAdapter, StreamingNodeEvent } from '../types.js'
 import { handleScheduleRun } from '../handlers/schedule-run.js'
 
 // ─── types ────────────────────────────────────────────────────────────────────
@@ -80,7 +80,7 @@ async function seedRun(db: TestDb): Promise<{
 
 // ─── mock adapter factory ─────────────────────────────────────────────────────
 
-function makeAdapter(events: NodeEvent[]): RuntimeAdapter {
+function makeAdapter(events: StreamingNodeEvent[]): RuntimeAdapter {
   return {
     async *executeNode() {
       for (const e of events) {
@@ -126,8 +126,9 @@ describe('handleScheduleRun', () => {
 
     const finishContent = '# Requirement IR\nAs a user I want to login with GitHub OAuth'
     const adapter = makeAdapter([
-      { kind: 'text', ts: new Date().toISOString(), content: 'thinking...' },
-      { kind: 'finish', ts: new Date().toISOString(), content: finishContent },
+      { kind: 'thinking', ts: new Date().toISOString(), content: 'thinking...' },
+      { kind: 'text', ts: new Date().toISOString(), content: finishContent },
+      { kind: 'finish', ts: new Date().toISOString(), reason: 'end_turn' },
     ])
 
     // Act
@@ -158,14 +159,15 @@ describe('handleScheduleRun', () => {
     expect(gateNode.name).toBe('stage1.gate')
     expect(gateNode.status).toBe('pending')
 
-    // Assert — events: 2 (one per generator event)
+    // Assert — events: 3 (thinking + text + finish)
     const eventRows = await db.query.events.findMany({
       where: (e, { eq }) => eq(e.runId, runId),
       orderBy: (e, { asc }) => [asc(e.seq)],
     })
-    expect(eventRows).toHaveLength(2)
-    expect(eventRows[0]!.kind).toBe('text')
-    expect(eventRows[1]!.kind).toBe('finish')
+    expect(eventRows).toHaveLength(3)
+    expect(eventRows[0]!.kind).toBe('thinking')
+    expect(eventRows[1]!.kind).toBe('text')
+    expect(eventRows[2]!.kind).toBe('finish')
 
     // Assert — artifact_blob (sha256 correct)
     const buf = Buffer.from(finishContent, 'utf-8')
@@ -200,8 +202,8 @@ describe('handleScheduleRun', () => {
 
     const finishContent = '# Requirement IR\nnotify test'
     const adapter = makeAdapter([
-      { kind: 'text', ts: new Date().toISOString(), content: 'hello' },
-      { kind: 'finish', ts: new Date().toISOString(), content: finishContent },
+      { kind: 'text', ts: new Date().toISOString(), content: finishContent },
+      { kind: 'finish', ts: new Date().toISOString(), reason: 'end_turn' },
     ])
 
     // Set up LISTEN on the run channel using a raw PG client

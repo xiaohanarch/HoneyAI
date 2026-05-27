@@ -318,6 +318,9 @@ importers:
 
   packages/worker:
     dependencies:
+      '@honeyai/adapter-claude':
+        specifier: workspace:*
+        version: link:../adapter-claude
       '@honeyai/core':
         specifier: workspace:*
         version: link:../core

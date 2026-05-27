@@ -6,11 +6,11 @@ import { Worker } from 'bullmq'
 import { getDb } from '@honeyai/db'
 import { startReconcileLoop } from '@honeyai/orchestrator'
 import type { PodChecker } from '@honeyai/orchestrator'
+import { ClaudeCodeAdapter } from '@honeyai/adapter-claude'
 import { handleScheduleRun } from './handlers/schedule-run.js'
 import { handleAdvanceRun } from './handlers/advance-run.js'
 import { SCHEDULE_RUN_QUEUE, ADVANCE_RUN_QUEUE } from './queues.js'
 import { runCostRollup } from './cost-rollup.js'
-import type { RuntimeAdapter } from './types.js'
 import type { ScheduleRunJob, AdvanceRunJob } from './queues.js'
 
 // ─── Fail-fast env check ──────────────────────────────────────────────────────
@@ -23,17 +23,6 @@ if (!DATABASE_URL) throw new Error('DATABASE_URL is required')
 if (!REDIS_URL) throw new Error('REDIS_URL is required')
 if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY is required')
 
-// ─── Adapter stub (Phase 2.7 — adapter-claude integrated in Phase 2.8) ───────
-
-function createClaudeAdapter(): RuntimeAdapter {
-  return {
-    // eslint-disable-next-line require-yield
-    async *executeNode(_params): AsyncGenerator<import('./types.js').NodeEvent> {
-      throw new Error('adapter-claude not yet integrated')
-    },
-  }
-}
-
 // ─── Infrastructure ───────────────────────────────────────────────────────────
 
 // Pass plain connection options to avoid ioredis version mismatch with BullMQ's peer dep.
@@ -42,13 +31,15 @@ const db = getDb()
 
 // ─── BullMQ Workers ───────────────────────────────────────────────────────────
 
+const claudeAdapter = new ClaudeCodeAdapter()
+
 const scheduleWorker = new Worker<ScheduleRunJob>(
   SCHEDULE_RUN_QUEUE,
   async (job) => {
     await handleScheduleRun(
       {
         db,
-        adapter: createClaudeAdapter(),
+        adapter: claudeAdapter,
         anthropicKey: ANTHROPIC_API_KEY,
       },
       job.data,
@@ -63,7 +54,7 @@ const advanceWorker = new Worker<AdvanceRunJob>(
     await handleAdvanceRun(
       {
         db,
-        adapter: createClaudeAdapter(),
+        adapter: claudeAdapter,
         anthropicKey: ANTHROPIC_API_KEY,
         createPR: (_params) => {
           throw new Error('GitHub integration not yet configured')

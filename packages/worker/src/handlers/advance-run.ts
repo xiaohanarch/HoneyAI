@@ -31,7 +31,7 @@ import { eq, and, desc } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '@honeyai/db/schema'
 import { persistRun, persistNode, pauseRunAtGate } from '@honeyai/orchestrator'
-import type { RuntimeAdapter } from '../types.js'
+import type { RuntimeAdapter, StreamingNodeEvent } from '../types.js'
 import type { AdvanceRunJob } from '../queues.js'
 import { pgNotify } from '../notify.js'
 import { handleFailure } from './failure.js'
@@ -158,14 +158,20 @@ async function runDesignStage(
   })
 
   let seq = 0n
-  let finishContent: string | undefined
+  const allEvents: StreamingNodeEvent[] = []
 
   try {
     for await (const event of generator) {
+      allEvents.push(event)
+
       const payload: Record<string, unknown> = {
         ts: event.ts,
         kind: event.kind,
         ...(event.content !== undefined ? { content: event.content } : {}),
+        ...(event.tool !== undefined ? { tool: event.tool } : {}),
+        ...(event.args !== undefined ? { args: event.args } : {}),
+        ...(event.outputLen !== undefined ? { outputLen: event.outputLen } : {}),
+        ...(event.reason !== undefined ? { reason: event.reason } : {}),
         ...(event.inputTokens !== undefined ? { inputTokens: event.inputTokens } : {}),
         ...(event.outputTokens !== undefined ? { outputTokens: event.outputTokens } : {}),
       }
@@ -182,10 +188,6 @@ async function runDesignStage(
       await pgNotify(db, `run:${runId}`, { type: 'node_event', event })
 
       seq++
-
-      if (event.kind === 'finish' && event.content !== undefined) {
-        finishContent = event.content
-      }
     }
   } catch (err) {
     await handleFailure(db, err, runId, nodeId, 'agent', 0)
@@ -193,8 +195,14 @@ async function runDesignStage(
   }
 
   // On finish: INSERT artifact_blobs + artifacts (kind='design_ir')
-  if (finishContent !== undefined) {
-    const buf = Buffer.from(finishContent, 'utf-8')
+  // IR content comes from the last 'text' event (finish event has no content field)
+  const designTextEvents = allEvents.filter((e) => e.kind === 'text' && e.content !== undefined)
+  const designIrContent =
+    designTextEvents.length > 0
+      ? designTextEvents[designTextEvents.length - 1]!.content!
+      : undefined
+  if (designIrContent !== undefined) {
+    const buf = Buffer.from(designIrContent, 'utf-8')
     const sha256 = createHash('sha256').update(buf).digest('hex')
     const ossKey = `ir/${tenantId}/${runId}/${nodeId}/design_ir.md`
 
@@ -305,14 +313,20 @@ async function runImplementStage(
   })
 
   let seq = 0n
-  let finishContent: string | undefined
+  const allImplEvents: StreamingNodeEvent[] = []
 
   try {
     for await (const event of generator) {
+      allImplEvents.push(event)
+
       const payload: Record<string, unknown> = {
         ts: event.ts,
         kind: event.kind,
         ...(event.content !== undefined ? { content: event.content } : {}),
+        ...(event.tool !== undefined ? { tool: event.tool } : {}),
+        ...(event.args !== undefined ? { args: event.args } : {}),
+        ...(event.outputLen !== undefined ? { outputLen: event.outputLen } : {}),
+        ...(event.reason !== undefined ? { reason: event.reason } : {}),
         ...(event.inputTokens !== undefined ? { inputTokens: event.inputTokens } : {}),
         ...(event.outputTokens !== undefined ? { outputTokens: event.outputTokens } : {}),
       }
@@ -329,10 +343,6 @@ async function runImplementStage(
       await pgNotify(db, `run:${runId}`, { type: 'node_event', event })
 
       seq++
-
-      if (event.kind === 'finish' && event.content !== undefined) {
-        finishContent = event.content
-      }
     }
   } catch (err) {
     await handleFailure(db, err, runId, nodeId, 'agent', 0)
@@ -340,8 +350,12 @@ async function runImplementStage(
   }
 
   // On finish: INSERT artifact_blobs + artifacts (kind='impl_ir')
-  if (finishContent !== undefined) {
-    const buf = Buffer.from(finishContent, 'utf-8')
+  // IR content comes from the last 'text' event (finish event has no content field)
+  const implTextEvents = allImplEvents.filter((e) => e.kind === 'text' && e.content !== undefined)
+  const implIrContent =
+    implTextEvents.length > 0 ? implTextEvents[implTextEvents.length - 1]!.content! : undefined
+  if (implIrContent !== undefined) {
+    const buf = Buffer.from(implIrContent, 'utf-8')
     const sha256 = createHash('sha256').update(buf).digest('hex')
     const ossKey = `ir/${tenantId}/${runId}/${nodeId}/impl_ir.md`
 

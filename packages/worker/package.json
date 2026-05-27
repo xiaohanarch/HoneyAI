@@ -14,6 +14,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@honeyai/adapter-claude": "workspace:*",
     "@honeyai/core": "workspace:*",
     "@honeyai/db": "workspace:*",
     "@honeyai/orchestrator": "workspace:*",
