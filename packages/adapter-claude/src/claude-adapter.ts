@@ -27,6 +27,9 @@ export class ClaudeCodeAdapter implements RuntimeAdapter {
     // claude CLI falls back to its own OAuth auth (Claude Code subscription).
     const spawnEnv = { ...process.env, ANTHROPIC_API_KEY: anthropicKey }
     if (!anthropicKey) delete spawnEnv['ANTHROPIC_API_KEY']
+    // Remove CLAUDECODE so the worker can spawn claude even when running inside
+    // a Claude Code session (e.g. developer's integrated terminal).
+    delete spawnEnv['CLAUDECODE']
 
     console.log('[claude-adapter] spawning claude, kind=%s, args=%s', kind, args.join(' '))
     const proc = spawn('claude', args, { env: spawnEnv, stdio: ['ignore', 'pipe', 'pipe'] })

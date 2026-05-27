@@ -113,7 +113,7 @@ async function runDesignStage(
   adapter: RuntimeAdapter,
   anthropicKey: string,
   getArtifactContent: (sha256: string) => Promise<string>,
-  run: { id: string; tenantId: string; title: string; repositoryId: string },
+  run: { id: string; tenantId: string; title: string; repositoryId: string; oneLiner: string },
   tenantId: string,
   runId: string,
 ): Promise<void> {
@@ -128,7 +128,10 @@ async function runDesignStage(
   if (!reqArtifact) {
     throw new Error(`handleAdvanceRun: no requirement_ir artifact found for run ${runId}`)
   }
-  const irInput = await getArtifactContent(reqArtifact.blobSha256)
+  // If artifact was user-submitted (nodeId=null), fall back to run.oneLiner directly
+  const irInput = reqArtifact.nodeId
+    ? await getArtifactContent(reqArtifact.blobSha256)
+    : run.oneLiner
 
   // If run was paused, notify it's running again
   await pgNotify(db, `run:${runId}`, { type: 'run_status', status: 'running' })
