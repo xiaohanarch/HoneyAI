@@ -1,4 +1,3 @@
-// @honeyai/adapter-claude — Claude Code CLI adapter.
-// Phase 1: placeholder only (see ADR-008 + CLAUDE.md Phase 1 Scope).
-// Implementation lands in Phase 2.
-export {}
+export { ClaudeCodeAdapter } from './claude-adapter.js'
+export { buildSystemPrompt } from './prompts.js'
+export { parseIRFromEvents } from './parse-ir.js'
