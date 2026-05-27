@@ -7,8 +7,11 @@ import { getDb } from '@honeyai/db'
 import { startReconcileLoop } from '@honeyai/orchestrator'
 import type { PodChecker } from '@honeyai/orchestrator'
 import { ClaudeCodeAdapter } from '@honeyai/adapter-claude'
+import { initGitHubApp } from '@honeyai/github'
 import { handleScheduleRun } from './handlers/schedule-run.js'
 import { handleAdvanceRun } from './handlers/advance-run.js'
+import { getArtifactContent } from './handlers/artifact-content.js'
+import { resolveAndCreatePR } from './handlers/github-pr.js'
 import { SCHEDULE_RUN_QUEUE, ADVANCE_RUN_QUEUE } from './queues.js'
 import { runCostRollup } from './cost-rollup.js'
 import type { ScheduleRunJob, AdvanceRunJob } from './queues.js'
@@ -22,6 +25,30 @@ const ANTHROPIC_API_KEY = process.env['ANTHROPIC_API_KEY']
 if (!DATABASE_URL) throw new Error('DATABASE_URL is required')
 if (!REDIS_URL) throw new Error('REDIS_URL is required')
 if (!ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY is required')
+
+// ─── Optional GitHub App configuration ───────────────────────────────────────
+
+const GITHUB_APP_ID = process.env['GITHUB_APP_ID']
+const GITHUB_APP_PRIVATE_KEY = process.env['GITHUB_APP_PRIVATE_KEY']
+const GITHUB_CLIENT_ID = process.env['GITHUB_CLIENT_ID']
+const GITHUB_CLIENT_SECRET = process.env['GITHUB_CLIENT_SECRET']
+
+const githubConfigured =
+  Boolean(GITHUB_APP_ID) &&
+  Boolean(GITHUB_APP_PRIVATE_KEY) &&
+  Boolean(GITHUB_CLIENT_ID) &&
+  Boolean(GITHUB_CLIENT_SECRET)
+
+if (githubConfigured) {
+  initGitHubApp({
+    appId: GITHUB_APP_ID!,
+    privateKey: GITHUB_APP_PRIVATE_KEY!,
+    clientId: GITHUB_CLIENT_ID!,
+    clientSecret: GITHUB_CLIENT_SECRET!,
+  })
+} else {
+  console.warn('[worker] GitHub App env vars not fully configured — createPR will be a no-op')
+}
 
 // ─── Infrastructure ───────────────────────────────────────────────────────────
 
@@ -56,12 +83,14 @@ const advanceWorker = new Worker<AdvanceRunJob>(
         db,
         adapter: claudeAdapter,
         anthropicKey: ANTHROPIC_API_KEY,
-        createPR: (_params) => {
-          throw new Error('GitHub integration not yet configured')
+        createPR: async (params) => {
+          if (!githubConfigured) {
+            console.warn('[worker] GitHub App not configured — skipping createPR')
+            return { prNumber: 0, prUrl: '', branchName: params.headBranch, sha: '' }
+          }
+          return resolveAndCreatePR(db, params)
         },
-        getArtifactContent: async (_sha256) => {
-          throw new Error('OSS not yet configured')
-        },
+        getArtifactContent: (blobSha256) => getArtifactContent(db, blobSha256),
       },
       job.data,
     )
