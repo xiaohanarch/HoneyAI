@@ -42,54 +42,65 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
     return { ok: false, code: 'NO_ANTHROPIC_KEY' }
   }
 
-  // Validate the key decodes (non-empty)
-  const plainKey = decryptAnthropicKey(ciphertext)
+  // Validate the key decodes — catch malformed envelope errors
+  let plainKey: string
+  try {
+    plainKey = decryptAnthropicKey(ciphertext)
+  } catch {
+    return { ok: false, code: 'NO_ANTHROPIC_KEY' }
+  }
   if (!plainKey) {
     return { ok: false, code: 'NO_ANTHROPIC_KEY' }
+  }
+
+  const redisUrl = process.env['REDIS_URL']
+  if (!redisUrl) {
+    return { ok: false, code: 'REDIS_NOT_CONFIGURED' }
   }
 
   const runId = uuidv7()
   const tenantId = session.user.tenantId
 
-  // Insert the run row
-  await db.insert(runs).values({
-    id: runId,
-    status: 'created',
-    tenantId,
-    repositoryId: tenant.defaultRepoId,
-    createdByUserId: session.user.id,
-    title: input.title,
-    oneLiner: input.oneLiner,
-  })
-
-  // Insert placeholder artifactBlobs row (CAS dedup via onConflictDoNothing)
+  // Wrap all three inserts in a transaction so partial writes don't persist on failure
   const sha256 = createHash('sha256').update(input.oneLiner).digest('hex')
   const byteSize = BigInt(Buffer.from(input.oneLiner).length)
   const ossKey = `placeholder/${runId}/requirement_ir.md`
 
-  await db.insert(artifactBlobs).values({ sha256, byteSize, ossKey }).onConflictDoNothing()
+  await db.transaction(async (tx) => {
+    await tx.insert(runs).values({
+      id: runId,
+      status: 'created',
+      tenantId,
+      repositoryId: tenant.defaultRepoId!,
+      createdByUserId: session.user.id,
+      title: input.title,
+      oneLiner: input.oneLiner,
+    })
 
-  // Insert placeholder artifacts row
-  await db.insert(artifacts).values({
-    id: uuidv7(),
-    tenantId,
-    runId,
-    nodeId: null,
-    attempt: 0,
-    kind: 'requirement_ir',
-    status: 'ok',
-    blobSha256: sha256,
-    metadata: { placeholder: true },
-    authorKind: 'user',
-    pinned: false,
+    await tx.insert(artifactBlobs).values({ sha256, byteSize, ossKey }).onConflictDoNothing()
+
+    await tx.insert(artifacts).values({
+      id: uuidv7(),
+      tenantId,
+      runId,
+      nodeId: null,
+      attempt: 0,
+      kind: 'requirement_ir',
+      status: 'ok',
+      blobSha256: sha256,
+      metadata: { placeholder: true },
+      authorKind: 'user',
+      pinned: false,
+    })
   })
 
-  // Enqueue scheduleRun job
-  const queue = new Queue(SCHEDULE_RUN_QUEUE, {
-    connection: { url: process.env['REDIS_URL'] },
-  })
-  await queue.add('scheduleRun', { runId, tenantId })
-  await queue.close()
+  // Enqueue scheduleRun job after the transaction commits
+  const queue = new Queue(SCHEDULE_RUN_QUEUE, { connection: { url: redisUrl } })
+  try {
+    await queue.add('scheduleRun', { runId, tenantId })
+  } finally {
+    await queue.close()
+  }
 
   revalidatePath(`/t/${session.user.tenantSlug}/runs`)
   return { ok: true, runId }
@@ -113,15 +124,21 @@ export async function approveGate(input: ApproveGateInput): Promise<ActionResult
     return { ok: false, code: 'GATE_ERROR' }
   }
 
-  const queue = new Queue(ADVANCE_RUN_QUEUE, {
-    connection: { url: process.env['REDIS_URL'] },
-  })
-  await queue.add('advanceRun', {
-    runId: input.runId,
-    tenantId: session.user.tenantId,
-    completedNodeId: input.nodeId,
-  })
-  await queue.close()
+  const redisUrl = process.env['REDIS_URL']
+  if (!redisUrl) {
+    return { ok: false, code: 'REDIS_NOT_CONFIGURED' }
+  }
+
+  const queue = new Queue(ADVANCE_RUN_QUEUE, { connection: { url: redisUrl } })
+  try {
+    await queue.add('advanceRun', {
+      runId: input.runId,
+      tenantId: session.user.tenantId,
+      completedNodeId: input.nodeId,
+    })
+  } finally {
+    await queue.close()
+  }
 
   revalidatePath(`/t/${session.user.tenantSlug}/runs/${input.runId}`)
   return { ok: true }
@@ -129,14 +146,18 @@ export async function approveGate(input: ApproveGateInput): Promise<ActionResult
 
 // ── rejectGate ───────────────────────────────────────────────────────────────
 
-export type RejectGateInput = { runId: string; nodeId: string; reason: string }
+export type RejectGateInput = { runId: string; nodeId: string }
 
 export async function rejectGate(input: RejectGateInput): Promise<ActionResult> {
   const session = await auth()
   if (!session?.user?.tenantId) return { ok: false, code: 'UNAUTHENTICATED' }
 
   const db = getDb()
-  await resumeFromGate(db, input.runId, input.nodeId, session.user.id, 'reject')
+  try {
+    await resumeFromGate(db, input.runId, input.nodeId, session.user.id, 'reject')
+  } catch {
+    return { ok: false, code: 'REJECT_FAILED' }
+  }
 
   revalidatePath(`/t/${session.user.tenantSlug}/runs/${input.runId}`)
   return { ok: true }

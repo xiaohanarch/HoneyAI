@@ -15,19 +15,26 @@ const mockAuth = vi.fn()
 vi.mock('@/lib/auth', () => ({ auth: () => mockAuth() }))
 
 // Mock DB
-const mockInsert = vi.fn()
-const mockUpdate = vi.fn().mockReturnThis()
-const mockSet = vi.fn().mockReturnThis()
-const mockWhere = vi.fn().mockReturnThis()
-const mockOnConflictDoNothing = vi.fn().mockResolvedValue(undefined)
+// mockValues returns a thenable that also has .onConflictDoNothing(), so it satisfies
+// both direct-await inserts (runs, artifacts) and chained inserts (artifactBlobs).
+const mockValues = vi.fn().mockImplementation(() => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result = Promise.resolve(undefined) as any
+  result.onConflictDoNothing = vi.fn().mockResolvedValue(undefined)
+  return result
+})
+const mockInsert = vi.fn().mockReturnValue({ values: mockValues })
 const mockSelect = vi.fn()
 
+// db.transaction executes the callback with a tx that has the same insert/select shape
+const mockTransaction = vi.fn().mockImplementation(async (cb: (tx: unknown) => Promise<void>) => {
+  await cb({ insert: mockInsert, select: mockSelect })
+})
+
 const mockDb = {
-  update: mockUpdate,
-  set: mockSet,
-  where: mockWhere,
   insert: mockInsert,
   select: mockSelect,
+  transaction: mockTransaction,
 }
 vi.mock('@honeyai/db', () => ({ getDb: vi.fn(() => mockDb) }))
 vi.mock('@honeyai/db/schema', () => ({
@@ -47,23 +54,13 @@ vi.mock('@honeyai/orchestrator', () => ({
   resumeFromGate: (...args: unknown[]) => mockResumeFromGate(...args),
 }))
 
-// Mock bullmq Queue — the factory must not reference outer variables (hoisting).
-// We create a stable add/close pair that gets reused per-instance via the factory.
-const _queueAdd = vi.fn().mockResolvedValue(undefined)
-const _queueClose = vi.fn().mockResolvedValue(undefined)
-vi.mock('bullmq', () => {
-  const addFn = vi.fn().mockResolvedValue(undefined)
-  const closeFn = vi.fn().mockResolvedValue(undefined)
-  return {
-    Queue: vi.fn().mockImplementation(() => ({
-      add: addFn,
-      close: closeFn,
-    })),
-    // expose fns so tests can check them
-    __addFn: addFn,
-    __closeFn: closeFn,
-  }
-})
+// Mock bullmq Queue — factory must be self-contained (hoisting constraint)
+vi.mock('bullmq', () => ({
+  Queue: vi.fn().mockImplementation(() => ({
+    add: vi.fn().mockResolvedValue(undefined),
+    close: vi.fn().mockResolvedValue(undefined),
+  })),
+}))
 
 // Mock @honeyai/worker queue constants
 vi.mock('@honeyai/worker', () => ({
@@ -81,15 +78,26 @@ import { createRun, approveGate, rejectGate } from './actions'
 import { Queue } from 'bullmq'
 
 describe('run actions', () => {
-  // Capture the stable add/close mocks from the bullmq module after import
-  // Queue is a vi.fn() constructor — each new Queue() returns the same mock instance
+  // Fresh Queue instance mock rebuilt each test so clearAllMocks doesn't orphan references
   let mockQueueInstance: { add: ReturnType<typeof vi.fn>; close: ReturnType<typeof vi.fn> }
 
   beforeEach(() => {
     vi.clearAllMocks()
-    // Re-provision default resolved values after clearAllMocks
+    // Ensure REDIS_URL is present for happy-path tests; individual tests override as needed
+    process.env['REDIS_URL'] = 'redis://localhost:6379'
+    // Re-provision defaults cleared by clearAllMocks
     mockDecryptAnthropicKey.mockReturnValue('sk-ant-real-key')
-    // Set up a fresh queue instance mock for each test
+    mockValues.mockImplementation(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = Promise.resolve(undefined) as any
+      result.onConflictDoNothing = vi.fn().mockResolvedValue(undefined)
+      return result
+    })
+    mockInsert.mockReturnValue({ values: mockValues })
+    mockTransaction.mockImplementation(async (cb: (tx: unknown) => Promise<void>) => {
+      await cb({ insert: mockInsert, select: mockSelect })
+    })
+    // Fresh queue instance for each test
     const addFn = vi.fn().mockResolvedValue(undefined)
     const closeFn = vi.fn().mockResolvedValue(undefined)
     mockQueueInstance = { add: addFn, close: closeFn }
@@ -115,7 +123,6 @@ describe('run actions', () => {
     it('AC-02-01: createRun inserts run row and enqueues scheduleRun job', async () => {
       mockAuth.mockResolvedValue({ user: { id: 'u1', tenantId: 't1', tenantSlug: 'alice' } })
 
-      // Mock tenant SELECT returning tenant with defaultRepoId + anthropicKeyCiphertext
       const tenantRow = {
         id: 't1',
         defaultRepoId: 'repo-1',
@@ -127,13 +134,6 @@ describe('run actions', () => {
         }),
       })
 
-      // Mock insert chaining for all three insert calls
-      mockInsert.mockReturnValue({
-        values: vi.fn().mockReturnValue({
-          onConflictDoNothing: mockOnConflictDoNothing,
-        }),
-      })
-
       const result = await createRun({ title: 'My task', oneLiner: 'do something' })
 
       expect(result.ok).toBe(true)
@@ -141,13 +141,15 @@ describe('run actions', () => {
         expect(typeof result.runId).toBe('string')
         expect(result.runId.length).toBeGreaterThan(0)
       }
-      // DB insert should have been called (runs, artifactBlobs, artifacts)
-      expect(mockDb.insert).toHaveBeenCalled()
-      // Queue.add should have been called with scheduleRun job
+      // Transaction should have been used for DB inserts
+      expect(mockDb.transaction).toHaveBeenCalled()
+      // Queue.add called with scheduleRun job
       expect(mockQueueInstance.add).toHaveBeenCalledWith(
         'scheduleRun',
         expect.objectContaining({ tenantId: 't1' }),
       )
+      // Queue.close must be called (try/finally guarantee)
+      expect(mockQueueInstance.close).toHaveBeenCalled()
     })
 
     it('AC-02-02: createRun returns NO_DEFAULT_REPO when tenant has no defaultRepoId', async () => {
@@ -193,6 +195,61 @@ describe('run actions', () => {
         expect(result.code).toBe('NO_ANTHROPIC_KEY')
       }
     })
+
+    it('AC-02-03b: createRun returns NO_ANTHROPIC_KEY when decryptAnthropicKey throws', async () => {
+      mockAuth.mockResolvedValue({ user: { id: 'u1', tenantId: 't1', tenantSlug: 'alice' } })
+      mockDecryptAnthropicKey.mockImplementation(() => {
+        throw new Error('decryptAnthropicKey: malformed envelope')
+      })
+
+      const tenantRow = {
+        id: 't1',
+        defaultRepoId: 'repo-1',
+        settings: { bootstrap: { anthropicKeyCiphertext: 'bad-ciphertext' } },
+      }
+      mockSelect.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([tenantRow]),
+        }),
+      })
+
+      const result = await createRun({ title: 'test', oneLiner: 'do something' })
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.code).toBe('NO_ANTHROPIC_KEY')
+      }
+    })
+
+    it('AC-02-07: createRun returns error when REDIS_URL not configured', async () => {
+      mockAuth.mockResolvedValue({ user: { id: 'u1', tenantId: 't1', tenantSlug: 'alice' } })
+
+      const tenantRow = {
+        id: 't1',
+        defaultRepoId: 'repo-1',
+        settings: { bootstrap: { anthropicKeyCiphertext: 'v1:c2stYW50LXJlYWwta2V5' } },
+      }
+      mockSelect.mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([tenantRow]),
+        }),
+      })
+
+      const savedRedisUrl = process.env['REDIS_URL']
+      delete process.env['REDIS_URL']
+
+      try {
+        const result = await createRun({ title: 'test', oneLiner: 'do something' })
+        expect(result.ok).toBe(false)
+        if (!result.ok) {
+          expect(result.code).toBe('REDIS_NOT_CONFIGURED')
+        }
+      } finally {
+        if (savedRedisUrl !== undefined) {
+          process.env['REDIS_URL'] = savedRedisUrl
+        }
+      }
+    })
   })
 
   describe('approveGate', () => {
@@ -217,6 +274,8 @@ describe('run actions', () => {
         'advanceRun',
         expect.objectContaining({ runId: 'r1', tenantId: 't1', completedNodeId: 'n1' }),
       )
+      // Queue.close must be called (try/finally guarantee)
+      expect(mockQueueInstance.close).toHaveBeenCalled()
     })
 
     it('AC-02-05: approveGate returns GATE_NOT_VIEWED when gate not viewed', async () => {
@@ -235,7 +294,7 @@ describe('run actions', () => {
   describe('rejectGate', () => {
     it('AC-07-06: returns error when unauthenticated', async () => {
       mockAuth.mockResolvedValue(null)
-      const result = await rejectGate({ runId: 'r1', nodeId: 'n1', reason: 'not good' })
+      const result = await rejectGate({ runId: 'r1', nodeId: 'n1' })
       expect(result.ok).toBe(false)
       if (!result.ok) {
         expect(result.code).toBe('UNAUTHENTICATED')
@@ -246,10 +305,22 @@ describe('run actions', () => {
       mockAuth.mockResolvedValue({ user: { id: 'u1', tenantId: 't1', tenantSlug: 'alice' } })
       mockResumeFromGate.mockResolvedValue(undefined)
 
-      const result = await rejectGate({ runId: 'r1', nodeId: 'n1', reason: 'needs rework' })
+      const result = await rejectGate({ runId: 'r1', nodeId: 'n1' })
 
       expect(result.ok).toBe(true)
       expect(mockResumeFromGate).toHaveBeenCalledWith(mockDb, 'r1', 'n1', 'u1', 'reject')
+    })
+
+    it('AC-02-06b: rejectGate returns REJECT_FAILED when resumeFromGate throws', async () => {
+      mockAuth.mockResolvedValue({ user: { id: 'u1', tenantId: 't1', tenantSlug: 'alice' } })
+      mockResumeFromGate.mockRejectedValue(new Error('DB error'))
+
+      const result = await rejectGate({ runId: 'r1', nodeId: 'n1' })
+
+      expect(result.ok).toBe(false)
+      if (!result.ok) {
+        expect(result.code).toBe('REJECT_FAILED')
+      }
     })
   })
 })
