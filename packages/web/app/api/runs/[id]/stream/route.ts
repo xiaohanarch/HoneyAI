@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { Client } from 'pg'
+import { auth } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -26,6 +27,14 @@ export async function GET(
   if (!databaseUrl) {
     return new Response(JSON.stringify({ error: 'DATABASE_URL not configured' }), {
       status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
+  const session = await auth()
+  if (!session?.user?.tenantId) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
       headers: { 'Content-Type': 'application/json' },
     })
   }

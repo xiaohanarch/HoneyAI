@@ -250,6 +250,16 @@ describe('run actions', () => {
         }
       }
     })
+
+    it('AC-02-20: createRun returns INVALID_INPUT for empty title', async () => {
+      const result = await createRun({ title: '   ', oneLiner: 'valid requirement' })
+      expect(result).toEqual({ ok: false, code: 'INVALID_INPUT' })
+    })
+
+    it('AC-02-21: createRun returns INVALID_INPUT for empty oneLiner', async () => {
+      const result = await createRun({ title: 'valid title', oneLiner: '' })
+      expect(result).toEqual({ ok: false, code: 'INVALID_INPUT' })
+    })
   })
 
   describe('approveGate', () => {
@@ -266,13 +276,15 @@ describe('run actions', () => {
       mockAuth.mockResolvedValue({ user: { id: 'u1', tenantId: 't1', tenantSlug: 'alice' } })
       mockPassGate.mockResolvedValue({ ok: true })
 
-      const result = await approveGate({ runId: 'r1', nodeId: 'n1' })
+      const runId = '11111111-1111-1111-1111-111111111111'
+      const nodeId = '22222222-2222-2222-2222-222222222222'
+      const result = await approveGate({ runId, nodeId })
 
       expect(result.ok).toBe(true)
-      expect(mockPassGate).toHaveBeenCalledWith(mockDb, 'n1', 'u1')
+      expect(mockPassGate).toHaveBeenCalledWith(mockDb, nodeId, 'u1')
       expect(mockQueueInstance.add).toHaveBeenCalledWith(
         'advanceRun',
-        expect.objectContaining({ runId: 'r1', tenantId: 't1', completedNodeId: 'n1' }),
+        expect.objectContaining({ runId, tenantId: 't1', completedNodeId: nodeId }),
       )
       // Queue.close must be called (try/finally guarantee)
       expect(mockQueueInstance.close).toHaveBeenCalled()
@@ -282,12 +294,21 @@ describe('run actions', () => {
       mockAuth.mockResolvedValue({ user: { id: 'u1', tenantId: 't1', tenantSlug: 'alice' } })
       mockPassGate.mockResolvedValue({ ok: false, reason: 'not_viewed' })
 
-      const result = await approveGate({ runId: 'r1', nodeId: 'n1' })
+      const result = await approveGate({
+        runId: '11111111-1111-1111-1111-111111111111',
+        nodeId: '22222222-2222-2222-2222-222222222222',
+      })
 
       expect(result.ok).toBe(false)
       if (!result.ok) {
         expect(result.code).toBe('GATE_NOT_VIEWED')
       }
+    })
+
+    it('AC-02-22: approveGate returns INVALID_INPUT for non-UUID nodeId', async () => {
+      mockAuth.mockResolvedValue({ user: { id: 'u1', tenantId: 't1', tenantSlug: 'alice' } })
+      const result = await approveGate({ runId: 'not-a-uuid', nodeId: 'also-not-a-uuid' })
+      expect(result).toEqual({ ok: false, code: 'INVALID_INPUT' })
     })
   })
 
@@ -305,17 +326,22 @@ describe('run actions', () => {
       mockAuth.mockResolvedValue({ user: { id: 'u1', tenantId: 't1', tenantSlug: 'alice' } })
       mockResumeFromGate.mockResolvedValue(undefined)
 
-      const result = await rejectGate({ runId: 'r1', nodeId: 'n1' })
+      const runId = '11111111-1111-1111-1111-111111111111'
+      const nodeId = '22222222-2222-2222-2222-222222222222'
+      const result = await rejectGate({ runId, nodeId })
 
       expect(result.ok).toBe(true)
-      expect(mockResumeFromGate).toHaveBeenCalledWith(mockDb, 'r1', 'n1', 'u1', 'reject')
+      expect(mockResumeFromGate).toHaveBeenCalledWith(mockDb, runId, nodeId, 'u1', 'reject')
     })
 
     it('AC-02-06b: rejectGate returns REJECT_FAILED when resumeFromGate throws', async () => {
       mockAuth.mockResolvedValue({ user: { id: 'u1', tenantId: 't1', tenantSlug: 'alice' } })
       mockResumeFromGate.mockRejectedValue(new Error('DB error'))
 
-      const result = await rejectGate({ runId: 'r1', nodeId: 'n1' })
+      const result = await rejectGate({
+        runId: '11111111-1111-1111-1111-111111111111',
+        nodeId: '22222222-2222-2222-2222-222222222222',
+      })
 
       expect(result.ok).toBe(false)
       if (!result.ok) {

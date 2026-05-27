@@ -27,8 +27,13 @@ vi.mock('pg', () => {
   return { Client: MockClient }
 })
 
+vi.mock('@/lib/auth', () => ({
+  auth: vi.fn().mockResolvedValue({ user: { tenantId: 'tenant-1', id: 'user-1' } }),
+}))
+
 // Import AFTER mock is registered
 const { GET } = await import('./route')
+import { auth } from '@/lib/auth'
 
 // -----------------------------------------------------------------------
 // Helpers
@@ -87,6 +92,15 @@ describe('SSE stream route — pg LISTEN', () => {
     delete process.env['DATABASE_URL']
     const res = await GET(makeRequest(), { params: Promise.resolve({ id: 'run-123' }) })
     expect(res.status).toBe(500)
+  })
+
+  it('AC-02-23: GET returns 401 when unauthenticated', async () => {
+    vi.mocked(auth).mockResolvedValueOnce(null)
+    const req = new Request('http://localhost/api/runs/11111111-1111-1111-1111-111111111111/stream')
+    const res = await GET(req as NextRequest, {
+      params: Promise.resolve({ id: '11111111-1111-1111-1111-111111111111' }),
+    })
+    expect(res.status).toBe(401)
   })
 
   it('AC-02-08b: GET /api/runs/[id]/stream returns 400 when runId is not a valid UUID', async () => {

@@ -12,6 +12,8 @@ import { decryptAnthropicKey } from '@honeyai/core'
 import { SCHEDULE_RUN_QUEUE, ADVANCE_RUN_QUEUE } from '@honeyai/worker'
 import { auth } from '@/lib/auth'
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 // ── Result types ────────────────────────────────────────────────────────────
 
 type ErrorResult = { ok: false; code: string; message?: string }
@@ -24,6 +26,10 @@ type ActionResult = { ok: true } | ErrorResult
 export type CreateRunInput = { title: string; oneLiner: string }
 
 export async function createRun(input: CreateRunInput): Promise<CreateRunResult> {
+  if (!input.title?.trim() || !input.oneLiner?.trim()) {
+    return { ok: false, code: 'INVALID_INPUT' }
+  }
+
   const session = await auth()
   if (!session?.user?.tenantId) return { ok: false, code: 'UNAUTHENTICATED' }
 
@@ -114,6 +120,10 @@ export async function approveGate(input: ApproveGateInput): Promise<ActionResult
   const session = await auth()
   if (!session?.user?.tenantId) return { ok: false, code: 'UNAUTHENTICATED' }
 
+  if (!UUID_RE.test(input.runId) || !UUID_RE.test(input.nodeId)) {
+    return { ok: false, code: 'INVALID_INPUT' }
+  }
+
   const db = getDb()
 
   const result = await passGate(db, input.nodeId, session.user.id)
@@ -151,6 +161,10 @@ export type RejectGateInput = { runId: string; nodeId: string }
 export async function rejectGate(input: RejectGateInput): Promise<ActionResult> {
   const session = await auth()
   if (!session?.user?.tenantId) return { ok: false, code: 'UNAUTHENTICATED' }
+
+  if (!UUID_RE.test(input.runId) || !UUID_RE.test(input.nodeId)) {
+    return { ok: false, code: 'INVALID_INPUT' }
+  }
 
   const db = getDb()
   try {
