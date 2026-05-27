@@ -89,6 +89,7 @@ describe('SSE stream route — pg LISTEN', () => {
   })
 
   it('AC-02-08: GET /api/runs/[id]/stream returns 500 when DATABASE_URL not set', async () => {
+    vi.mocked(auth).mockResolvedValueOnce({ user: { tenantId: 'tenant-1', id: 'user-1' } } as never)
     delete process.env['DATABASE_URL']
     const res = await GET(makeRequest(), { params: Promise.resolve({ id: 'run-123' }) })
     expect(res.status).toBe(500)

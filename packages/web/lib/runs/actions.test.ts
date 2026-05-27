@@ -252,11 +252,17 @@ describe('run actions', () => {
     })
 
     it('AC-02-20: createRun returns INVALID_INPUT for empty title', async () => {
+      mockAuth.mockResolvedValue({
+        user: { tenantId: 'tenant-1', id: 'user-1', tenantSlug: 'acme' },
+      })
       const result = await createRun({ title: '   ', oneLiner: 'valid requirement' })
       expect(result).toEqual({ ok: false, code: 'INVALID_INPUT' })
     })
 
     it('AC-02-21: createRun returns INVALID_INPUT for empty oneLiner', async () => {
+      mockAuth.mockResolvedValue({
+        user: { tenantId: 'tenant-1', id: 'user-1', tenantSlug: 'acme' },
+      })
       const result = await createRun({ title: 'valid title', oneLiner: '' })
       expect(result).toEqual({ ok: false, code: 'INVALID_INPUT' })
     })

@@ -23,18 +23,18 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  const databaseUrl = process.env['DATABASE_URL']
-  if (!databaseUrl) {
-    return new Response(JSON.stringify({ error: 'DATABASE_URL not configured' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    })
-  }
-
   const session = await auth()
   if (!session?.user?.tenantId) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
+  const databaseUrl = process.env['DATABASE_URL']
+  if (!databaseUrl) {
+    return new Response(JSON.stringify({ error: 'DATABASE_URL not configured' }), {
+      status: 500,
       headers: { 'Content-Type': 'application/json' },
     })
   }

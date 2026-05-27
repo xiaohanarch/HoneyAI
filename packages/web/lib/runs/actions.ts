@@ -26,12 +26,12 @@ type ActionResult = { ok: true } | ErrorResult
 export type CreateRunInput = { title: string; oneLiner: string }
 
 export async function createRun(input: CreateRunInput): Promise<CreateRunResult> {
+  const session = await auth()
+  if (!session?.user?.tenantId) return { ok: false, code: 'UNAUTHENTICATED' }
+
   if (!input.title?.trim() || !input.oneLiner?.trim()) {
     return { ok: false, code: 'INVALID_INPUT' }
   }
-
-  const session = await auth()
-  if (!session?.user?.tenantId) return { ok: false, code: 'UNAUTHENTICATED' }
 
   const db = getDb()
 
