@@ -65,6 +65,7 @@
     0%, 100% { box-shadow: 0 0 0 0 oklch(70% 0.15 65 / 0.4); }
     50% { box-shadow: 0 0 0 10px oklch(70% 0.15 65 / 0); }
   }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
   /* Node timeline */
   .tl-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; position: relative; }
@@ -135,25 +136,43 @@
     <p id="run-oneliner" class="text-[14px] text-[var(--text-muted)] max-w-[700px] leading-relaxed"></p>
   </section>
 
-  <!-- Stage progress bar -->
+  <!-- Three-rail pipeline -->
   <section class="card p-6 mb-6">
-    <div class="caps mb-5">流水线进度</div>
-    <div class="stage-bar">
-      <div class="stage-node">
-        <div id="stage-1-circle" class="stage-circle">01</div>
-        <div class="stage-label" id="stage-1-label">需求富化</div>
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <div class="caps">主流水线 · 三轨</div>
+        <div class="text-[11.5px] text-[var(--text-muted)] mt-0.5">上 · 执行流　→　中 · AI 产出　→　下 · 评审门</div>
       </div>
-      <div id="stage-1-2-connector" class="stage-connector"></div>
-      <div class="stage-node">
-        <div id="stage-2-circle" class="stage-circle">02</div>
-        <div class="stage-label" id="stage-2-label">设计与拆解</div>
-      </div>
-      <div id="stage-2-3-connector" class="stage-connector"></div>
-      <div class="stage-node">
-        <div id="stage-3-circle" class="stage-circle">03</div>
-        <div class="stage-label" id="stage-3-label">编码 + UT</div>
+      <div class="flex items-center gap-3 text-[11px] text-[var(--text-muted)]">
+        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full" style="background:var(--done)"></span>已完成</span>
+        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full" style="background:var(--run)"></span>运行中</span>
+        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full" style="background:var(--review)"></span>评审中</span>
       </div>
     </div>
+    <!-- Rail 1 -->
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-[9.5px] tracking-[.18em] uppercase font-semibold" style="color:var(--text-muted)">执行流 · Execution</span>
+      <div class="flex-1 h-px bg-[var(--border-soft)]"></div>
+    </div>
+    <div id="rail-exec" class="grid grid-cols-3 gap-0 relative mb-1">
+      <div class="text-[12px] text-[var(--text-muted)] col-span-3 py-2">加载中…</div>
+    </div>
+    <!-- Connector 1→2 -->
+    <div id="rail-conn-1" class="grid grid-cols-3 gap-0 py-1"></div>
+    <!-- Rail 2 -->
+    <div class="flex items-center gap-2 mb-3 mt-1">
+      <span class="text-[9.5px] tracking-[.18em] uppercase font-semibold" style="color:var(--run)">AI 产出 · Artifacts</span>
+      <div class="flex-1 h-px" style="background:linear-gradient(90deg, var(--run) 0%, transparent 100%); opacity:.25"></div>
+    </div>
+    <div id="rail-artifacts" class="grid grid-cols-3 gap-0 relative mb-1"></div>
+    <!-- Connector 2→3 -->
+    <div id="rail-conn-2" class="grid grid-cols-3 gap-0 py-1"></div>
+    <!-- Rail 3 -->
+    <div class="flex items-center gap-2 mb-3 mt-1">
+      <span class="text-[9.5px] tracking-[.18em] uppercase font-semibold" style="color:var(--review)">评审门 · Review Gates</span>
+      <div class="flex-1 h-px" style="background:var(--review-soft)"></div>
+    </div>
+    <div id="rail-gates" class="grid grid-cols-3 gap-0 relative"></div>
   </section>
 
   <div class="grid grid-cols-12 gap-6">
@@ -337,52 +356,185 @@ function renderTimeline(nodes) {
   el.innerHTML = html;
 }
 
-// ── Render stage bar ──────────────────────────────────────────────────────────
-function renderStageBar(nodes, runStatus) {
-  var stageState = { 1: 'idle', 2: 'idle', 3: 'idle' };
-  (nodes || []).forEach(function(n) {
-    var s = n.stage;
-    if (!stageState[s]) return;
-    if (stageState[s] === 'done') return; // already done
-    if (n.status === 'success' && n.kind === 'gate' && s < 3) {
-      // gate success means stage is done, next stage starts
-    } else if (n.status === 'running') {
-      stageState[s] = 'running';
-    } else if (n.status === 'success' && n.kind === 'agent') {
-      stageState[s] = 'done'; // agent done
-    }
-  });
-  // A stage is 'done' if ALL agent nodes in that stage are success
-  var stageDone = { 1: false, 2: false, 3: false };
-  var stageRunning = { 1: false, 2: false, 3: false };
-  (nodes || []).forEach(function(n) {
-    if (!n.stage || n.stage > 3) return;
-    if (n.kind === 'agent' && n.status === 'success') stageDone[n.stage] = true;
-    if (n.kind === 'agent' && n.status === 'running') stageRunning[n.stage] = true;
-  });
-  if (runStatus === 'completed') { stageDone[1] = stageDone[2] = stageDone[3] = true; }
+// ── Three-rail pipeline render ────────────────────────────────────────────────
+var EXEC_STAGES = [
+  { stage: 1, num: '01', name: '需求富化',   desc: '原始诉求 → 语义化富化' },
+  { stage: 2, num: '02', name: '设计与拆解', desc: '需求 IR → 架构与拆解' },
+  { stage: 3, num: '03', name: '编码 + UT',  desc: '设计 IR → 代码实现' },
+];
+var ART_INFO = [
+  { stage: 1, label: 'requirement_ir', desc: '需求 IR 文档' },
+  { stage: 2, label: 'design_ir',      desc: '设计 IR 文档' },
+  { stage: 3, label: 'impl_ir',        desc: '实现 IR 文档' },
+];
 
-  [1, 2, 3].forEach(function(i) {
-    var circ = document.getElementById('stage-' + i + '-circle');
-    var lbl = document.getElementById('stage-' + i + '-label');
-    circ.className = 'stage-circle';
-    lbl.className = 'stage-label';
-    if (stageDone[i]) {
-      circ.classList.add('done');
-      circ.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
-      lbl.classList.add('active');
-    } else if (stageRunning[i]) {
-      circ.classList.add('running');
-      circ.textContent = '0' + i;
-      lbl.classList.add('active');
-    } else {
-      circ.textContent = '0' + i;
-    }
-    if (i < 3) {
-      var conn = document.getElementById('stage-' + i + '-' + (i+1) + '-connector');
-      conn.className = 'stage-connector' + (stageDone[i] ? ' done' : '');
-    }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderThreeRail(nodes, runStatus, prUrl) {
+  var agentByStage = {}, gateByStage = {};
+  (nodes || []).forEach(function(n) {
+    if (n.kind === 'agent') agentByStage[n.stage] = n;
+    if (n.kind === 'gate')  gateByStage[n.stage]  = n;
   });
+  var isCompleted = runStatus === 'completed';
+
+  // ── Rail 1: Execution ──────────────────────────────────────────────────────
+  var execHtml = '';
+  EXEC_STAGES.forEach(function(info, i) {
+    var n = agentByStage[info.stage];
+    var st = n ? n.status : 'idle';
+    if (isCompleted) st = 'success';
+    var isLast = i === 2;
+
+    var circStyle, statusLabel, statusColor, connBg;
+    if (st === 'success') {
+      circStyle = 'background:var(--done);border:2px solid var(--done);color:white;';
+      statusLabel = info.num + ' · DONE'; statusColor = 'var(--done)';
+      connBg = 'background:var(--done)';
+    } else if (st === 'running') {
+      circStyle = 'background:var(--run);border:2px solid var(--run);color:white;';
+      statusLabel = info.num + ' · RUNNING'; statusColor = 'var(--run)';
+      connBg = 'background:repeating-linear-gradient(90deg,var(--border-mid) 0 4px,transparent 4px 8px)';
+    } else {
+      circStyle = 'background:white;border:2px dashed var(--border-mid);color:var(--text-faint);';
+      statusLabel = info.num + ' · PENDING'; statusColor = 'var(--text-faint)';
+      connBg = 'background:var(--border-soft)';
+    }
+    var icon = st === 'success'
+      ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'
+      : (st === 'running'
+          ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56" stroke-linecap="round"/></svg>'
+          : info.num);
+
+    execHtml += '<div class="relative' + (isLast ? '' : ' pr-6') + '">';
+    if (!isLast) execHtml += '<div class="absolute top-[13px] left-[26px] right-0 h-[2px]" style="' + connBg + '"></div>';
+    execHtml += '<div class="relative flex items-start gap-2.5">';
+    execHtml += '<div class="w-[26px] h-[26px] rounded-full flex-shrink-0 z-10 flex items-center justify-center text-[11px] font-semibold font-mono" style="' + circStyle + '">' + icon + '</div>';
+    execHtml += '<div class="min-w-0 flex-1">';
+    execHtml += '<div class="text-[10px] tracking-[.14em] uppercase font-semibold" style="color:' + statusColor + '">' + statusLabel + '</div>';
+    execHtml += '<div class="text-[13.5px] font-medium text-[var(--text-strong)] mt-0.5">' + esc(info.name) + '</div>';
+    execHtml += '<div class="text-[11px] text-[var(--text-muted)] mt-0.5 leading-snug">' + esc(info.desc) + '</div>';
+    execHtml += '</div></div></div>';
+  });
+  document.getElementById('rail-exec').innerHTML = execHtml;
+
+  // ── Connector 1→2 ─────────────────────────────────────────────────────────
+  var c1Html = '';
+  EXEC_STAGES.forEach(function(info) {
+    var n = agentByStage[info.stage];
+    var done = n && (n.status === 'success' || isCompleted);
+    var running = n && n.status === 'running' && !isCompleted;
+    var col = done ? 'var(--done)' : (running ? 'var(--run)' : 'var(--text-faint)');
+    var op = (done || running) ? '.8' : '.35';
+    var label = done ? '产出 → IR 文档' : (running ? '产出中…' : '待产出');
+    c1Html += '<div class="pl-[10px] flex items-center gap-1">';
+    c1Html += '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="' + col + '" stroke-width="2" style="opacity:' + op + '"' + (done ? '' : ' stroke-dasharray="2 2"') + '><line x1="12" y1="3" x2="12" y2="17"/><polyline points="6 11 12 17 18 11"/></svg>';
+    c1Html += '<span class="text-[10px]" style="color:' + col + ';opacity:' + op + '">' + label + '</span></div>';
+  });
+  document.getElementById('rail-conn-1').innerHTML = c1Html;
+
+  // ── Rail 2: Artifacts ──────────────────────────────────────────────────────
+  var artHtml = '';
+  ART_INFO.forEach(function(info, i) {
+    var n = agentByStage[info.stage];
+    var done = n && (n.status === 'success' || isCompleted);
+    var running = n && n.status === 'running' && !isCompleted;
+    var isLast = i === 2;
+
+    var border, iconCol, connStyle, statusLabel;
+    if (done) {
+      border = 'var(--done-soft)'; iconCol = 'var(--done)';
+      statusLabel = 'DONE'; connStyle = 'background:var(--done);opacity:.45';
+    } else if (running) {
+      border = 'oklch(85% 0.08 65)'; iconCol = 'var(--run)';
+      statusLabel = 'PRODUCING'; connStyle = 'background:repeating-linear-gradient(90deg,var(--run) 0 4px,transparent 4px 8px);opacity:.4';
+    } else {
+      border = 'var(--border-soft)'; iconCol = 'var(--text-faint)';
+      statusLabel = 'PENDING'; connStyle = 'background:var(--border-soft)';
+    }
+    var docIcon = done
+      ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>'
+      : '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+
+    artHtml += '<div class="relative' + (isLast ? '' : ' pr-6') + '">';
+    if (!isLast) artHtml += '<div class="absolute top-[13px] left-[26px] right-0 h-[2px]" style="' + connStyle + '"></div>';
+    artHtml += '<div class="relative rounded-xl border p-2.5 bg-white" style="border-color:' + border + '">';
+    artHtml += '<div class="flex items-start gap-2">';
+    artHtml += '<div class="w-[26px] h-[26px] rounded-lg border-2 flex-shrink-0 flex items-center justify-center" style="border-color:' + iconCol + ';color:' + iconCol + '">' + docIcon + '</div>';
+    artHtml += '<div class="min-w-0 flex-1">';
+    artHtml += '<div class="text-[10px] tracking-[.10em] uppercase font-semibold" style="color:' + iconCol + '">' + statusLabel + ' · ' + esc(info.label) + '</div>';
+    artHtml += '<div class="text-[12px] font-medium text-[var(--text-strong)] mt-0.5">' + esc(info.desc) + '</div>';
+    artHtml += '</div></div></div></div>';
+  });
+  document.getElementById('rail-artifacts').innerHTML = artHtml;
+
+  // ── Connector 2→3 ─────────────────────────────────────────────────────────
+  var c2Html = '';
+  EXEC_STAGES.forEach(function(info, i) {
+    var n = agentByStage[info.stage];
+    var done = n && (n.status === 'success' || isCompleted);
+    var col = done ? 'var(--review)' : 'var(--text-faint)';
+    var op = done ? '.8' : '.35';
+    var label = done ? (i === 2 ? 'IR → PR 提交' : 'IR → 人评 go/nogo') : '待评审';
+    c2Html += '<div class="pl-[10px] flex items-center gap-1">';
+    c2Html += '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="' + col + '" stroke-width="2" style="opacity:' + op + '"' + (done ? '' : ' stroke-dasharray="2 2"') + '><line x1="12" y1="3" x2="12" y2="17"/><polyline points="6 11 12 17 18 11"/></svg>';
+    c2Html += '<span class="text-[10px]" style="color:' + col + ';opacity:' + op + '">' + label + '</span></div>';
+  });
+  document.getElementById('rail-conn-2').innerHTML = c2Html;
+
+  // ── Rail 3: Gates ──────────────────────────────────────────────────────────
+  var GATE_DEF = [
+    { stage: 1, name: '评审门 · Stage 1', desc: '需求富化阶段人工评审', isPR: false },
+    { stage: 2, name: '评审门 · Stage 2', desc: '设计与拆解阶段人工评审', isPR: false },
+    { stage: 3, name: 'Pull Request',      desc: '编码完成 · 代码已提交', isPR: true },
+  ];
+  var gatesHtml = '';
+  GATE_DEF.forEach(function(info, i) {
+    var isLast = i === 2;
+    var gateNode = gateByStage[info.stage];
+    var agentNode = agentByStage[info.stage];
+    var agentDone = agentNode && (agentNode.status === 'success' || isCompleted);
+
+    var border, iconCol, statusLabel, connStyle, circleHtml, extraHtml = '';
+    if (info.isPR) {
+      if (prUrl) {
+        border = 'var(--done-soft)'; iconCol = 'var(--done)'; statusLabel = 'PR · 已创建';
+        circleHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>';
+        extraHtml = '<a href="' + esc(prUrl) + '" target="_blank" class="text-[10px] font-medium mt-1.5 inline-block hover:underline" style="color:var(--done)">在 GitHub 查看 PR →</a>';
+      } else {
+        border = 'var(--border-soft)'; iconCol = 'var(--text-faint)'; statusLabel = 'PR · 待生成';
+        circleHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>';
+      }
+    } else {
+      var gst = gateNode ? gateNode.status : (agentDone ? 'pending' : 'idle');
+      if (gst === 'success') {
+        border = 'var(--done-soft)'; iconCol = 'var(--done)'; statusLabel = '评审 · 通过';
+        connStyle = 'background:var(--done);opacity:.35';
+        circleHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+      } else if (gst === 'pending') {
+        border = 'var(--review)'; iconCol = 'var(--review)'; statusLabel = '评审 · 待审批';
+        connStyle = 'background:repeating-linear-gradient(90deg,var(--review-soft) 0 4px,transparent 4px 8px)';
+        circleHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+      } else {
+        border = 'var(--border-soft)'; iconCol = 'var(--text-faint)'; statusLabel = '评审 · 待启动';
+        connStyle = 'background:var(--border-soft)';
+        circleHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+      }
+    }
+
+    gatesHtml += '<div class="relative' + (isLast ? '' : ' pr-6') + '">';
+    if (!isLast && connStyle) gatesHtml += '<div class="absolute top-[13px] left-[26px] right-0 h-[2px]" style="' + connStyle + '"></div>';
+    gatesHtml += '<div class="relative rounded-xl border p-2.5 bg-white" style="border-color:' + border + '">';
+    gatesHtml += '<div class="flex items-start gap-2">';
+    gatesHtml += '<div class="w-[26px] h-[26px] rounded-full border-2 flex-shrink-0 flex items-center justify-center" style="border-color:' + iconCol + ';color:' + iconCol + '">' + circleHtml + '</div>';
+    gatesHtml += '<div class="min-w-0 flex-1">';
+    gatesHtml += '<div class="text-[10px] tracking-[.10em] uppercase font-semibold" style="color:' + iconCol + '">' + statusLabel + '</div>';
+    gatesHtml += '<div class="text-[12px] font-medium text-[var(--text-strong)] mt-0.5">' + esc(info.name) + '</div>';
+    gatesHtml += '<div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">' + esc(info.desc) + '</div>';
+    gatesHtml += extraHtml;
+    gatesHtml += '</div></div></div></div>';
+  });
+  document.getElementById('rail-gates').innerHTML = gatesHtml;
 }
 
 // ── Render gate panel ─────────────────────────────────────────────────────────
@@ -586,8 +738,9 @@ function loadRun() {
       document.getElementById('run-oneliner').textContent = run.oneLiner || '';
       document.getElementById('hdr-status-chip').outerHTML = '<span id="hdr-status-chip">' + statusChipHtml(run.status) + '</span>';
 
+      var prUrl = run.metadata && run.metadata.prUrl ? run.metadata.prUrl : null;
       renderTimeline(nodes);
-      renderStageBar(nodes, run.status);
+      renderThreeRail(nodes, run.status, prUrl);
       renderGatePanel(nodes, run.status);
       renderOutput(run.status, nodes);
 
@@ -610,7 +763,6 @@ function loadRun() {
       } else if (run.status === 'completed' || run.status === 'failed' || run.status === 'cancelled') {
         stopTerminalPoll();
         // Show PR card if prUrl available
-        var prUrl = run.metadata && run.metadata.prUrl;
         if (prUrl) {
           var prCard = document.getElementById('pr-card');
           prCard.classList.remove('hidden');
