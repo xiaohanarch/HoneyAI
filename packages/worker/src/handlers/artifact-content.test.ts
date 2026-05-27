@@ -4,29 +4,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { getArtifactContent } from './artifact-content.js'
 
-// ─── mock db factory ─────────────────────────────────────────────────────────
-
-function makeDb(artifactRows: unknown[], eventRows: unknown[]) {
-  let callCount = 0
-  const mockSelect = vi.fn().mockImplementation(() => {
-    callCount++
-    // first call → artifacts table, second call → events table
-    const rows = callCount === 1 ? artifactRows : eventRows
-    return {
-      from: vi.fn().mockReturnValue({
-        where: vi.fn().mockReturnValue({
-          limit: vi.fn().mockResolvedValue(rows),
-          // for events query (no limit) — also return rows via .orderBy()
-          orderBy: vi.fn().mockResolvedValue(eventRows),
-        }),
-        orderBy: vi.fn().mockResolvedValue(eventRows),
-      }),
-    }
-  })
-
-  return { select: mockSelect } as unknown as Parameters<typeof getArtifactContent>[0]
-}
-
 // ─── tests ────────────────────────────────────────────────────────────────────
 
 describe('getArtifactContent', () => {
@@ -137,5 +114,36 @@ describe('getArtifactContent', () => {
 
     // Act + Assert
     await expect(getArtifactContent(mockDb, 'xyz')).rejects.toThrow('artifact not found')
+  })
+
+  it('AC-02-14d: getArtifactContent throws when artifact has no text events', async () => {
+    // Arrange — artifact found but no text events
+    const blobSha256 = 'zzz789'
+    const nodeId = 'n4'
+    const artifactRows = [{ id: 'a4', blobSha256, nodeId }]
+
+    const mockDb = {
+      select: vi
+        .fn()
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue(artifactRows),
+            }),
+          }),
+        })
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              orderBy: vi.fn().mockResolvedValue([]), // empty events
+            }),
+          }),
+        }),
+    } as unknown as Parameters<typeof getArtifactContent>[0]
+
+    // Act + Assert
+    await expect(getArtifactContent(mockDb, blobSha256)).rejects.toThrow(
+      'no text events found for nodeId=',
+    )
   })
 })

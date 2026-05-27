@@ -36,6 +36,10 @@ export async function getArtifactContent(db: AnyDb, blobSha256: string): Promise
     .orderBy(schema.events.seq)
 
   // 3. Concatenate content from all text events (skip undefined/non-string)
+  if (eventRows.length === 0) {
+    throw new Error(`getArtifactContent: no text events found for nodeId=${artifact.nodeId}`)
+  }
+
   return eventRows
     .map((e) => {
       const p = e.payload as Record<string, unknown>
