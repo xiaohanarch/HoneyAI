@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>系统初始化 · DevPipeline</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-base: oklch(98% 0.006 85);
+      --bg-card: #ffffff;
+      --bg-elev: oklch(99% 0.004 85);
+      --bg-deep: oklch(15% 0.018 260);
+
+      --border-soft: oklch(93% 0.005 85);
+      --border-mid: oklch(88% 0.008 85);
+
+      --text-strong: oklch(22% 0.03 260);
+      --text-body: oklch(38% 0.02 260);
+      --text-muted: oklch(56% 0.015 260);
+      --text-faint: oklch(72% 0.01 260);
+
+      --done: oklch(62% 0.13 150);
+      --done-soft: oklch(94% 0.04 150);
+      --run: oklch(70% 0.15 65);
+      --run-soft: oklch(95% 0.05 75);
+      --review: oklch(58% 0.18 290);
+      --review-soft: oklch(95% 0.04 290);
+
+      --shadow-sm: 0 1px 2px oklch(20% 0.02 260 / 0.04);
+      --shadow-md: 0 2px 6px oklch(20% 0.02 260 / 0.04), 0 1px 2px oklch(20% 0.02 260 / 0.06);
+      --shadow-lg: 0 12px 28px oklch(20% 0.02 260 / 0.07), 0 2px 6px oklch(20% 0.02 260 / 0.04);
+
+      --accent-done: oklch(62% 0.13 150);
+      --accent-review: oklch(70% 0.18 290);
+    }
+
+    * { -webkit-font-smoothing: antialiased; box-sizing: border-box; }
+    html, body { font-family: 'Inter', system-ui, sans-serif; }
+    body {
+      background: var(--bg-base);
+      color: var(--text-body);
+      font-feature-settings: 'cv02','cv03','cv04','cv11';
+    }
+    .font-display { font-family: 'Instrument Serif','Songti SC',serif; letter-spacing: -0.01em; }
+    .font-mono    { font-family: 'JetBrains Mono', monospace; }
+
+    .bg-atmosphere {
+      background:
+        radial-gradient(900px 460px at 8% -8%,  oklch(93% 0.05 245 / 0.55), transparent 60%),
+        radial-gradient(700px 340px at 105% 0%, oklch(94% 0.05 65 / 0.45),  transparent 60%),
+        radial-gradient(600px 360px at 50% 110%,oklch(94% 0.05 290 / 0.35), transparent 60%),
+        var(--bg-base);
+    }
+    .grain::before {
+      content:''; position: fixed; inset: 0; pointer-events: none;
+      opacity: .03; mix-blend-mode: multiply; z-index: 100;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: 16px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow .2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* left accent bar for completed steps */
+    .card.step-done::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 4px;
+      background: oklch(62% 0.13 150);
+      border-radius: 16px 0 0 16px;
+    }
+    .card.step-pending::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 4px;
+      background: var(--border-mid);
+      border-radius: 16px 0 0 16px;
+    }
+
+    .caps {
+      font-size: 10.5px; letter-spacing: .14em;
+      text-transform: uppercase; font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border-radius: 9px;
+      font-size: 13px; font-weight: 500;
+      border: 1px solid var(--border-mid);
+      background: var(--bg-card); color: var(--text-body);
+      transition: all .15s; cursor: pointer;
+    }
+    .btn:hover { background: var(--bg-elev); border-color: var(--text-faint); color: var(--text-strong); }
+    .btn-dark {
+      background: var(--text-strong);
+      color: white;
+      border-color: var(--text-strong);
+    }
+    .btn-dark:hover { background: oklch(28% 0.06 265); color: white; border-color: oklch(28% 0.06 265); }
+    .btn-enter {
+      background: linear-gradient(135deg, oklch(55% 0.15 150), oklch(65% 0.13 150));
+      color: white;
+      border-color: transparent;
+      padding: 11px 28px;
+      font-size: 14px;
+      border-radius: 12px;
+    }
+    .btn-enter:hover:not(:disabled) {
+      background: linear-gradient(135deg, oklch(50% 0.17 150), oklch(62% 0.15 150));
+      color: white;
+      border-color: transparent;
+      box-shadow: 0 4px 16px oklch(62% 0.13 150 / 0.35);
+    }
+    .btn-enter:disabled {
+      opacity: .38;
+      cursor: not-allowed;
+    }
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 12px;
+      border-radius: 7px;
+    }
+
+    .input {
+      width: 100%;
+      height: 38px;
+      border: 1px solid var(--border-mid);
+      border-radius: 9px;
+      background: var(--bg-elev);
+      padding: 0 14px;
+      font-size: 13.5px;
+      font-family: 'Inter', system-ui, sans-serif;
+      color: var(--text-strong);
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .input:focus {
+      outline: none;
+      border-color: oklch(70% 0.18 290);
+      box-shadow: 0 0 0 4px oklch(70% 0.18 290 / 0.12);
+    }
+    .input::placeholder { color: var(--text-faint); }
+    .input-mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      letter-spacing: .01em;
+    }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+    .status-dot.done { background: oklch(62% 0.13 150); }
+    .status-dot.pending { background: var(--border-mid); }
+
+    .check-icon {
+      width: 22px; height: 22px;
+      border-radius: 999px;
+      background: oklch(62% 0.13 150);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .skill-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px;
+      border-radius: 9px;
+      background: var(--bg-elev);
+      border: 1px solid var(--border-soft);
+      transition: background .12s;
+    }
+    .skill-item:hover { background: oklch(97% 0.006 260); }
+
+    .skill-icon {
+      width: 28px; height: 28px;
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 10px; font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .toast {
+      position: fixed; bottom: 28px; right: 28px;
+      background: var(--text-strong); color: white;
+      padding: 12px 20px; border-radius: 12px;
+      font-size: 13px; font-weight: 500;
+      box-shadow: var(--shadow-lg);
+      display: flex; align-items: center; gap: 10px;
+      transform: translateY(0); opacity: 1;
+      transition: opacity .25s, transform .25s;
+      z-index: 9999;
+    }
+    .toast.hidden { opacity: 0; transform: translateY(8px); pointer-events: none; }
+
+    .step-number {
+      width: 26px; height: 26px;
+      border-radius: 999px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11.5px; font-weight: 600;
+      flex-shrink: 0;
+    }
+    .step-number.done {
+      background: oklch(62% 0.13 150);
+      color: white;
+    }
+    .step-number.pending {
+      background: var(--border-soft);
+      color: var(--text-muted);
+      border: 1px solid var(--border-mid);
+    }
+
+    .redact {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--text-body);
+      background: oklch(95% 0.008 260);
+      border: 1px solid var(--border-soft);
+      border-radius: 7px;
+      padding: 6px 12px;
+      display: inline-block;
+    }
+
+    .progress-connector {
+      width: 2px; height: 24px;
+      background: var(--border-soft);
+      margin: 0 auto;
+    }
+    .progress-connector.done { background: oklch(75% 0.09 150); }
+  </style>
+</head>
+<body class="bg-atmosphere grain min-h-screen">
+
+  <!-- ==================== TOP BAR ==================== -->
+  <header class="border-b border-[var(--border-soft)] bg-white/65 backdrop-blur-xl sticky top-0 z-50">
+    <div class="max-w-[1480px] mx-auto px-8 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-10">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-[var(--text-strong)] flex items-center justify-center text-white text-[11px] font-bold tracking-tight">DP</div>
+          <div>
+            <div class="text-[14.5px] font-semibold text-[var(--text-strong)] leading-tight">DevPipeline</div>
+            <div class="text-[10px] text-[var(--text-muted)] tracking-[.14em] uppercase">AI 研发流水线 · 初始化</div>
+          </div>
+        </div>
+        <nav class="flex items-center gap-1 text-[13px]">
+          <a href="index.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">运行中</a>
+          <a href="runs-list.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">历史</a>
+          <a href="agent-detail.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">Agents</a>
+          <a href="rules-library.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">军规库</a>
+        </nav>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="btn btn-sm text-[var(--text-muted)] hover:text-[var(--text-strong)]">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          返回驾驶舱
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-[1480px] mx-auto px-8 py-10">
+
+    <!-- ==================== PAGE TITLE ==================== -->
+    <div class="mb-10 max-w-2xl mx-auto">
+      <div class="caps mb-2">SYSTEM SETUP · ONBOARDING</div>
+      <h1 class="font-display text-[42px] leading-[1.05] text-[var(--text-strong)]">
+        系统初始化 · <span class="italic font-light text-[var(--text-muted)]">三步完成</span>
+      </h1>
+      <p class="mt-3 text-[13.5px] text-[var(--text-muted)] leading-relaxed">
+        完成以下配置后，AI 研发流水线即可接收需求、自动产出代码并生成 Pull Request。整个过程通常不超过 2 分钟。
+      </p>
+    </div>
+
+    <!-- ==================== STEPS ==================== -->
+    <div class="max-w-2xl mx-auto space-y-0" id="steps-container">
+
+      <!-- ── STEP 1: Anthropic API Key ────────────────── -->
+      <div id="step-1" class="card step-pending p-6" style="border-radius: 16px 16px 0 0; border-bottom: none;">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 flex flex-col items-center gap-1 mt-0.5">
+            <div class="step-number pending" id="step-1-num">1</div>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between mb-1">
+              <div>
+                <div class="text-[15px] font-semibold text-[var(--text-strong)]">Anthropic API Key</div>
+                <div class="text-[12.5px] text-[var(--text-muted)] mt-0.5">用于驱动所有 AI 代理节点（需求富化、设计、编码、审查）</div>
+              </div>
+              <div id="step-1-badge" class="hidden flex items-center gap-1.5 text-[12px] font-medium" style="color: oklch(42% 0.12 150)">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                已配置
+              </div>
+            </div>
+
+            <!-- Already set view -->
+            <div id="step-1-set" class="hidden mt-3">
+              <div class="flex items-center gap-3">
+                <span class="redact" id="step-1-masked">sk-ant-****...****</span>
+                <button class="btn btn-sm" id="step-1-reset-btn">重新设置</button>
+              </div>
+            </div>
+
+            <!-- Input view -->
+            <div id="step-1-form" class="mt-3">
+              <div class="flex gap-2">
+                <input
+                  type="password"
+                  id="step-1-input"
+                  class="input input-mono"
+                  placeholder="sk-ant-api03-..."
+                  autocomplete="off"
+                />
+                <button class="btn btn-dark flex-shrink-0" id="step-1-save-btn">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                  保存
+                </button>
+              </div>
+              <div class="mt-2 text-[11.5px] text-[var(--text-muted)]">
+                密钥仅存储于服务端，不会明文落盘或出现在客户端日志中。
+                <a href="https://console.anthropic.com/settings/keys" target="_blank" class="underline hover:text-[var(--text-body)]">获取 API Key →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- connector -->
+      <div class="mx-auto flex justify-center" style="width:2px; height:0; border-left: 1px dashed var(--border-mid); margin-left: 51px;"></div>
+
+      <!-- ── STEP 2: GitHub 仓库 ────────────────────────── -->
+      <div id="step-2" class="card step-pending p-6" style="border-radius: 0; border-top: 1px dashed var(--border-soft); border-bottom: none;">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 flex flex-col items-center gap-1 mt-0.5">
+            <div class="step-number pending" id="step-2-num">2</div>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between mb-1">
+              <div>
+                <div class="text-[15px] font-semibold text-[var(--text-strong)]">GitHub 仓库绑定</div>
+                <div class="text-[12.5px] text-[var(--text-muted)] mt-0.5">AI 编码产出将以 Pull Request 形式推送至此仓库</div>
+              </div>
+              <div id="step-2-badge" class="hidden flex items-center gap-1.5 text-[12px] font-medium" style="color: oklch(42% 0.12 150)">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                已绑定
+              </div>
+            </div>
+
+            <!-- Already set view -->
+            <div id="step-2-set" class="hidden mt-3">
+              <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[var(--border-soft)] bg-[var(--bg-elev)]">
+                  <svg class="w-4 h-4 text-[var(--text-muted)]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                  <span class="font-mono text-[13px] text-[var(--text-strong)]" id="step-2-repo-display">owner/repo</span>
+                </div>
+                <button class="btn btn-sm" id="step-2-reset-btn">重新绑定</button>
+              </div>
+            </div>
+
+            <!-- Input view -->
+            <div id="step-2-form" class="mt-3">
+              <div class="flex gap-2">
+                <div class="relative flex-1">
+                  <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                  <input
+                    type="text"
+                    id="step-2-input"
+                    class="input input-mono"
+                    style="padding-left: 36px;"
+                    placeholder="owner/repo"
+                  />
+                </div>
+                <button class="btn btn-dark flex-shrink-0" id="step-2-save-btn">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                  绑定
+                </button>
+              </div>
+              <div class="mt-2 text-[11.5px] text-[var(--text-muted)]">
+                格式：<span class="font-mono">owner/repository-name</span>，例如 <span class="font-mono">acme-corp/backend-api</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── STEP 3: Skills 技能库 ──────────────────────── -->
+      <div id="step-3" class="card step-pending p-6" style="border-radius: 0 0 16px 16px; border-top: 1px dashed var(--border-soft);">
+        <div class="flex items-start gap-4">
+          <div class="flex-shrink-0 flex flex-col items-center gap-1 mt-0.5">
+            <div class="step-number pending" id="step-3-num">3</div>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between mb-1">
+              <div>
+                <div class="text-[15px] font-semibold text-[var(--text-strong)]">技能库导入 (Skills)</div>
+                <div class="text-[12.5px] text-[var(--text-muted)] mt-0.5">团队军规和 Agent 技能通过 Git 仓库同步，每次提交自动更新</div>
+              </div>
+              <div id="step-3-badge" class="hidden flex items-center gap-1.5 text-[12px] font-medium" style="color: oklch(42% 0.12 150)">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                已同步
+              </div>
+            </div>
+
+            <!-- Skills list -->
+            <div class="mt-4 grid grid-cols-2 gap-2" id="skills-list">
+              <div class="skill-item">
+                <div class="skill-icon" style="background: oklch(62% 0.16 245);">CR</div>
+                <div>
+                  <div class="text-[12.5px] font-medium text-[var(--text-strong)]">code-review</div>
+                  <div class="text-[10.5px] text-[var(--text-muted)]">代码审查规范</div>
+                </div>
+              </div>
+              <div class="skill-item">
+                <div class="skill-icon" style="background: oklch(60% 0.20 25);">SC</div>
+                <div>
+                  <div class="text-[12.5px] font-medium text-[var(--text-strong)]">security-check</div>
+                  <div class="text-[10.5px] text-[var(--text-muted)]">安全漏洞扫描</div>
+                </div>
+              </div>
+              <div class="skill-item">
+                <div class="skill-icon" style="background: oklch(58% 0.13 200);">AD</div>
+                <div>
+                  <div class="text-[12.5px] font-medium text-[var(--text-strong)]">api-design</div>
+                  <div class="text-[10.5px] text-[var(--text-muted)]">RESTful 接口设计</div>
+                </div>
+              </div>
+              <div class="skill-item">
+                <div class="skill-icon" style="background: oklch(56% 0.17 270);">UT</div>
+                <div>
+                  <div class="text-[12.5px] font-medium text-[var(--text-strong)]">unit-testing</div>
+                  <div class="text-[10.5px] text-[var(--text-muted)]">单元测试生成</div>
+                </div>
+              </div>
+              <div class="skill-item">
+                <div class="skill-icon" style="background: oklch(70% 0.16 70);">PF</div>
+                <div>
+                  <div class="text-[12.5px] font-medium text-[var(--text-strong)]">perf-analysis</div>
+                  <div class="text-[10.5px] text-[var(--text-muted)]">性能瓶颈分析</div>
+                </div>
+              </div>
+              <div class="skill-item">
+                <div class="skill-icon" style="background: oklch(60% 0.18 295);">RF</div>
+                <div>
+                  <div class="text-[12.5px] font-medium text-[var(--text-strong)]">refactor-guide</div>
+                  <div class="text-[10.5px] text-[var(--text-muted)]">重构建议规范</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 flex items-center gap-3">
+              <button class="btn btn-dark btn-sm" id="skills-sync-btn">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+                从仓库同步
+              </button>
+              <span id="skills-sync-result" class="text-[12.5px] hidden" style="color: oklch(42% 0.12 150)">
+                <svg class="w-4 h-4 inline mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                已同步 6 项技能
+              </span>
+              <span class="text-[11.5px] text-[var(--text-muted)]">最后同步：从未</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /steps-container -->
+
+    <!-- ==================== ENTER SYSTEM BUTTON ==================== -->
+    <div class="max-w-2xl mx-auto mt-8 flex items-center justify-between">
+      <div class="text-[12.5px] text-[var(--text-muted)]" id="enter-hint">
+        完成步骤 1 和 2 后即可进入系统
+      </div>
+      <a href="index.html" class="btn btn-enter" id="enter-btn" style="pointer-events: none; opacity: .38; text-decoration: none;">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        进入系统
+      </a>
+    </div>
+
+  </main>
+
+  <!-- ==================== TOAST ==================== -->
+  <div id="toast" class="toast hidden">
+    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    <span id="toast-msg">保存成功</span>
+  </div>
+
+  <script>
+    // ── State ────────────────────────────────────────────────────────────────
+    var state = {
+      keySet: false,
+      repoSet: false,
+      skillsSynced: false
+    };
+
+    // ── Auth check ────────────────────────────────────────────────────────────
+    fetch('/api/prototype/me').then(function(r) {
+      if (r.status === 401) {
+        window.location.href = '/login?callbackUrl=/prototype/setup.html';
+      }
+    }).catch(function() {});
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function showToast(msg, isError) {
+      var el = document.getElementById('toast');
+      var msgEl = document.getElementById('toast-msg');
+      msgEl.textContent = msg;
+      el.style.background = isError ? 'oklch(45% 0.18 25)' : 'oklch(22% 0.03 260)';
+      el.classList.remove('hidden');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(function() {
+        el.classList.add('hidden');
+      }, 3000);
+    }
+
+    function maskKey(val) {
+      if (!val || val.length < 12) return '****';
+      return val.slice(0, 10) + '...' + val.slice(-4);
+    }
+
+    function updateEnterButton() {
+      var btn = document.getElementById('enter-btn');
+      var hint = document.getElementById('enter-hint');
+      if (state.keySet && state.repoSet) {
+        btn.style.pointerEvents = '';
+        btn.style.opacity = '1';
+        hint.textContent = '配置已完成，可以进入系统了';
+        hint.style.color = 'oklch(42% 0.12 150)';
+      } else {
+        btn.style.pointerEvents = 'none';
+        btn.style.opacity = '.38';
+        hint.textContent = '完成步骤 1 和 2 后即可进入系统';
+        hint.style.color = '';
+      }
+    }
+
+    function setStep1Done(maskedVal) {
+      state.keySet = true;
+      // card style
+      var card = document.getElementById('step-1');
+      card.classList.remove('step-pending');
+      card.classList.add('step-done');
+      // step number
+      var numEl = document.getElementById('step-1-num');
+      numEl.className = 'step-number done';
+      numEl.innerHTML = '<svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+      // badge
+      document.getElementById('step-1-badge').classList.remove('hidden');
+      // show masked value
+      document.getElementById('step-1-masked').textContent = maskedVal;
+      document.getElementById('step-1-set').classList.remove('hidden');
+      document.getElementById('step-1-form').classList.add('hidden');
+      updateEnterButton();
+    }
+
+    function setStep1Pending() {
+      state.keySet = false;
+      var card = document.getElementById('step-1');
+      card.classList.remove('step-done');
+      card.classList.add('step-pending');
+      var numEl = document.getElementById('step-1-num');
+      numEl.className = 'step-number pending';
+      numEl.textContent = '1';
+      document.getElementById('step-1-badge').classList.add('hidden');
+      document.getElementById('step-1-set').classList.add('hidden');
+      document.getElementById('step-1-form').classList.remove('hidden');
+      document.getElementById('step-1-input').value = '';
+      updateEnterButton();
+    }
+
+    function setStep2Done(repo) {
+      state.repoSet = true;
+      var card = document.getElementById('step-2');
+      card.classList.remove('step-pending');
+      card.classList.add('step-done');
+      var numEl = document.getElementById('step-2-num');
+      numEl.className = 'step-number done';
+      numEl.innerHTML = '<svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+      document.getElementById('step-2-badge').classList.remove('hidden');
+      document.getElementById('step-2-repo-display').textContent = repo;
+      document.getElementById('step-2-set').classList.remove('hidden');
+      document.getElementById('step-2-form').classList.add('hidden');
+      updateEnterButton();
+    }
+
+    function setStep2Pending() {
+      state.repoSet = false;
+      var card = document.getElementById('step-2');
+      card.classList.remove('step-done');
+      card.classList.add('step-pending');
+      var numEl = document.getElementById('step-2-num');
+      numEl.className = 'step-number pending';
+      numEl.textContent = '2';
+      document.getElementById('step-2-badge').classList.add('hidden');
+      document.getElementById('step-2-set').classList.add('hidden');
+      document.getElementById('step-2-form').classList.remove('hidden');
+      document.getElementById('step-2-input').value = '';
+      updateEnterButton();
+    }
+
+    // ── Load setup state ──────────────────────────────────────────────────────
+    function loadSetupState() {
+      fetch('/api/prototype/setup')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.keySet) {
+            setStep1Done(data.keyMasked || 'sk-ant-****...****');
+          } else {
+            setStep1Pending();
+          }
+          if (data.repoSet) {
+            setStep2Done(data.repo || 'owner/repo');
+          } else {
+            setStep2Pending();
+          }
+        })
+        .catch(function() {
+          // API not available in prototype — no-op, use default state
+        });
+    }
+
+    loadSetupState();
+
+    // ── Step 1: Save API Key ──────────────────────────────────────────────────
+    document.getElementById('step-1-save-btn').addEventListener('click', function() {
+      var val = document.getElementById('step-1-input').value.trim();
+      if (!val) { showToast('请输入 API Key', true); return; }
+      if (!val.startsWith('sk-ant-')) { showToast('格式错误：应以 sk-ant- 开头', true); return; }
+
+      var btn = document.getElementById('step-1-save-btn');
+      btn.disabled = true;
+      btn.textContent = '保存中…';
+
+      fetch('/api/prototype/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'key', value: val })
+      })
+      .then(function(r) {
+        if (!r.ok) throw new Error('failed');
+        return r.json();
+      })
+      .then(function() {
+        setStep1Done(maskKey(val));
+        showToast('API Key 已保存');
+      })
+      .catch(function() {
+        // prototype fallback — accept locally
+        setStep1Done(maskKey(val));
+        showToast('API Key 已保存（本地预览模式）');
+      })
+      .finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 保存';
+      });
+    });
+
+    document.getElementById('step-1-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') document.getElementById('step-1-save-btn').click();
+    });
+
+    document.getElementById('step-1-reset-btn').addEventListener('click', function() {
+      setStep1Pending();
+    });
+
+    // ── Step 2: Bind Repo ─────────────────────────────────────────────────────
+    document.getElementById('step-2-save-btn').addEventListener('click', function() {
+      var val = document.getElementById('step-2-input').value.trim();
+      if (!val) { showToast('请输入仓库地址', true); return; }
+      if (!val.includes('/') || val.split('/').length !== 2) {
+        showToast('格式错误：应为 owner/repo', true);
+        return;
+      }
+
+      var btn = document.getElementById('step-2-save-btn');
+      btn.disabled = true;
+      btn.textContent = '绑定中…';
+
+      fetch('/api/prototype/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'repo', value: val })
+      })
+      .then(function(r) {
+        if (!r.ok) throw new Error('failed');
+        return r.json();
+      })
+      .then(function() {
+        setStep2Done(val);
+        showToast('GitHub 仓库绑定成功');
+      })
+      .catch(function() {
+        setStep2Done(val);
+        showToast('仓库已绑定（本地预览模式）');
+      })
+      .finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> 绑定';
+      });
+    });
+
+    document.getElementById('step-2-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') document.getElementById('step-2-save-btn').click();
+    });
+
+    document.getElementById('step-2-reset-btn').addEventListener('click', function() {
+      setStep2Pending();
+    });
+
+    // ── Step 3: Sync Skills ───────────────────────────────────────────────────
+    document.getElementById('skills-sync-btn').addEventListener('click', function() {
+      var btn = document.getElementById('skills-sync-btn');
+      var resultEl = document.getElementById('skills-sync-result');
+      btn.disabled = true;
+      btn.innerHTML = '<svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg> 同步中…';
+
+      setTimeout(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg> 从仓库同步';
+        resultEl.classList.remove('hidden');
+        state.skillsSynced = true;
+        // mark step 3
+        var card = document.getElementById('step-3');
+        card.classList.remove('step-pending');
+        card.classList.add('step-done');
+        var numEl = document.getElementById('step-3-num');
+        numEl.className = 'step-number done';
+        numEl.innerHTML = '<svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+        document.getElementById('step-3-badge').classList.remove('hidden');
+        showToast('技能库同步完成，共 6 项');
+      }, 1000);
+    });
+  </script>
+</body>
+</html>

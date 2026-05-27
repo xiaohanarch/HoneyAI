@@ -163,7 +163,7 @@
           </div>
         </div>
         <nav class="flex items-center gap-1 text-[13px]">
-          <a href="index.html" class="px-3 py-1.5 rounded-md bg-[var(--bg-elev)] text-[var(--text-strong)] font-medium">运行中 · 3</a>
+          <a href="index.html" id="nav-running-badge" class="px-3 py-1.5 rounded-md bg-[var(--bg-elev)] text-[var(--text-strong)] font-medium">运行中 · 3</a>
           <a href="runs-list.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">历史</a>
           <a href="agent-detail.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">Agents</a>
           <a href="rules-library.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">军规库</a>
@@ -173,7 +173,7 @@
         </nav>
       </div>
       <div class="flex items-center gap-3">
-        <div class="text-[12px] text-[var(--text-muted)]">
+        <div id="hdr-stats" class="text-[12px] text-[var(--text-muted)]">
           <span class="font-mono text-[var(--text-strong)]">12</span> 待评审 ·
           <span class="font-mono text-[var(--text-strong)]">2</span> 中断
         </div>
@@ -198,14 +198,16 @@
     <!-- ==================== RUN TITLE ==================== -->
     <div class="mb-7 flex items-end justify-between">
       <div>
-        <div class="caps mb-2">PIPELINE RUN · <span class="font-mono">#2451</span></div>
-        <h1 class="font-display text-[44px] leading-[1.05] text-[var(--text-strong)]">
+        <div class="caps mb-2">PIPELINE RUN · <span id="main-run-id" class="font-mono">#2451</span></div>
+        <a id="main-run-link" href="run-detail.html" class="no-underline hover:underline" style="text-decoration: none; color: inherit;">
+        <h1 id="main-run-title" class="font-display text-[44px] leading-[1.05] text-[var(--text-strong)]">
           用户登录接口 <span class="italic font-light text-[var(--text-muted)]">限流与并发</span> 优化
         </h1>
+        </a>
         <div class="mt-3 flex items-center gap-5 text-[13px] text-[var(--text-muted)]">
           <span class="flex items-center gap-1.5">
             <span class="w-1.5 h-1.5 rounded-full bg-[var(--run)] pulse-run"></span>
-            运行中 · 阶段 <span class="font-mono text-[var(--text-strong)]">3/4</span>
+            <span id="main-run-status">运行中</span> · 阶段 <span class="font-mono text-[var(--text-strong)]">3/4</span>
           </span>
           <span>已耗时 <span class="font-mono text-[var(--text-strong)]">28m 41s</span></span>
           <span>预计剩余 <span class="font-mono text-[var(--text-strong)]">~14m</span></span>
@@ -1406,6 +1408,49 @@
     </footer>
 
   </main>
+
+<script>
+// ── Auth check ────────────────────────────────────────────────────────────────
+fetch('/api/prototype/me').then(function(r) {
+  if (r.status === 401) window.location.href = '/login?callbackUrl=/prototype/index.html';
+});
+
+// ── Load real run stats ───────────────────────────────────────────────────────
+fetch('/api/prototype/runs').then(function(r) { return r.json(); }).then(function(data) {
+  var runs = data.runs || [];
+  var running = runs.filter(function(r) { return r.status === 'running'; }).length;
+  var paused = runs.filter(function(r) { return r.status === 'paused_at_gate'; }).length;
+  var done = runs.filter(function(r) { return r.status === 'completed'; }).length;
+
+  // Update nav badge
+  var navBadge = document.getElementById('nav-running-badge');
+  if (navBadge) navBadge.textContent = '运行中 · ' + (running + paused);
+
+  // Update header stats
+  var statsEl = document.getElementById('hdr-stats');
+  if (statsEl) statsEl.innerHTML = '<span class="font-mono text-[var(--text-strong)]">' + paused + '</span> 待评审 · <span class="font-mono text-[var(--text-strong)]">' + running + '</span> 运行中';
+
+  // If have real runs, show latest active or completed run info
+  var activeRun = runs.find(function(r) { return r.status === 'running' || r.status === 'paused_at_gate'; })
+                 || runs[0];
+  if (activeRun) {
+    var titleEl = document.getElementById('main-run-title');
+    if (titleEl) titleEl.textContent = activeRun.title || activeRun.oneLiner || '最新运行';
+
+    var runLinkEl = document.getElementById('main-run-link');
+    if (runLinkEl) runLinkEl.href = 'run-detail.html?runId=' + activeRun.id;
+
+    var runIdEl = document.getElementById('main-run-id');
+    if (runIdEl) runIdEl.textContent = '#' + activeRun.id.slice(0, 8);
+
+    var runStatusEl = document.getElementById('main-run-status');
+    if (runStatusEl) {
+      var statusMap = { running: '运行中', paused_at_gate: '待审批', completed: '已完成', failed: '失败', created: '已创建' };
+      runStatusEl.textContent = statusMap[activeRun.status] || activeRun.status;
+    }
+  }
+}).catch(function() {});
+</script>
 
 </body>
 </html>
