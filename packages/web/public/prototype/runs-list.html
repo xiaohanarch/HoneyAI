@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>历史运行 · AI 数字产线</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-base: oklch(98.8% 0.006 90);
+    --ink: oklch(18% 0.02 260);
+    --ink-soft: oklch(38% 0.02 260);
+    --ink-mute: oklch(58% 0.015 260);
+    --line: oklch(90% 0.01 260);
+    --line-soft: oklch(94% 0.008 260);
+    --surface: oklch(100% 0 0);
+    --done: oklch(72% 0.16 150);
+    --run: oklch(80% 0.16 65);
+    --review: oklch(70% 0.16 290);
+    --halt: oklch(67% 0.20 25);
+    --idle: oklch(80% 0.01 260);
+  }
+  *{ -webkit-font-smoothing:antialiased; }
+  html,body{ background: var(--bg-base); color: var(--ink); font-family:'Inter',ui-sans-serif,system-ui,sans-serif; }
+  .display{ font-family:'Instrument Serif', ui-serif, Georgia, serif; letter-spacing:-0.01em; }
+  .mono{ font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace; font-variant-numeric: tabular-nums; }
+  .grain::before{
+    content:""; position:fixed; inset:0; pointer-events:none; opacity:.05; mix-blend-mode:multiply; z-index:1;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  .panel{ background: var(--surface); border:1px solid var(--line); border-radius:14px; }
+  .pill{ font-size:11px; padding:3px 8px; border-radius:999px; background: oklch(97% 0.008 260); color: var(--ink-soft); border:1px solid var(--line-soft); }
+  .pill-done{ color: oklch(40% 0.13 150); background: oklch(72% 0.16 150 / .12); border-color: oklch(72% 0.16 150 / .4); }
+  .pill-run{ color: oklch(46% 0.16 65); background: oklch(80% 0.16 65 / .14); border-color: oklch(80% 0.16 65 / .4); }
+  .pill-review{ color: oklch(40% 0.16 290); background: oklch(70% 0.16 290 / .12); border-color: oklch(70% 0.16 290 / .4); }
+  .pill-halt{ color: oklch(45% 0.18 25); background: oklch(67% 0.20 25 / .12); border-color: oklch(67% 0.20 25 / .4); }
+  .section-h{ font-size:11px; color: var(--ink-mute); letter-spacing:.16em; text-transform: uppercase; }
+  .input{ height:34px; border:1px solid var(--line); border-radius:8px; background: var(--surface); padding:0 12px; font-size:13px; }
+  .input:focus{ outline:none; border-color: oklch(70% 0.06 260); box-shadow: 0 0 0 4px oklch(70% 0.06 260 / .12); }
+  .seg{ display:inline-flex; padding:3px; background: oklch(97% 0.008 260); border:1px solid var(--line-soft); border-radius:8px; gap:2px; }
+  .seg .opt{ font-size:11.5px; padding:5px 11px; border-radius:6px; cursor:pointer; color: var(--ink-soft); }
+  .seg .opt.active{ background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px oklch(15% 0 0 / .08); }
+  /* run row */
+  .run-row{
+    display:grid;
+    grid-template-columns: 72px 1.5fr 220px 100px 100px 100px 100px 80px;
+    align-items:center;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--line-soft);
+    gap: 14px;
+    cursor:pointer;
+    transition: background .12s;
+  }
+  .run-row:hover{ background: oklch(99% 0.005 90); }
+  .run-row:last-child{ border-bottom:0; }
+  /* mini pipeline strip */
+  .stages{ display:grid; grid-template-columns: repeat(4, 1fr); gap:3px; }
+  .stages .seg-cell{ height:5px; border-radius:2px; background: var(--line-soft); position:relative; }
+  .stages .seg-cell.done{ background: var(--done); }
+  .stages .seg-cell.run{ background: linear-gradient(90deg, var(--done) 60%, var(--run) 60%); }
+  .stages .seg-cell.review{ background: var(--review); }
+  .stages .seg-cell.halt{ background: var(--halt); }
+  .stages .seg-cell.idle{ background: var(--line-soft); }
+  .row-meta{ font-size:11.5px; color: var(--ink-mute); margin-top:5px; display:flex; gap:10px; align-items:center; }
+  .filter-chip{ display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; font-size:12px; background: var(--surface); border:1px solid var(--line); color: var(--ink-soft); cursor:pointer; }
+  .filter-chip.active{ background: var(--ink); color:#fff; border-color: var(--ink); }
+  .filter-chip .count{ font-family:'JetBrains Mono',monospace; font-size:10.5px; opacity:.75; }
+  .sort-h{ font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; color: var(--ink-mute); display:flex; align-items:center; gap:4px; cursor:pointer; }
+  .ruler{ height:1px; background: var(--line-soft); }
+  .avatar{ width:24px; height:24px; border-radius:7px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-family:'JetBrains Mono',monospace; font-size:10px; }
+  .spark{ width:62px; height:18px; }
+  .atmo{
+    background:
+      radial-gradient(60% 50% at 0% 0%, oklch(70% 0.16 290 / .07), transparent 60%),
+      radial-gradient(50% 40% at 100% 0%, oklch(72% 0.17 150 / .06), transparent 60%);
+  }
+  .kbd{ font-family:'JetBrains Mono',monospace; font-size:10.5px; padding:1.5px 5px; border-radius:4px; background: oklch(97% 0.008 260); border:1px solid var(--line); color: var(--ink-soft); }
+</style>
+</head>
+<body class="grain atmo">
+
+<header class="px-8 pt-6 pb-4 flex items-center gap-4 sticky top-0 z-20 backdrop-blur bg-[color:oklch(98.8%_0.006_90/.82)] border-b border-[color:var(--line-soft)]">
+  <a href="index.html" class="text-[12.5px] text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] flex items-center gap-1.5">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    数字产线
+  </a>
+  <div class="h-4 w-px bg-[color:var(--line)]"></div>
+  <span class="text-[12.5px] text-[color:var(--ink)] font-medium">历史运行</span>
+  <span class="pill mono ml-1">2,418 总记录</span>
+  <div class="ml-auto flex items-center gap-2">
+    <button class="kbd">/ 搜索</button>
+    <a href="create-run.html" class="text-[12.5px] px-3 h-8 rounded-md text-white flex items-center" style="background: oklch(18% 0.02 260)">
+      + 新建运行
+    </a>
+  </div>
+</header>
+
+<main class="px-8 py-7">
+  <div class="max-w-[1400px] mx-auto">
+
+  <!-- Title -->
+  <section class="flex items-end justify-between mb-7">
+    <div>
+      <div class="section-h">RUNS / HISTORY</div>
+      <h1 class="display text-[44px] leading-[1.05] mt-2">所有运行</h1>
+      <p class="text-[13px] text-[color:var(--ink-soft)] mt-1.5 max-w-[640px]">
+        每一次需求穿过 4 阶段数字产线的完整记录。点击行进入运行画布;
+        命令面板支持按需求/服务/审批员/日期/状态过滤。
+      </p>
+    </div>
+    <div class="flex items-end gap-6 text-right">
+      <div>
+        <div class="text-[10.5px] text-[color:var(--ink-mute)] uppercase tracking-wider">本周新建</div>
+        <div class="display text-[36px] leading-none mt-1">42</div>
+      </div>
+      <div>
+        <div class="text-[10.5px] text-[color:var(--ink-mute)] uppercase tracking-wider">一次通过</div>
+        <div class="display text-[36px] leading-none mt-1" style="color: oklch(40% 0.13 150)">81%</div>
+      </div>
+      <div>
+        <div class="text-[10.5px] text-[color:var(--ink-mute)] uppercase tracking-wider">平均周期</div>
+        <div class="display text-[36px] leading-none mt-1">4.2<span class="text-[18px] text-[color:var(--ink-mute)]">h</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Filters bar -->
+  <section class="panel p-4 mb-4">
+    <div class="flex items-center gap-3">
+      <!-- Search -->
+      <div class="relative flex-1 max-w-[420px]">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--ink-mute)]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="input w-full pl-9" placeholder="搜索需求 / 服务 / Run ID / 审批员…" />
+      </div>
+
+      <!-- Status chips -->
+      <div class="flex items-center gap-1.5">
+        <span class="filter-chip active">全部 <span class="count">2,418</span></span>
+        <span class="filter-chip"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--run)"></span>运行中 <span class="count">7</span></span>
+        <span class="filter-chip"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--review)"></span>等评审 <span class="count">12</span></span>
+        <span class="filter-chip"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--done)"></span>已完成 <span class="count">2,371</span></span>
+        <span class="filter-chip"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--halt)"></span>失败 <span class="count">28</span></span>
+      </div>
+
+      <!-- View mode -->
+      <span class="seg ml-auto">
+        <span class="opt active">列表</span>
+        <span class="opt">画布</span>
+        <span class="opt">日历</span>
+      </span>
+
+      <button class="text-[11.5px] text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] flex items-center gap-1.5 ml-2">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/></svg>
+        高级筛选
+      </button>
+    </div>
+
+    <div class="flex items-center gap-2 mt-3 pt-3 border-t border-[color:var(--line-soft)] text-[11.5px]">
+      <span class="text-[color:var(--ink-mute)] mr-1">已应用</span>
+      <span class="pill flex items-center gap-1.5">服务: auth-service <span class="text-[color:var(--ink-mute)] cursor-pointer">×</span></span>
+      <span class="pill flex items-center gap-1.5">日期: 近 30 天 <span class="text-[color:var(--ink-mute)] cursor-pointer">×</span></span>
+      <span class="pill flex items-center gap-1.5">审批员: @王工 <span class="text-[color:var(--ink-mute)] cursor-pointer">×</span></span>
+      <span class="text-[color:var(--ink-mute)] underline cursor-pointer ml-1">清空筛选</span>
+      <span class="ml-auto text-[color:var(--ink-mute)]">显示 <span class="mono">28</span> / 2,418 条</span>
+    </div>
+  </section>
+
+  <!-- Sort header -->
+  <div class="px-6 py-2.5 flex items-center gap-3.5 mb-0 text-[10.5px] text-[color:var(--ink-mute)] uppercase tracking-[.12em]">
+    <div class="w-[72px]">Run</div>
+    <div class="flex-1">需求 · 服务</div>
+    <div class="w-[220px]">阶段进度</div>
+    <div class="w-[100px]">时长</div>
+    <div class="w-[100px]">Token</div>
+    <div class="w-[100px]">成本</div>
+    <div class="w-[100px] flex items-center gap-1">完成时间 <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg></div>
+    <div class="w-[80px] text-right">状态</div>
+  </div>
+
+  <!-- Run list -->
+  <section id="runs-panel" class="panel divide-y divide-[color:var(--line-soft)]">
+
+    <!-- REAL RUNS (fetched from API) -->
+    <div id="real-runs-container"></div>
+
+    <!-- ROW running -->
+    <div class="run-row">
+      <div class="mono font-medium text-[14px]">#2451</div>
+      <div>
+        <div class="font-medium text-[14px] leading-tight">登录接口加入限流与账户锁定</div>
+        <div class="row-meta">
+          <span>JIRA-3982</span><span>·</span>
+          <span class="mono">auth-service</span><span>·</span>
+          <span>由 <span class="font-medium text-[color:var(--ink-soft)]">@王工</span> 发起</span>
+        </div>
+      </div>
+      <div>
+        <div class="stages">
+          <div class="seg-cell done"></div>
+          <div class="seg-cell done"></div>
+          <div class="seg-cell run"></div>
+          <div class="seg-cell idle"></div>
+        </div>
+        <div class="row-meta mono">需求 · 架构 · <span class="text-[color:oklch(46%_0.16_65)]">代码 67%</span> · 测试</div>
+      </div>
+      <div class="mono text-[13px]">01:47:12<div class="row-meta">还需 ~ 25m</div></div>
+      <div class="mono text-[13px]">228k<div class="row-meta">▲ 12%</div></div>
+      <div class="mono text-[13px]">¥ 11.84</div>
+      <div class="mono text-[12.5px] text-[color:var(--ink-soft)]">运行中…<div class="row-meta">14:38</div></div>
+      <div class="text-right"><span class="pill pill-run">运行中</span></div>
+    </div>
+
+    <!-- ROW review -->
+    <div class="run-row">
+      <div class="mono font-medium text-[14px]">#2450</div>
+      <div>
+        <div class="font-medium text-[14px] leading-tight">支付回调超时重试机制</div>
+        <div class="row-meta">
+          <span>JIRA-3977</span><span>·</span>
+          <span class="mono">payment-service</span><span>·</span>
+          <span>由 <span class="font-medium text-[color:var(--ink-soft)]">@刘工</span> 发起</span>
+        </div>
+      </div>
+      <div>
+        <div class="stages">
+          <div class="seg-cell done"></div>
+          <div class="seg-cell done"></div>
+          <div class="seg-cell done"></div>
+          <div class="seg-cell review"></div>
+        </div>
+        <div class="row-meta mono"><span style="color: oklch(40% 0.16 290)">测试 CR-4 待审</span></div>
+      </div>
+      <div class="mono text-[13px]">03:21:48</div>
+      <div class="mono text-[13px]">412k</div>
+      <div class="mono text-[13px]">¥ 18.62</div>
+      <div class="mono text-[12.5px] text-[color:var(--ink-soft)]">阻塞 12m<div class="row-meta">14:26</div></div>
+      <div class="text-right"><span class="pill pill-review">等评审</span></div>
+    </div>
+
+    <!-- ROW done -->
+    <div class="run-row">
+      <div class="mono font-medium text-[14px]">#2449</div>
+      <div>
+        <div class="font-medium text-[14px] leading-tight">风控中心客户端接入(异步降级)</div>
+        <div class="row-meta">
+          <span>JIRA-3961</span><span>·</span>
+          <span class="mono">auth-service</span><span>·</span>
+          <span>由 <span class="font-medium text-[color:var(--ink-soft)]">@张工</span> 发起</span>
+        </div>
+      </div>
+      <div>
+        <div class="stages">
+          <div class="seg-cell done"></div><div class="seg-cell done"></div>
+          <div class="seg-cell done"></div><div class="seg-cell done"></div>
+        </div>
+        <div class="row-meta mono" style="color: oklch(40% 0.13 150)">全部通过 · 单元 86.4%</div>
+      </div>
+      <div class="mono text-[13px]">04:02:18</div>
+      <div class="mono text-[13px]">521k</div>
+      <div class="mono text-[13px]">¥ 24.40</div>
+      <div class="mono text-[12.5px]">今 09:55</div>
+      <div class="text-right"><span class="pill pill-done">已完成</span></div>
+    </div>
+
+    <!-- ROW done -->
+    <div class="run-row">
+      <div class="mono font-medium text-[14px]">#2448</div>
+      <div>
+        <div class="font-medium text-[14px] leading-tight">密码策略 v3 升级 (长度+复杂度)</div>
+        <div class="row-meta">
+          <span>JIRA-3958</span><span>·</span>
+          <span class="mono">auth-service</span><span>·</span>
+          <span>由 <span class="font-medium text-[color:var(--ink-soft)]">@王工</span> 发起</span>
+        </div>
+      </div>
+      <div>
+        <div class="stages">
+          <div class="seg-cell done"></div><div class="seg-cell done"></div>
+          <div class="seg-cell done"></div><div class="seg-cell done"></div>
+        </div>
+        <div class="row-meta mono" style="color: oklch(40% 0.13 150)">全部通过 · 一次通过</div>
+      </div>
+      <div class="mono text-[13px]">02:48:02</div>
+      <div class="mono text-[13px]">312k</div>
+      <div class="mono text-[13px]">¥ 14.12</div>
+      <div class="mono text-[12.5px]">昨 19:02</div>
+      <div class="text-right"><span class="pill pill-done">已完成</span></div>
+    </div>
+
+    <!-- ROW done with one rework -->
+    <div class="run-row">
+      <div class="mono font-medium text-[14px]">#2447</div>
+      <div>
+        <div class="font-medium text-[14px] leading-tight">User Controller — 邮箱可选注册</div>
+        <div class="row-meta">
+          <span>JIRA-3942</span><span>·</span>
+          <span class="mono">auth-service</span><span>·</span>
+          <span>由 <span class="font-medium text-[color:var(--ink-soft)]">@张工</span> 发起</span>
+        </div>
+      </div>
+      <div>
+        <div class="stages">
+          <div class="seg-cell done"></div><div class="seg-cell done"></div>
+          <div class="seg-cell done"></div><div class="seg-cell done"></div>
+        </div>
+        <div class="row-meta mono">含 1 次 CR-3 退回 / 重做</div>
+      </div>
+      <div class="mono text-[13px]">05:31:08</div>
+      <div class="mono text-[13px]">684k</div>
+      <div class="mono text-[13px]">¥ 31.82</div>
+      <div class="mono text-[12.5px]">昨 16:38</div>
+      <div class="text-right"><span class="pill pill-done">已完成</span></div>
+    </div>
+
+    <!-- ROW halt -->
+    <div class="run-row">
+      <div class="mono font-medium text-[14px]">#2444</div>
+      <div>
+        <div class="font-medium text-[14px] leading-tight">SSO 第三方接入(企微 / 钉钉)</div>
+        <div class="row-meta">
+          <span>JIRA-3919</span><span>·</span>
+          <span class="mono">auth-service</span><span>·</span>
+          <span>由 <span class="font-medium text-[color:var(--ink-soft)]">@刘工</span> 发起</span>
+        </div>
+      </div>
+      <div>
+        <div class="stages">
+          <div class="seg-cell done"></div><div class="seg-cell done"></div>
+          <div class="seg-cell halt"></div><div class="seg-cell idle"></div>
+        </div>
+        <div class="row-meta mono" style="color: oklch(45% 0.18 25)">代码阶段 安全严重 1 — 已挂起</div>
+      </div>
+      <div class="mono text-[13px]">02:14:00</div>
+      <div class="mono text-[13px]">189k</div>
+      <div class="mono text-[13px]">¥ 9.40</div>
+      <div class="mono text-[12.5px]">3 天前</div>
+      <div class="text-right"><span class="pill pill-halt">阻断</span></div>
+    </div>
+
+    <!-- ROW done quick -->
+    <div class="run-row">
+      <div class="mono font-medium text-[14px]">#2441</div>
+      <div>
+        <div class="font-medium text-[14px] leading-tight">登录失败日志补充 trace_id</div>
+        <div class="row-meta">
+          <span>JIRA-3905</span><span>·</span>
+          <span class="mono">auth-service</span><span>·</span>
+          <span>由 <span class="font-medium text-[color:var(--ink-soft)]">@张工</span> 发起</span>
+        </div>
+      </div>
+      <div>
+        <div class="stages">
+          <div class="seg-cell done"></div><div class="seg-cell done"></div>
+          <div class="seg-cell done"></div><div class="seg-cell done"></div>
+        </div>
+        <div class="row-meta mono" style="color: oklch(40% 0.13 150)">极速通道 · 直通</div>
+      </div>
+      <div class="mono text-[13px]">00:42:18</div>
+      <div class="mono text-[13px]">68k</div>
+      <div class="mono text-[13px]">¥ 3.21</div>
+      <div class="mono text-[12.5px]">4 天前</div>
+      <div class="text-right"><span class="pill pill-done">已完成</span></div>
+    </div>
+
+    <!-- ROW done -->
+    <div class="run-row">
+      <div class="mono font-medium text-[14px]">#2438</div>
+      <div>
+        <div class="font-medium text-[14px] leading-tight">JWT 密钥轮换 — 后台任务</div>
+        <div class="row-meta">
+          <span>JIRA-3877</span><span>·</span>
+          <span class="mono">auth-service</span><span>·</span>
+          <span>由 <span class="font-medium text-[color:var(--ink-soft)]">@王工</span> 发起</span>
+        </div>
+      </div>
+      <div>
+        <div class="stages">
+          <div class="seg-cell done"></div><div class="seg-cell done"></div>
+          <div class="seg-cell done"></div><div class="seg-cell done"></div>
+        </div>
+        <div class="row-meta mono">含 1 次中断 / 补上下文</div>
+      </div>
+      <div class="mono text-[13px]">06:18:24</div>
+      <div class="mono text-[13px]">812k</div>
+      <div class="mono text-[13px]">¥ 38.92</div>
+      <div class="mono text-[12.5px]">7 天前</div>
+      <div class="text-right"><span class="pill pill-done">已完成</span></div>
+    </div>
+
+  </section>
+
+  <!-- Pagination -->
+  <section class="flex items-center justify-between mt-5 px-2 text-[12px] text-[color:var(--ink-mute)]">
+    <div>第 <span class="mono text-[color:var(--ink)]">1</span> 页 · 共 <span class="mono">303</span> 页</div>
+    <div class="flex items-center gap-1">
+      <button class="w-8 h-8 rounded-md hover:bg-[color:var(--line-soft)] flex items-center justify-center disabled:opacity-30" disabled>←</button>
+      <button class="w-8 h-8 rounded-md flex items-center justify-center mono font-medium text-[color:var(--ink)] bg-[color:oklch(97%_0.008_260)]">1</button>
+      <button class="w-8 h-8 rounded-md hover:bg-[color:var(--line-soft)] flex items-center justify-center mono">2</button>
+      <button class="w-8 h-8 rounded-md hover:bg-[color:var(--line-soft)] flex items-center justify-center mono">3</button>
+      <span class="px-2">…</span>
+      <button class="w-8 h-8 rounded-md hover:bg-[color:var(--line-soft)] flex items-center justify-center mono">303</button>
+      <button class="w-8 h-8 rounded-md hover:bg-[color:var(--line-soft)] flex items-center justify-center">→</button>
+    </div>
+    <div class="flex items-center gap-2">
+      每页 <span class="seg"><span class="opt">10</span><span class="opt active">8</span><span class="opt">25</span><span class="opt">50</span></span>
+    </div>
+  </section>
+
+  </div>
+</main>
+
+<footer class="px-8 py-6 text-[10.5px] mono text-[color:var(--ink-mute)] flex items-center gap-3">
+  <span class="w-1.5 h-1.5 rounded-full" style="background: var(--ink-mute)"></span>
+  Prototype · runs-list.html · 历史运行索引
+</footer>
+
+<script>
+  // ── Auth check ──────────────────────────────────────────────────────────────
+  fetch('/api/prototype/me').then(function(r) {
+    if (r.status === 401) window.location.href = '/login?callbackUrl=/prototype/runs-list.html';
+  });
+
+  // ── Status helpers ──────────────────────────────────────────────────────────
+  function statusLabel(s) {
+    return { created:'已创建', running:'运行中', paused_at_gate:'待审批', completed:'已完成', failed:'失败', cancelled:'已取消' }[s] || s;
+  }
+  function statusPill(s) {
+    var cls = { created:'pill', running:'pill pill-run', paused_at_gate:'pill pill-review', completed:'pill pill-done', failed:'pill pill-halt', cancelled:'pill' }[s] || 'pill';
+    return '<span class="' + cls + '">' + statusLabel(s) + '</span>';
+  }
+  function stageProgress(nodes) {
+    // Summarize stage completion by max stage seen per stage number
+    var stageMax = {};
+    (nodes||[]).forEach(function(n) {
+      var st = stageMax[n.stage];
+      var done = n.status === 'success';
+      var run = n.status === 'running';
+      if (!st) stageMax[n.stage] = { done: false, run: false };
+      if (done) stageMax[n.stage].done = true;
+      if (run) stageMax[n.stage].run = true;
+    });
+    var html = '<div class="stages">';
+    for (var i = 1; i <= 3; i++) {
+      var s = stageMax[i];
+      var cls = 'idle';
+      if (s) { cls = s.done ? 'done' : (s.run ? 'run' : 'review'); }
+      html += '<div class="seg-cell ' + cls + '"></div>';
+    }
+    html += '<div class="seg-cell idle"></div></div>';
+    return html;
+  }
+  function timeAgo(dateStr) {
+    var d = new Date(dateStr);
+    var diff = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (diff < 60) return diff + '秒前';
+    if (diff < 3600) return Math.floor(diff/60) + '分钟前';
+    if (diff < 86400) return Math.floor(diff/3600) + '小时前';
+    return Math.floor(diff/86400) + '天前';
+  }
+
+  // ── Fetch + render real runs ─────────────────────────────────────────────────
+  fetch('/api/prototype/runs').then(function(r) { return r.json(); }).then(function(data) {
+    var container = document.getElementById('real-runs-container');
+    if (!data.runs || data.runs.length === 0) { container.innerHTML = ''; return; }
+
+    var html = '';
+    data.runs.forEach(function(run, idx) {
+      var num = '#' + String(10000 + idx + 1);
+      html += '<div class="run-row real-run-row" data-run-id="' + run.id + '" style="cursor:pointer">';
+      html += '<div class="mono font-medium text-[14px]">' + num + '</div>';
+      html += '<div><div class="font-medium text-[14px] leading-tight">' + (run.title||'(无标题)') + '</div>';
+      html += '<div class="row-meta"><span class="mono">' + (run.id||'').slice(0,8) + '</span></div></div>';
+      html += '<div>' + stageProgress(run.nodes) + '<div class="row-meta mono">需求 · 设计 · 编码</div></div>';
+      html += '<div class="mono text-[13px]">—</div>';
+      html += '<div class="mono text-[13px]">—</div>';
+      html += '<div class="mono text-[13px]">—</div>';
+      html += '<div class="mono text-[12.5px] text-[color:var(--ink-soft)]">' + timeAgo(run.createdAt) + '</div>';
+      html += '<div class="text-right">' + statusPill(run.status) + '</div>';
+      html += '</div>';
+    });
+
+    // Add a divider label before static demo data
+    html += '<div class="px-6 py-2 text-[10.5px] mono text-[color:var(--ink-mute)] uppercase tracking-wider border-b border-[color:var(--line-soft)]" style="background:oklch(98%_0.006_90)">— 演示数据 —</div>';
+    container.innerHTML = html;
+
+    // Wire click handlers for real runs
+    container.querySelectorAll('.real-run-row').forEach(function(row) {
+      row.addEventListener('click', function() {
+        window.location.href = 'run-detail.html?runId=' + row.getAttribute('data-run-id');
+      });
+    });
+  }).catch(function(err) { console.warn('Failed to load runs:', err); });
+
+  // make static demo rows go to index.html (existing behavior)
+  document.querySelectorAll('.run-row:not(.real-run-row)').forEach(function (row) {
+    row.addEventListener('click', function () { window.location.href = 'index.html'; });
+  });
+</script>
+
+</body>
+</html>

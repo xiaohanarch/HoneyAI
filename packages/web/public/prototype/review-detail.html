@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>评审详情 · CR-3 · AI 数字产线</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-base: oklch(98.8% 0.006 90);
+    --bg-warm: oklch(96.5% 0.018 75);
+    --ink: oklch(18% 0.02 260);
+    --ink-soft: oklch(38% 0.02 260);
+    --ink-mute: oklch(58% 0.015 260);
+    --line: oklch(90% 0.01 260);
+    --line-soft: oklch(94% 0.008 260);
+    --surface: oklch(100% 0 0);
+    --done: oklch(72% 0.16 150);
+    --run: oklch(80% 0.16 65);
+    --review: oklch(70% 0.16 290);
+    --halt: oklch(67% 0.20 25);
+    --add: oklch(92% 0.08 150);
+    --add-line: oklch(72% 0.16 150);
+    --del: oklch(92% 0.06 25);
+    --del-line: oklch(67% 0.20 25);
+    --a-dev: oklch(72% 0.17 150);
+    --a-sec: oklch(67% 0.20 25);
+    --a-perf: oklch(80% 0.16 65);
+  }
+  *{ -webkit-font-smoothing:antialiased; }
+  html,body{ background: var(--bg-base); color: var(--ink); font-family:'Inter',ui-sans-serif,system-ui,sans-serif; }
+  .display{ font-family:'Instrument Serif', ui-serif, Georgia, serif; letter-spacing:-0.01em; }
+  .mono{ font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace; font-variant-numeric: tabular-nums; }
+  .grain::before{
+    content:""; position:fixed; inset:0; pointer-events:none; opacity:.05; mix-blend-mode:multiply; z-index:1;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  .panel{ background: var(--surface); border:1px solid var(--line); border-radius:14px; }
+  .pill{ font-size:11px; padding:3px 8px; border-radius:999px; background: oklch(97% 0.008 260); color: var(--ink-soft); border:1px solid var(--line-soft); }
+  .pill-done{ color: oklch(40% 0.13 150); background: oklch(72% 0.16 150 / .12); border-color: oklch(72% 0.16 150 / .4); }
+  .pill-warn{ color: oklch(46% 0.16 65); background: oklch(80% 0.16 65 / .14); border-color: oklch(80% 0.16 65 / .4); }
+  .pill-halt{ color: oklch(45% 0.18 25); background: oklch(67% 0.20 25 / .12); border-color: oklch(67% 0.20 25 / .4); }
+  .pill-review{ color: oklch(40% 0.16 290); background: oklch(70% 0.16 290 / .12); border-color: oklch(70% 0.16 290 / .4); }
+  .section-h{ font-size:11px; color: var(--ink-mute); letter-spacing:.16em; text-transform: uppercase; }
+  .ln{ user-select:none; color: oklch(70% 0.015 260); display:inline-block; width:36px; text-align:right; padding-right:10px; }
+  .ln-x{ width:36px; text-align:right; padding-right:10px; }
+  .diff-row{ display:flex; align-items:flex-start; font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.55; padding-right:8px; }
+  .diff-row.add{ background: oklch(72% 0.16 150 / .10); }
+  .diff-row.add .marker{ color: var(--add-line); }
+  .diff-row.del{ background: oklch(67% 0.20 25 / .08); }
+  .diff-row.del .marker{ color: var(--del-line); }
+  .diff-row.ctx{ color: var(--ink-soft); }
+  .diff-row.hunk{ background: oklch(70% 0.16 290 / .08); color: oklch(40% 0.16 290); font-style: italic; }
+  .marker{ width:14px; display:inline-block; text-align:center; color: var(--ink-mute); }
+  .file-tab{ font-size:12px; padding:6px 12px; border-radius:8px 8px 0 0; border:1px solid var(--line); border-bottom:none; background:#fff; color: var(--ink-soft); display:inline-flex; align-items:center; gap:6px; }
+  .file-tab.active{ color: var(--ink); font-weight:600; background: oklch(99% 0.005 90); }
+  .file-tab .dot{ width:6px; height:6px; border-radius:50%; }
+  .rule-row{ display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:10px; }
+  .rule-pass{ background: oklch(72% 0.16 150 / .06); border:1px solid oklch(72% 0.16 150 / .25); }
+  .rule-warn{ background: oklch(80% 0.16 65 / .08); border:1px solid oklch(80% 0.16 65 / .3); }
+  .rule-fail{ background: oklch(67% 0.20 25 / .07); border:1px solid oklch(67% 0.20 25 / .3); }
+  .comment{ background: oklch(70% 0.16 290 / .07); border-left:3px solid oklch(70% 0.16 290); padding:10px 12px; border-radius:0 8px 8px 0; }
+  .decision-card{ border:1.5px solid var(--line); border-radius:12px; padding:14px; cursor:pointer; }
+  .decision-card.checked{ border-color: var(--ink); background: oklch(98% 0.008 260); }
+  .agent-chip{ display:inline-flex; align-items:center; gap:6px; padding:3px 9px; border-radius:999px; font-size:11px; }
+  .chip-dev{ background: oklch(72% 0.17 150 / .12); color: oklch(40% 0.16 150); }
+  .chip-sec{ background: oklch(67% 0.20 25 / .12); color: oklch(45% 0.18 25); }
+  .chip-perf{ background: oklch(80% 0.16 65 / .14); color: oklch(46% 0.16 65); }
+  .ruler{ height:1px; background: var(--line-soft); }
+  .kbd{ font-family:'JetBrains Mono',monospace; font-size:10.5px; padding:1.5px 5px; border-radius:4px; background: oklch(97% 0.008 260); border:1px solid var(--line); color: var(--ink-soft); }
+  .tab2{ font-size:12px; padding:5px 10px; border-radius:7px; color: var(--ink-mute); cursor:pointer; }
+  .tab2.active{ background: var(--ink); color:#fff; }
+  /* atmospheric */
+  .atmo{ background:
+    radial-gradient(60% 50% at 20% 10%, oklch(70% 0.16 290 / .08), transparent 60%),
+    radial-gradient(50% 40% at 100% 0%, oklch(80% 0.16 65 / .07), transparent 60%);
+  }
+</style>
+</head>
+<body class="grain atmo">
+
+<!-- Top bar -->
+<header class="px-8 pt-6 pb-4 flex items-center gap-4 sticky top-0 z-20 backdrop-blur bg-[color:oklch(98.8%_0.006_90/.86)] border-b border-[color:var(--line-soft)]">
+  <a href="index.html" class="text-[12.5px] text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] flex items-center gap-1.5">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    Run #2451
+  </a>
+  <div class="h-4 w-px bg-[color:var(--line)]"></div>
+  <div class="flex items-center gap-2 text-[12.5px]">
+    <span class="pill pill-review">CR-3 评审</span>
+    <span class="mono text-[color:var(--ink-mute)]">Stage 03 · 编码 + UT</span>
+    <span class="text-[color:var(--ink-mute)]">·</span>
+    <a href="artifact-diff.html" class="font-medium text-[color:var(--ink)] hover:underline">LoginService.login()</a>
+    <span class="text-[color:var(--ink-mute)]">·</span>
+    <a href="artifact-diff.html" class="text-[11.5px] text-[color:var(--ink-soft)] hover:text-[color:var(--ink)]">查看 diff →</a>
+  </div>
+  <div class="ml-auto flex items-center gap-3 text-[11.5px] text-[color:var(--ink-mute)]">
+    <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--review)"></span>等待 @王工 决策</span>
+    <span class="mono">SLA 还剩 02:14:32</span>
+    <button class="kbd" title="键盘快捷键">⌘K</button>
+  </div>
+</header>
+
+<main class="px-8 py-6">
+
+  <!-- Hero strip -->
+  <section class="grid grid-cols-12 gap-4 mb-5">
+    <div class="col-span-8 panel p-5">
+      <div class="flex items-start gap-4">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-white display text-[20px]" style="background: linear-gradient(135deg, oklch(70% 0.16 290), oklch(60% 0.20 285))">CR</div>
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="pill mono">CR-3</span>
+            <span class="pill pill-review">待人工决策</span>
+            <span class="pill">变更 +148 / -22</span>
+            <span class="pill">3 文件</span>
+          </div>
+          <h1 class="display text-[34px] leading-tight">为 <span class="mono italic text-[28px]">LoginService.login()</span> 加入限流与账户锁定</h1>
+          <div class="text-[12.5px] text-[color:var(--ink-soft)] mt-1.5">由 <span class="agent-chip chip-dev">DEV-Engineer v2.3.1</span> 提交,合作 <span class="agent-chip chip-sec ml-1">SEC-Auditor</span> · 共 7 轮辩论,收敛分 <span class="mono font-medium">0.93</span></div>
+        </div>
+      </div>
+
+      <!-- metric strip -->
+      <div class="grid grid-cols-5 gap-0 mt-5 -mb-1 border-t border-[color:var(--line-soft)] pt-4">
+        <div>
+          <div class="text-[10.5px] text-[color:var(--ink-mute)] uppercase tracking-wider">置信度</div>
+          <div class="display text-[28px] leading-none mt-1.5">0.93</div>
+          <div class="text-[10.5px] text-[color:var(--ink-mute)] mono mt-1">▲ +0.08 vs 上次</div>
+        </div>
+        <div>
+          <div class="text-[10.5px] text-[color:var(--ink-mute)] uppercase tracking-wider">军规命中</div>
+          <div class="display text-[28px] leading-none mt-1.5">17<span class="text-[14px] text-[color:var(--ink-mute)]"> / 18</span></div>
+          <div class="text-[10.5px] mono mt-1" style="color: oklch(40% 0.13 150)">1 项警告</div>
+        </div>
+        <div>
+          <div class="text-[10.5px] text-[color:var(--ink-mute)] uppercase tracking-wider">测试覆盖</div>
+          <div class="display text-[28px] leading-none mt-1.5">86.4%</div>
+          <div class="text-[10.5px] text-[color:var(--ink-mute)] mono mt-1">目标 ≥ 85%</div>
+        </div>
+        <div>
+          <div class="text-[10.5px] text-[color:var(--ink-mute)] uppercase tracking-wider">安全扫</div>
+          <div class="display text-[28px] leading-none mt-1.5">0<span class="text-[14px] text-[color:var(--ink-mute)]"> / 0</span></div>
+          <div class="text-[10.5px] text-[color:var(--ink-mute)] mono mt-1">高危 / 严重</div>
+        </div>
+        <div>
+          <div class="text-[10.5px] text-[color:var(--ink-mute)] uppercase tracking-wider">Token / 成本</div>
+          <div class="display text-[28px] leading-none mt-1.5">38.2k</div>
+          <div class="text-[10.5px] text-[color:var(--ink-mute)] mono mt-1">¥ 1.84</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI 自检快照 -->
+    <div class="col-span-4 panel p-5">
+      <div class="section-h mb-3">AI 自动审查</div>
+      <div class="space-y-2">
+        <div class="rule-row rule-pass">
+          <span class="w-1.5 h-1.5 rounded-full" style="background: var(--done)"></span>
+          <span class="text-[12.5px] flex-1">所有口令处理走 password-policy-checker</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-mute)]">SEC-001</span>
+        </div>
+        <div class="rule-row rule-pass">
+          <span class="w-1.5 h-1.5 rounded-full" style="background: var(--done)"></span>
+          <span class="text-[12.5px] flex-1">JWT 签名密钥从 KMS 读取,无硬编码</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-mute)]">SEC-014</span>
+        </div>
+        <div class="rule-row rule-warn">
+          <span class="w-1.5 h-1.5 rounded-full" style="background: var(--run)"></span>
+          <span class="text-[12.5px] flex-1">限流键含用户名,可能被探测;建议同时纳入 IP 维度</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-mute)]">PRF-007</span>
+        </div>
+        <div class="rule-row rule-pass">
+          <span class="w-1.5 h-1.5 rounded-full" style="background: var(--done)"></span>
+          <span class="text-[12.5px] flex-1">单元测试覆盖锁定时长、解锁、并发</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-mute)]">QA-022</span>
+        </div>
+        <div class="rule-row rule-pass">
+          <span class="w-1.5 h-1.5 rounded-full" style="background: var(--done)"></span>
+          <span class="text-[12.5px] flex-1">异常日志不泄露用户名 / 凭据</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-mute)]">LOG-003</span>
+        </div>
+      </div>
+      <div class="ruler my-3"></div>
+      <div class="flex items-center justify-between text-[11.5px]">
+        <span class="text-[color:var(--ink-mute)]">综合建议</span>
+        <span class="pill pill-warn">通过 + 建议</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Two-column workspace -->
+  <section class="grid grid-cols-12 gap-4">
+
+    <!-- Left: diff viewer -->
+    <div class="col-span-8">
+      <!-- file tabs -->
+      <div class="flex items-end gap-1 pl-1">
+        <span class="file-tab active">
+          <span class="dot" style="background: var(--run)"></span>
+          LoginService.java
+          <span class="mono text-[10px] text-[color:var(--ink-mute)]">+ 92 / - 22</span>
+        </span>
+        <span class="file-tab">
+          <span class="dot" style="background: var(--add-line)"></span>
+          AccountLockService.java
+          <span class="mono text-[10px] text-[color:var(--ink-mute)]">+ 41</span>
+        </span>
+        <span class="file-tab">
+          <span class="dot" style="background: var(--add-line)"></span>
+          TokenBucketLimiter.java
+          <span class="mono text-[10px] text-[color:var(--ink-mute)]">+ 15</span>
+        </span>
+        <div class="ml-auto flex items-center gap-1 pb-1.5">
+          <span class="tab2 active">分裂</span>
+          <span class="tab2">合并</span>
+          <span class="tab2">仅变更</span>
+        </div>
+      </div>
+
+      <div class="panel rounded-tl-none overflow-hidden">
+        <!-- Diff body -->
+        <div class="py-2">
+          <div class="diff-row hunk"><span class="ln"></span><span class="ln-x"></span><span class="marker">@@</span><span>　-78,12 +84,38 @@　public ResponseEntity&lt;LoginResp&gt; login(LoginReq req)</span></div>
+
+          <div class="diff-row ctx"><span class="ln">78</span><span class="ln-x">84</span><span class="marker"> </span><span>　public ResponseEntity&lt;LoginResp&gt; login(LoginReq req) {</span></div>
+          <div class="diff-row del"><span class="ln">79</span><span class="ln-x"></span><span class="marker">-</span><span>　　　User u = userRepo.findByName(req.username());</span></div>
+          <div class="diff-row del"><span class="ln">80</span><span class="ln-x"></span><span class="marker">-</span><span>　　　if (u == null) throw new BizException(USER_NOT_FOUND);</span></div>
+          <div class="diff-row add"><span class="ln"></span><span class="ln-x">85</span><span class="marker">+</span><span>　　　String key = "login:" + req.username() + ":" + clientIp();</span></div>
+          <div class="diff-row add"><span class="ln"></span><span class="ln-x">86</span><span class="marker">+</span><span>　　　if (!limiter.tryAcquire(key, 10, Duration.ofMinutes(1))) {</span></div>
+          <div class="diff-row add"><span class="ln"></span><span class="ln-x">87</span><span class="marker">+</span><span>　　　　　throw new BizException(RATE_LIMITED);</span></div>
+          <div class="diff-row add"><span class="ln"></span><span class="ln-x">88</span><span class="marker">+</span><span>　　　}</span></div>
+          <div class="diff-row add"><span class="ln"></span><span class="ln-x">89</span><span class="marker">+</span><span>　　　if (lockService.isLocked(req.username())) {</span></div>
+          <div class="diff-row add"><span class="ln"></span><span class="ln-x">90</span><span class="marker">+</span><span>　　　　　throw new BizException(ACCOUNT_LOCKED);</span></div>
+          <div class="diff-row add"><span class="ln"></span><span class="ln-x">91</span><span class="marker">+</span><span>　　　}</span></div>
+          <div class="diff-row ctx"><span class="ln">81</span><span class="ln-x">92</span><span class="marker"> </span><span>　　　User u = userRepo.findByName(req.username());</span></div>
+          <div class="diff-row ctx"><span class="ln">82</span><span class="ln-x">93</span><span class="marker"> </span><span>　　　if (u == null) throw new BizException(USER_NOT_FOUND);</span></div>
+
+          <!-- inline AI comment -->
+          <div class="px-12 py-2 bg-[color:oklch(99%_0.008_260)] border-y border-[color:var(--line-soft)]">
+            <div class="comment text-[12px]">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="agent-chip chip-perf">PRF-007</span>
+                <span class="text-[color:var(--ink-mute)] text-[11px]">AI 自动审查 · 警告</span>
+              </div>
+              <div>限流键 <span class="mono">login:user:ip</span> 偏窄,建议同时实现 <span class="mono">login:ip</span> 维度桶以防止用户名枚举攻击。可在下一次迭代中加入。</div>
+            </div>
+          </div>
+
+          <div class="diff-row del"><span class="ln">83</span><span class="ln-x"></span><span class="marker">-</span><span>　　　if (!u.password().equals(req.password())) {</span></div>
+          <div class="diff-row del"><span class="ln">84</span><span class="ln-x"></span><span class="marker">-</span><span>　　　　　throw new BizException(BAD_CREDENTIALS);</span></div>
+          <div class="diff-row del"><span class="ln">85</span><span class="ln-x"></span><span class="marker">-</span><span>　　　}</span></div>
+          <div class="diff-row add"><span class="ln"></span><span class="ln-x">94</span><span class="marker">+</span><span>　　　if (!passwordEncoder.matches(req.password(), u.passwordHash())) {</span></div>
+          <div class="diff-row add"><span class="ln"></span><span class="ln-x">95</span><span class="marker">+</span><span>　　　　　lockService.recordFailure(req.username());</span></div>
+          <div class="diff-row add"><span class="ln"></span><span class="ln-x">96</span><span class="marker">+</span><span>　　　　　throw new BizException(BAD_CREDENTIALS);</span></div>
+          <div class="diff-row add"><span class="ln"></span><span class="ln-x">97</span><span class="marker">+</span><span>　　　}</span></div>
+          <div class="diff-row add"><span class="ln"></span><span class="ln-x">98</span><span class="marker">+</span><span>　　　lockService.clear(req.username());</span></div>
+
+          <!-- human comment -->
+          <div class="px-12 py-2 bg-[color:oklch(99%_0.008_260)] border-y border-[color:var(--line-soft)]">
+            <div class="comment text-[12px]" style="border-left-color: oklch(62% 0.18 255)">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="w-5 h-5 rounded-full bg-[color:oklch(62%_0.18_255)] text-white text-[10px] flex items-center justify-center font-semibold">王</span>
+                <span class="text-[12px] font-medium">@王工</span>
+                <span class="text-[color:var(--ink-mute)] text-[11px]">3 分钟前</span>
+              </div>
+              <div>清晰。<span class="mono">clear()</span> 应在登录成功的所有分支前都调用,看到这里 OK。问一下:limiter 桶大小 10/分 是来自哪个 SLO 文档?</div>
+              <div class="flex items-center gap-3 mt-2 text-[11px] text-[color:var(--ink-soft)]">
+                <span class="cursor-pointer hover:text-[color:var(--ink)]">↩ 回复</span>
+                <span class="cursor-pointer hover:text-[color:var(--ink)]">✓ 解决</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="diff-row ctx"><span class="ln">93</span><span class="ln-x">99</span><span class="marker"> </span><span>　　　return ResponseEntity.ok(buildResp(u));</span></div>
+          <div class="diff-row ctx"><span class="ln">94</span><span class="ln-x">100</span><span class="marker"> </span><span>　}</span></div>
+
+          <div class="diff-row hunk"><span class="ln"></span><span class="ln-x"></span><span class="marker">@@</span><span>　-128,0 +142,18 @@　新增 helper</span></div>
+          <div class="diff-row add"><span class="ln"></span><span class="ln-x">142</span><span class="marker">+</span><span>　private String clientIp() {</span></div>
+          <div class="diff-row add"><span class="ln"></span><span class="ln-x">143</span><span class="marker">+</span><span>　　　return Optional.ofNullable(request.getHeader("X-Forwarded-For"))</span></div>
+          <div class="diff-row add"><span class="ln"></span><span class="ln-x">144</span><span class="marker">+</span><span>　　　　　.map(s -&gt; s.split(",")[0].trim())</span></div>
+          <div class="diff-row add"><span class="ln"></span><span class="ln-x">145</span><span class="marker">+</span><span>　　　　　.orElse(request.getRemoteAddr());</span></div>
+          <div class="diff-row add"><span class="ln"></span><span class="ln-x">146</span><span class="marker">+</span><span>　}</span></div>
+        </div>
+      </div>
+
+      <!-- Below diff: knowledge / refs -->
+      <div class="grid grid-cols-2 gap-4 mt-4">
+        <div class="panel p-4">
+          <div class="section-h mb-2">引用知识 · 4</div>
+          <ul class="space-y-2 text-[12px]">
+            <li class="flex items-start gap-2"><span class="mono text-[10.5px] text-[color:var(--ink-mute)] mt-0.5">KG·E12</span><span>《登录限流规范 v3》§3.1 单用户 10次/分</span></li>
+            <li class="flex items-start gap-2"><span class="mono text-[10.5px] text-[color:var(--ink-mute)] mt-0.5">KG·E07</span><span>《账户安全策略》5次失败锁 15 分钟</span></li>
+            <li class="flex items-start gap-2"><span class="mono text-[10.5px] text-[color:var(--ink-mute)] mt-0.5">KG·E22</span><span>Redis 限流参考实现 — redis-rate-limiter v1.4</span></li>
+            <li class="flex items-start gap-2"><span class="mono text-[10.5px] text-[color:var(--ink-mute)] mt-0.5">KG·E29</span><span>SLO: QPS ≥ 2000 / P99 ≤ 80ms</span></li>
+          </ul>
+        </div>
+        <div class="panel p-4">
+          <div class="section-h mb-2">辩论轨迹 · 7 轮</div>
+          <ol class="space-y-2 text-[12px]">
+            <li class="flex items-start gap-2"><span class="mono text-[10px] text-[color:var(--ink-mute)] mt-0.5 w-6">R1</span><span class="agent-chip chip-dev">DEV</span><span class="text-[color:var(--ink-soft)]">初版:仅加限流</span></li>
+            <li class="flex items-start gap-2"><span class="mono text-[10px] text-[color:var(--ink-mute)] mt-0.5 w-6">R2</span><span class="agent-chip chip-sec">SEC</span><span class="text-[color:var(--ink-soft)]">质疑:缺少账户锁定 → 阻塞</span></li>
+            <li class="flex items-start gap-2"><span class="mono text-[10px] text-[color:var(--ink-mute)] mt-0.5 w-6">R3</span><span class="agent-chip chip-dev">DEV</span><span class="text-[color:var(--ink-soft)]">引入 AccountLockService</span></li>
+            <li class="flex items-start gap-2"><span class="mono text-[10px] text-[color:var(--ink-mute)] mt-0.5 w-6">R5</span><span class="agent-chip chip-sec">SEC</span><span class="text-[color:var(--ink-soft)]">passwordEncoder.matches 替代 equals</span></li>
+            <li class="flex items-start gap-2"><span class="mono text-[10px] text-[color:var(--ink-mute)] mt-0.5 w-6">R7</span><span class="agent-chip chip-dev">DEV</span><span class="text-[color:var(--ink-soft)]">收敛 0.93</span></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: review panel -->
+    <aside class="col-span-4">
+      <div class="panel p-5 sticky top-[88px]">
+        <div class="flex items-center justify-between">
+          <div class="section-h">评审决策</div>
+          <span class="kbd">⌘ ↵</span>
+        </div>
+
+        <div class="mt-4 space-y-2.5">
+          <div class="decision-card">
+            <div class="flex items-center gap-2.5">
+              <span class="w-4 h-4 rounded-full border-2 border-[color:var(--line)]"></span>
+              <div class="flex-1">
+                <div class="text-[13px] font-medium">通过</div>
+                <div class="text-[11px] text-[color:var(--ink-mute)]">直接进入下游测试阶段</div>
+              </div>
+              <span class="pill" style="color: oklch(40% 0.13 150)">推荐</span>
+            </div>
+          </div>
+          <div class="decision-card checked">
+            <div class="flex items-center gap-2.5">
+              <span class="w-4 h-4 rounded-full border-[5px]" style="border-color: var(--ink)"></span>
+              <div class="flex-1">
+                <div class="text-[13px] font-medium">通过 + 留下建议</div>
+                <div class="text-[11px] text-[color:var(--ink-mute)]">作为下一迭代的 backlog 项</div>
+              </div>
+            </div>
+            <div class="mt-3 -mx-3 px-3 pt-3 border-t border-[color:var(--line-soft)]">
+              <div class="text-[11px] text-[color:var(--ink-mute)] mb-1.5">建议内容</div>
+              <textarea class="w-full h-20 text-[12.5px] p-2.5 rounded-md border border-[color:var(--line)] resize-none focus:outline-none focus:border-[color:oklch(70%_0.06_260)]" placeholder="下一迭代补充 IP 维度限流桶,防止用户名枚举…">下一迭代请补充 IP 维度限流桶,防止用户名枚举攻击。另外限流 10次/分 的数值,请同步在 SLO 文档 §3.1 加入引用。</textarea>
+            </div>
+          </div>
+          <div class="decision-card">
+            <div class="flex items-center gap-2.5">
+              <span class="w-4 h-4 rounded-full border-2 border-[color:var(--line)]"></span>
+              <div class="flex-1">
+                <div class="text-[13px] font-medium">退回 (注明问题)</div>
+                <div class="text-[11px] text-[color:var(--ink-mute)]">Agent 将基于评论重新生成</div>
+              </div>
+            </div>
+          </div>
+          <div class="decision-card">
+            <div class="flex items-center gap-2.5">
+              <span class="w-4 h-4 rounded-full border-2 border-[color:var(--line)]"></span>
+              <div class="flex-1">
+                <div class="text-[13px] font-medium">阻断 · 升级</div>
+                <div class="text-[11px] text-[color:var(--ink-mute)]">移交 @安全组 / 暂停整个运行</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ruler my-4"></div>
+
+        <!-- Structured feedback intake → flows back to agents / skills -->
+        <div class="section-h mb-2">书面反馈 · 回流目标</div>
+        <div class="text-[11px] text-[color:var(--ink-mute)] mb-2.5 leading-snug">本次意见将结构化存档,作为下一次执行的训练语料。</div>
+
+        <div class="space-y-1.5 mb-3">
+          <label class="flex items-start gap-2 text-[12px] cursor-pointer">
+            <input type="checkbox" checked class="mt-0.5">
+            <div class="flex-1">
+              <span class="agent-chip chip-dev">DEV · 主开发</span>
+              <span class="text-[11px] text-[color:var(--ink-mute)] ml-1">prompt 模板 · few-shot</span>
+            </div>
+          </label>
+          <label class="flex items-start gap-2 text-[12px] cursor-pointer">
+            <input type="checkbox" checked class="mt-0.5">
+            <div class="flex-1">
+              <span class="agent-chip chip-sec">SEC · 安全审查</span>
+              <span class="text-[11px] text-[color:var(--ink-mute)] ml-1">军规库新增一条</span>
+            </div>
+          </label>
+          <label class="flex items-start gap-2 text-[12px] cursor-pointer">
+            <input type="checkbox" class="mt-0.5">
+            <div class="flex-1">
+              <span class="agent-chip" style="background: oklch(80% 0.16 65 / .14); color: oklch(46% 0.16 65);">CODE-Reviewer (AI)</span>
+              <span class="text-[11px] text-[color:var(--ink-mute)] ml-1">误报 · 调低权重</span>
+            </div>
+          </label>
+          <label class="flex items-start gap-2 text-[12px] cursor-pointer">
+            <input type="checkbox" checked class="mt-0.5">
+            <div class="flex-1">
+              <span class="agent-chip" style="background: oklch(70% 0.16 290 / .12); color: oklch(40% 0.16 290);">Skill · 限流模板</span>
+              <span class="text-[11px] text-[color:var(--ink-mute)] ml-1">新增 IP 维度变体</span>
+            </div>
+          </label>
+          <label class="flex items-start gap-2 text-[12px] cursor-pointer">
+            <input type="checkbox" class="mt-0.5">
+            <div class="flex-1">
+              <span class="agent-chip" style="background: oklch(75% 0.08 250 / .14); color: oklch(40% 0.12 250);">KG · 鉴权 实体</span>
+              <span class="text-[11px] text-[color:var(--ink-mute)] ml-1">补充 SLO §3.1 关系</span>
+            </div>
+          </label>
+        </div>
+
+        <div class="text-[11px] text-[color:var(--ink-mute)] mb-1.5">意见分类</div>
+        <select class="w-full text-[12px] p-2 rounded-md border border-[color:var(--line)] bg-white mb-2.5">
+          <option>风险点 (高优 · 回流军规)</option>
+          <option>风格偏好 (回流 prompt)</option>
+          <option>知识缺失 (回流 KG)</option>
+          <option>AI 误报 (调低 Reviewer 权重)</option>
+        </select>
+
+        <div class="rounded-md p-2.5" style="background: oklch(72% 0.16 150 / .06); border:1px dashed oklch(72% 0.16 150 / .35)">
+          <div class="flex items-center gap-1.5 text-[10.5px]" style="color: oklch(40% 0.13 150)">
+            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            <span class="font-medium">签字后将自动:</span>
+          </div>
+          <ul class="text-[11px] text-[color:var(--ink-soft)] mt-1.5 space-y-0.5 ml-4 list-disc">
+            <li>追加 1 条 few-shot 到 DEV agent</li>
+            <li>SEC 军规库 +1 (待复审)</li>
+            <li>新建 Skill "ip-rate-limit-bucket"</li>
+          </ul>
+        </div>
+
+        <div class="ruler my-4"></div>
+
+        <!-- Pre-checks -->
+        <div class="section-h mb-2">放行前置</div>
+        <div class="space-y-1.5 text-[12px]">
+          <div class="flex items-center gap-2"><span class="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] text-white" style="background: var(--done)">✓</span><span>CI 通过 (build + lint + 单元)</span></div>
+          <div class="flex items-center gap-2"><span class="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] text-white" style="background: var(--done)">✓</span><span>AI 自动审查无严重项</span></div>
+          <div class="flex items-center gap-2"><span class="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] text-white" style="background: var(--done)">✓</span><span>覆盖率 ≥ 85%</span></div>
+          <div class="flex items-center gap-2 text-[color:var(--ink-mute)]"><span class="w-3.5 h-3.5 rounded-full border border-[color:var(--line)]"></span><span>需评审员签字</span></div>
+        </div>
+
+        <div class="ruler my-4"></div>
+
+        <!-- approval row -->
+        <div class="section-h mb-2">审批员</div>
+        <div class="flex items-center gap-2 mb-3">
+          <div class="w-7 h-7 rounded-full bg-[color:oklch(62%_0.18_255)] text-white text-[11px] flex items-center justify-center font-semibold">王</div>
+          <div class="flex-1 text-[12px]">
+            <div class="font-medium">@王工 · 主审批</div>
+            <div class="text-[10.5px] text-[color:var(--ink-mute)] mono">last action: 3min ago</div>
+          </div>
+        </div>
+
+        <button class="w-full h-11 rounded-lg text-[13px] font-medium text-white" style="background: linear-gradient(180deg, oklch(72% 0.16 150), oklch(58% 0.18 150))">
+          签字 · 通过 + 建议 →
+        </button>
+        <div class="text-center text-[10.5px] text-[color:var(--ink-mute)] mt-2 mono">⌘↵ 确认 · esc 取消</div>
+      </div>
+    </aside>
+  </section>
+</main>
+
+<footer class="px-8 py-6 text-[10.5px] mono text-[color:var(--ink-mute)] flex items-center gap-3">
+  <span class="w-1.5 h-1.5 rounded-full" style="background: var(--review)"></span>
+  Prototype · review-detail.html · 评审员视角 cockpit
+</footer>
+
+</body>
+</html>

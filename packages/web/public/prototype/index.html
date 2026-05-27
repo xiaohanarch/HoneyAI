@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DevPipeline · AI 研发流水线驾驶舱</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-base: oklch(98% 0.006 85);
+      --bg-card: #ffffff;
+      --bg-elev: oklch(99% 0.004 85);
+      --bg-deep: oklch(15% 0.018 260);
+
+      --border-soft: oklch(93% 0.005 85);
+      --border-mid: oklch(88% 0.008 85);
+
+      --text-strong: oklch(22% 0.03 260);
+      --text-body: oklch(38% 0.02 260);
+      --text-muted: oklch(56% 0.015 260);
+      --text-faint: oklch(72% 0.01 260);
+
+      --done: oklch(62% 0.13 150);
+      --done-soft: oklch(94% 0.04 150);
+      --run: oklch(70% 0.15 65);
+      --run-soft: oklch(95% 0.05 75);
+      --review: oklch(58% 0.18 290);
+      --review-soft: oklch(95% 0.04 290);
+      --idle-soft: oklch(96% 0.005 260);
+      --halt: oklch(60% 0.21 25);
+
+      /* agent identity palette */
+      --a-req: oklch(62% 0.16 245);     /* blue */
+      --a-graph: oklch(60% 0.18 295);   /* violet */
+      --a-arch: oklch(58% 0.13 200);    /* teal  */
+      --a-dev: oklch(58% 0.14 150);     /* green */
+      --a-sec: oklch(60% 0.20 25);      /* red   */
+      --a-perf: oklch(70% 0.16 70);     /* amber */
+      --a-test: oklch(56% 0.17 270);    /* indigo*/
+
+      --shadow-sm: 0 1px 2px oklch(20% 0.02 260 / 0.04);
+      --shadow-md: 0 2px 6px oklch(20% 0.02 260 / 0.04), 0 1px 2px oklch(20% 0.02 260 / 0.06);
+      --shadow-lg: 0 12px 28px oklch(20% 0.02 260 / 0.07), 0 2px 6px oklch(20% 0.02 260 / 0.04);
+    }
+
+    * { -webkit-font-smoothing: antialiased; }
+    html, body { font-family: 'Inter', system-ui, sans-serif; }
+    body {
+      background: var(--bg-base);
+      color: var(--text-body);
+      font-feature-settings: 'cv02','cv03','cv04','cv11';
+    }
+    .font-display { font-family: 'Instrument Serif','Songti SC',serif; letter-spacing: -0.01em; }
+    .font-mono    { font-family: 'JetBrains Mono', monospace; }
+
+    .bg-atmosphere {
+      background:
+        radial-gradient(900px 460px at 8% -8%,  oklch(93% 0.05 245 / 0.55), transparent 60%),
+        radial-gradient(700px 340px at 105% 0%, oklch(94% 0.05 65 / 0.45),  transparent 60%),
+        radial-gradient(600px 360px at 50% 110%,oklch(94% 0.05 290 / 0.35), transparent 60%),
+        var(--bg-base);
+    }
+    .grain::before {
+      content:''; position: fixed; inset: 0; pointer-events: none;
+      opacity: .03; mix-blend-mode: multiply; z-index: 100;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    @keyframes pulse-ring {
+      0%   { box-shadow: 0 0 0 0    color-mix(in oklch, var(--run) 65%, transparent); }
+      70%  { box-shadow: 0 0 0 10px transparent; }
+      100% { box-shadow: 0 0 0 0    transparent; }
+    }
+    .pulse-run { animation: pulse-ring 2s ease-out infinite; }
+
+    @keyframes shimmer {
+      0%   { background-position: -200% 0; }
+      100% { background-position:  200% 0; }
+    }
+    .shimmer-bar {
+      background: linear-gradient(90deg, transparent, color-mix(in oklch, white 80%, transparent), transparent);
+      background-size: 200% 100%;
+      animation: shimmer 2.2s ease-in-out infinite;
+    }
+
+    @keyframes blink { 50% { opacity: 0; } }
+    .blink { animation: blink 1s steps(2) infinite; }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: 16px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow .2s, transform .2s;
+    }
+    .card:hover { box-shadow: var(--shadow-md); }
+    .card-elev  { box-shadow: var(--shadow-lg); }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 9px; border-radius: 999px;
+      font-size: 11px; font-weight: 500; letter-spacing: .01em;
+      border: 1px solid transparent;
+    }
+    .chip-dot { width: 6px; height: 6px; border-radius: 999px; }
+
+    .caps {
+      font-size: 10.5px; letter-spacing: .14em;
+      text-transform: uppercase; font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 12px; border-radius: 9px;
+      font-size: 12.5px; font-weight: 500;
+      border: 1px solid var(--border-mid);
+      background: var(--bg-card); color: var(--text-body);
+      transition: all .15s; cursor: pointer;
+    }
+    .btn:hover { background: var(--bg-elev); border-color: var(--text-faint); color: var(--text-strong); }
+    .btn-primary { background: var(--text-strong); color: white; border-color: var(--text-strong); }
+    .btn-primary:hover { background: oklch(28% 0.06 265); color: white; }
+    .btn-ghost { background: transparent; border-color: transparent; }
+    .btn-ghost:hover { background: var(--bg-elev); }
+
+    /* agent avatar */
+    .agent-avatar {
+      width: 28px; height: 28px; border-radius: 8px;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: white; font-size: 11px; font-weight: 600;
+      letter-spacing: -.02em;
+      box-shadow: inset 0 -6px 12px rgba(0,0,0,.18), 0 1px 2px rgba(0,0,0,.06);
+    }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 999px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+
+    /* swimlane vertical guides */
+    .lane-rail::before {
+      content:''; position: absolute; left: 14px; top: 36px; bottom: 0;
+      width: 1px; background: var(--border-soft);
+    }
+  </style>
+</head>
+<body class="bg-atmosphere grain min-h-screen">
+
+  <!-- ==================== TOP BAR ==================== -->
+  <header class="border-b border-[var(--border-soft)] bg-white/65 backdrop-blur-xl sticky top-0 z-50">
+    <div class="max-w-[1480px] mx-auto px-8 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-10">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-[var(--text-strong)] flex items-center justify-center text-white text-[11px] font-bold tracking-tight">DP</div>
+          <div>
+            <div class="text-[14.5px] font-semibold text-[var(--text-strong)] leading-tight">DevPipeline</div>
+            <div class="text-[10px] text-[var(--text-muted)] tracking-[.14em] uppercase">AI 研发流水线 · 驾驶舱</div>
+          </div>
+        </div>
+        <nav class="flex items-center gap-1 text-[13px]">
+          <a href="index.html" class="px-3 py-1.5 rounded-md bg-[var(--bg-elev)] text-[var(--text-strong)] font-medium">运行中 · 3</a>
+          <a href="runs-list.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">历史</a>
+          <a href="agent-detail.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">Agents</a>
+          <a href="rules-library.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">军规库</a>
+          <a href="knowledge-graph.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">知识图谱</a>
+          <a href="operations.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">AI 资产</a>
+          <a href="people-ops.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">人员运营</a>
+        </nav>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="text-[12px] text-[var(--text-muted)]">
+          <span class="font-mono text-[var(--text-strong)]">12</span> 待评审 ·
+          <span class="font-mono text-[var(--text-strong)]">2</span> 中断
+        </div>
+        <button class="btn">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          14:23 启动
+        </button>
+        <a href="create-run.html" class="btn">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          新建运行
+        </a>
+        <button class="btn btn-primary">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          继续
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-[1480px] mx-auto px-8 py-8">
+
+    <!-- ==================== RUN TITLE ==================== -->
+    <div class="mb-7 flex items-end justify-between">
+      <div>
+        <div class="caps mb-2">PIPELINE RUN · <span class="font-mono">#2451</span></div>
+        <h1 class="font-display text-[44px] leading-[1.05] text-[var(--text-strong)]">
+          用户登录接口 <span class="italic font-light text-[var(--text-muted)]">限流与并发</span> 优化
+        </h1>
+        <div class="mt-3 flex items-center gap-5 text-[13px] text-[var(--text-muted)]">
+          <span class="flex items-center gap-1.5">
+            <span class="w-1.5 h-1.5 rounded-full bg-[var(--run)] pulse-run"></span>
+            运行中 · 阶段 <span class="font-mono text-[var(--text-strong)]">3/4</span>
+          </span>
+          <span>已耗时 <span class="font-mono text-[var(--text-strong)]">28m 41s</span></span>
+          <span>预计剩余 <span class="font-mono text-[var(--text-strong)]">~14m</span></span>
+          <span>由 <span class="text-[var(--text-strong)]">@zhangwei</span> 触发</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="btn btn-ghost">配置</button>
+        <button class="btn">克隆此次运行</button>
+      </div>
+    </div>
+
+    <!-- ==================== DUAL-TRACK PIPELINE ==================== -->
+    <section class="card mb-6 px-7 py-6">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <div class="caps flex items-center gap-2">
+            <span>主流水线 · 三轨</span>
+            <span class="text-[9px] px-1.5 py-[1px] rounded normal-case tracking-normal" style="background:rgba(217,119,6,.10); color:var(--run)">每节点可中断 · 补充上下文 · 续跑</span>
+          </div>
+          <div class="text-[11.5px] text-[var(--text-muted)] mt-0.5">上 · 执行(需求富化 → 设计与拆解 → 编码+UT → SIT)　→　中 · AI 自动审查(报告)　→　下 · 人评门(go/nogo)</div>
+        </div>
+        <div class="flex items-center gap-3 text-[11px] text-[var(--text-muted)]">
+          <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full" style="background:var(--done)"></span>已完成</span>
+          <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full" style="background:var(--run)"></span>运行中</span>
+          <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full" style="background:var(--review)"></span>评审中</span>
+          <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full" style="background:var(--text-faint)"></span>待运行</span>
+        </div>
+      </div>
+
+      <!-- ===== UPPER TRACK · EXECUTION ===== -->
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-[9.5px] tracking-[.18em] uppercase font-semibold" style="color:var(--text-muted)">执行流 · Execution</span>
+        <div class="flex-1 h-px bg-[var(--border-soft)]"></div>
+      </div>
+
+      <div class="grid grid-cols-4 gap-0 relative mb-1">
+
+        <!-- Stage 1 — DONE · 需求富化 -->
+        <div class="relative pr-8 group/stage">
+          <div class="absolute top-[14px] left-[28px] right-0 h-[2px] bg-[var(--done)]"></div>
+          <div class="relative flex items-start gap-3">
+            <div class="w-7 h-7 rounded-full bg-[var(--done)] text-white text-[11px] font-semibold flex items-center justify-center flex-shrink-0 z-10">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5">
+                <div class="text-[10px] tracking-[.14em] uppercase text-[var(--done)] font-semibold">01 · DONE</div>
+                <span class="text-[9px] font-mono text-[var(--text-faint)]">RQ-Enrich</span>
+              </div>
+              <a href="stage-1-requirement.html" class="text-[15px] font-medium text-[var(--text-strong)] mt-0.5 block hover:underline">需求富化</a>
+              <div class="text-[11.5px] text-[var(--text-muted)] mt-1 leading-snug">原始诉求 → 6 项语义化富化需求</div>
+              <div class="font-mono text-[10.5px] text-[var(--text-faint)] mt-2">3 agents · 5m 12s</div>
+              <!-- interrupt/resume controls -->
+              <div class="mt-2 flex items-center gap-1.5 opacity-0 group-hover/stage:opacity-100 transition">
+                <button title="补充上下文后再跑一次" class="text-[10px] px-1.5 py-0.5 rounded border border-[var(--border-soft)] text-[var(--text-muted)] hover:text-[var(--text-strong)] hover:border-[var(--border-mid)] inline-flex items-center gap-1">
+                  <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+                  追加重跑
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stage 2 — DONE · 设计与拆解(IR + US + 测试策略 + SIT用例) -->
+        <div class="relative pr-8 group/stage">
+          <div class="absolute top-[14px] left-[28px] right-0 h-[2px]" style="background: linear-gradient(90deg, var(--done) 0%, var(--done) 50%, var(--run) 100%);"></div>
+          <div class="relative flex items-start gap-3">
+            <div class="w-7 h-7 rounded-full bg-[var(--done)] text-white text-[11px] font-semibold flex items-center justify-center flex-shrink-0 z-10">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5">
+                <div class="text-[10px] tracking-[.14em] uppercase text-[var(--done)] font-semibold">02 · DONE</div>
+                <span class="text-[9px] font-mono text-[var(--text-faint)]">Design · Fan-out</span>
+              </div>
+              <a href="stage-2-architecture.html" class="text-[15px] font-medium text-[var(--text-strong)] mt-0.5 block hover:underline">设计与拆解</a>
+              <div class="text-[11.5px] text-[var(--text-muted)] mt-1 leading-snug">4 IR ▸ 并行产出 7 US · 测试策略 · 12 SIT 用例</div>
+              <!-- parallel branch micro-viz -->
+              <div class="mt-1.5 flex items-center gap-1">
+                <span class="chip text-[8.5px] !px-1 !py-[1px]" style="background:rgba(99,102,241,.10); color:#6366f1">US ×7</span>
+                <span class="chip text-[8.5px] !px-1 !py-[1px]" style="background:rgba(16,185,129,.10); color:#059669">策略</span>
+                <span class="chip text-[8.5px] !px-1 !py-[1px]" style="background:rgba(217,119,6,.10); color:var(--run)">SIT ×12</span>
+              </div>
+              <div class="font-mono text-[10.5px] text-[var(--text-faint)] mt-1.5">4 agents · 6m 18s</div>
+              <div class="mt-2 flex items-center gap-1.5 opacity-0 group-hover/stage:opacity-100 transition">
+                <button title="补充上下文后再跑一次" class="text-[10px] px-1.5 py-0.5 rounded border border-[var(--border-soft)] text-[var(--text-muted)] hover:text-[var(--text-strong)] hover:border-[var(--border-mid)] inline-flex items-center gap-1">
+                  <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+                  追加重跑
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stage 3 — RUNNING · 编码 + UT (中断恢复演示) -->
+        <div class="relative pr-8 group/stage">
+          <div class="absolute top-[14px] left-[28px] right-0 h-[2px]" style="background:repeating-linear-gradient(90deg, var(--border-mid) 0 4px, transparent 4px 8px);"></div>
+          <div class="relative flex items-start gap-3">
+            <div class="w-7 h-7 rounded-full bg-[var(--run)] text-white text-[11px] font-semibold flex items-center justify-center flex-shrink-0 z-10 pulse-run">
+              <svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56" stroke-linecap="round"/></svg>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5">
+                <div class="text-[10px] tracking-[.14em] uppercase text-[var(--run)] font-semibold">03 · RESUMED</div>
+                <span class="text-[9px] font-mono text-[var(--text-faint)]">Code + UT</span>
+                <!-- resumed-after-interrupt badge -->
+                <span class="text-[8.5px] px-1 py-[1px] rounded font-mono" style="background:rgba(217,119,6,.14); color:var(--run)" title="14:38 由 王工 中断 · 补充约束后 14:41 继续">
+                  ↻ 14:41 续跑
+                </span>
+              </div>
+              <div class="text-[15px] font-medium text-[var(--text-strong)] mt-0.5">编码 + UT</div>
+              <div class="text-[11.5px] text-[var(--text-muted)] mt-1 leading-snug">5 agents · UT 通过即合入 git · 已补充"幂等键约束"</div>
+              <div class="mt-2 h-1 rounded-full bg-[var(--border-soft)] overflow-hidden relative">
+                <!-- pre-interrupt segment (faded) -->
+                <div class="absolute inset-y-0 left-0 h-full" style="width:42%; background:repeating-linear-gradient(45deg, var(--border-mid) 0 3px, transparent 3px 6px);"></div>
+                <!-- resumed progress -->
+                <div class="absolute inset-y-0 left-0 h-full rounded-full" style="width:68%; background:linear-gradient(90deg, var(--run) 40%, oklch(82% 0.13 65) 100%);"></div>
+              </div>
+              <div class="font-mono text-[10.5px] text-[var(--text-faint)] mt-1.5">68% · UT 18/26 · 19m 44s</div>
+              <div class="mt-2 flex items-center gap-1.5 opacity-0 group-hover/stage:opacity-100 transition">
+                <button title="暂停当前节点" class="text-[10px] px-1.5 py-0.5 rounded border inline-flex items-center gap-1" style="border-color:rgba(217,119,6,.35); color:var(--run); background:rgba(217,119,6,.06)">
+                  <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+                  中断
+                </button>
+                <button title="补充新上下文后继续" class="text-[10px] px-1.5 py-0.5 rounded border border-[var(--border-soft)] text-[var(--text-muted)] hover:text-[var(--text-strong)] hover:border-[var(--border-mid)] inline-flex items-center gap-1">
+                  <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                  追加约束
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stage 4 — IDLE · SIT 集成测试 -->
+        <div class="relative group/stage">
+          <div class="relative flex items-start gap-3">
+            <div class="w-7 h-7 rounded-full bg-white border-2 border-dashed border-[var(--border-mid)] text-[var(--text-faint)] text-[11px] font-semibold flex items-center justify-center flex-shrink-0 z-10">4</div>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5">
+                <div class="text-[10px] tracking-[.14em] uppercase text-[var(--text-faint)] font-semibold">04 · GATED</div>
+                <span class="text-[9px] font-mono text-[var(--text-faint)]">SIT Run</span>
+              </div>
+              <a href="stage-4-test.html" class="text-[15px] font-medium text-[var(--text-faint)] mt-0.5 block hover:underline">SIT 集成测试</a>
+              <div class="text-[11.5px] text-[var(--text-faint)] mt-1 leading-snug">多 US 合并后 · 执行 Stage 02 已设计的 12 条 SIT 用例</div>
+              <div class="mt-1.5 flex items-center gap-1.5 text-[10px] text-[var(--text-faint)]">
+                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+                <span>触发条件 · ≥3 US 已合 main</span>
+              </div>
+              <div class="font-mono text-[10.5px] text-[var(--text-faint)] mt-1.5">预计 2 agents · ~9m</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===== CONNECTOR · EXEC → AI REVIEW ===== -->
+      <div class="grid grid-cols-4 gap-0 py-1.5">
+        <div class="pl-[10px] flex items-center gap-1">
+          <svg class="w-3.5 h-3.5" style="color:var(--done)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="17"/><polyline points="6 11 12 17 18 11"/></svg>
+          <span class="text-[10px] font-medium" style="color:var(--done)">执行产物 → AI 审查</span>
+        </div>
+        <div class="pl-[10px] flex items-center gap-1">
+          <svg class="w-3.5 h-3.5" style="color:var(--done)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="17"/><polyline points="6 11 12 17 18 11"/></svg>
+          <span class="text-[10px] font-medium" style="color:var(--done)">执行产物 → AI 审查</span>
+        </div>
+        <div class="pl-[10px] flex items-center gap-1">
+          <svg class="w-3.5 h-3.5 animate-pulse" style="color:var(--run)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="2 2"><line x1="12" y1="3" x2="12" y2="17"/><polyline points="6 11 12 17 18 11"/></svg>
+          <span class="text-[10px] font-medium" style="color:var(--run)">边执行边送审</span>
+        </div>
+        <div class="pl-[10px] flex items-center gap-1 opacity-60">
+          <svg class="w-3.5 h-3.5" style="color:var(--text-faint)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="2 3"><line x1="12" y1="3" x2="12" y2="17"/><polyline points="6 11 12 17 18 11"/></svg>
+          <span class="text-[10px] font-medium" style="color:var(--text-faint)">待执行</span>
+        </div>
+      </div>
+
+      <!-- ===== MIDDLE TRACK · AI AUTO-REVIEW ===== -->
+      <div class="flex items-center gap-2 mb-3 mt-1">
+        <span class="text-[9.5px] tracking-[.18em] uppercase font-semibold" style="color:var(--run)">AI 审查 · Auto-Review</span>
+        <span class="chip text-[9px] !px-1.5 !py-0" style="background:rgba(217,119,6,.10); color:var(--run)">Agent-as-Reviewer</span>
+        <div class="flex-1 h-px" style="background:linear-gradient(90deg, var(--run) 0%, transparent 100%); opacity:.25"></div>
+        <span class="text-[10px] text-[var(--text-faint)]">报告 → 人评门</span>
+      </div>
+
+      <div class="grid grid-cols-4 gap-0 relative mb-1">
+
+        <!-- AI Review 1 — PASS -->
+        <div class="relative pr-8">
+          <div class="absolute top-[14px] left-[28px] right-0 h-[2px]" style="background:var(--done); opacity:.45"></div>
+          <div class="relative rounded-xl border p-3 bg-white" style="border-color:var(--done-soft)">
+            <div class="flex items-start gap-2.5">
+              <div class="w-7 h-7 rounded-lg bg-white border-2 flex items-center justify-center flex-shrink-0 z-10 relative" style="border-color:var(--done)">
+                <svg class="w-3.5 h-3.5" style="color:var(--done)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+                <span class="absolute -top-1.5 -right-1.5 text-[7.5px] font-bold px-1 py-[1px] rounded text-white" style="background:var(--run)">AI</span>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[10px] tracking-[.14em] uppercase font-semibold" style="color:var(--done)">PASS</span>
+                  <span class="font-mono text-[10px] text-[var(--text-faint)]">v1.2</span>
+                </div>
+                <div class="text-[12px] text-[var(--text-strong)] font-medium mt-0.5">RQ-Reviewer</div>
+                <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5 leading-snug">语义完整性 · 业务约束齐全 · 0 critical</div>
+                <a href="review-detail.html" class="text-[10px] font-medium mt-1.5 inline-block hover:underline" style="color:var(--run)">AI 报告 →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Review 2 — PASS WITH WARNINGS -->
+        <div class="relative pr-8">
+          <div class="absolute top-[14px] left-[28px] right-0 h-[2px]" style="background:var(--done); opacity:.45"></div>
+          <div class="relative rounded-xl border p-3 bg-white" style="border-color:var(--done-soft)">
+            <div class="flex items-start gap-2.5">
+              <div class="w-7 h-7 rounded-lg bg-white border-2 flex items-center justify-center flex-shrink-0 z-10 relative" style="border-color:var(--done)">
+                <svg class="w-3.5 h-3.5" style="color:var(--done)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+                <span class="absolute -top-1.5 -right-1.5 text-[7.5px] font-bold px-1 py-[1px] rounded text-white" style="background:var(--run)">AI</span>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[10px] tracking-[.14em] uppercase font-semibold" style="color:var(--done)">PASS</span>
+                  <span class="chip text-[9.5px] !px-1.5 !py-0" style="background:rgba(217,119,6,.10); color:var(--run)">3 warn</span>
+                </div>
+                <div class="text-[12px] text-[var(--text-strong)] font-medium mt-0.5">DESIGN-Reviewer</div>
+                <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5 leading-snug">IR↔US 可追溯 · SIT 用例覆盖 92% · 3 warn</div>
+                <a href="review-detail.html" class="text-[10px] font-medium mt-1.5 inline-block hover:underline" style="color:var(--run)">AI 报告 →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Review 3 — REVIEWING (live) -->
+        <div class="relative pr-8">
+          <div class="absolute top-[14px] left-[28px] right-0 h-[2px]" style="background:repeating-linear-gradient(90deg, var(--run) 0 4px, transparent 4px 8px); opacity:.55"></div>
+          <div class="relative rounded-xl border-2 p-3 bg-white" style="border-color:var(--run); box-shadow:0 0 0 4px rgba(217,119,6,.08)">
+            <div class="flex items-start gap-2.5">
+              <div class="w-7 h-7 rounded-lg bg-white border-2 flex items-center justify-center flex-shrink-0 z-10 relative pulse-run" style="border-color:var(--run)">
+                <svg class="w-3.5 h-3.5 animate-spin" style="color:var(--run)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56" stroke-linecap="round"/></svg>
+                <span class="absolute -top-1.5 -right-1.5 text-[7.5px] font-bold px-1 py-[1px] rounded text-white" style="background:var(--run)">AI</span>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[10px] tracking-[.14em] uppercase font-semibold" style="color:var(--run)">REVIEWING</span>
+                </div>
+                <div class="text-[12px] text-[var(--text-strong)] font-medium mt-0.5">CODE-Reviewer</div>
+                <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5 leading-snug">UT 18/26 · 军规 24/30 · 已通过合 git 门禁</div>
+                <div class="mt-1.5 h-1 rounded-full bg-[var(--border-soft)] overflow-hidden">
+                  <div class="h-full rounded-full" style="width:62%; background:var(--run)"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Review 4 — IDLE -->
+        <div class="relative">
+          <div class="relative rounded-xl border border-dashed p-3 bg-[var(--bg-elev)]/40" style="border-color:var(--border-mid)">
+            <div class="flex items-start gap-2.5">
+              <div class="w-7 h-7 rounded-lg bg-white border-2 border-dashed flex items-center justify-center flex-shrink-0 z-10 relative" style="border-color:var(--border-mid)">
+                <svg class="w-3.5 h-3.5 text-[var(--text-faint)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2 2"/></svg>
+                <span class="absolute -top-1.5 -right-1.5 text-[7.5px] font-bold px-1 py-[1px] rounded text-white opacity-60" style="background:var(--text-faint)">AI</span>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="text-[10px] tracking-[.14em] uppercase font-semibold text-[var(--text-faint)]">IDLE</div>
+                <div class="text-[12px] text-[var(--text-muted)] font-medium mt-0.5">SIT-Reviewer</div>
+                <div class="text-[10.5px] text-[var(--text-faint)] mt-0.5 leading-snug">等待 ≥3 US 合并 · 跑 12 条 SIT 用例</div>
+                <div class="font-mono text-[10px] text-[var(--text-faint)] mt-1.5">预计 15:08 启动</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===== CONNECTOR · AI REVIEW → HUMAN GATE ===== -->
+      <div class="grid grid-cols-4 gap-0 py-1.5">
+        <div class="pl-[10px] flex items-center gap-1">
+          <svg class="w-3.5 h-3.5" style="color:var(--review)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="17"/><polyline points="6 11 12 17 18 11"/></svg>
+          <span class="text-[10px] font-medium" style="color:var(--review)">AI 报告 → 人评 go/nogo</span>
+        </div>
+        <div class="pl-[10px] flex items-center gap-1">
+          <svg class="w-3.5 h-3.5" style="color:var(--review)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="17"/><polyline points="6 11 12 17 18 11"/></svg>
+          <span class="text-[10px] font-medium" style="color:var(--review)">AI 报告 → 人评 go/nogo</span>
+        </div>
+        <div class="pl-[10px] flex items-center gap-1 opacity-70">
+          <svg class="w-3.5 h-3.5" style="color:var(--review)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="2 2"><line x1="12" y1="3" x2="12" y2="17"/><polyline points="6 11 12 17 18 11"/></svg>
+          <span class="text-[10px] font-medium" style="color:var(--review)">AI 审查完成后送人评</span>
+        </div>
+        <div class="pl-[10px] flex items-center gap-1 opacity-50">
+          <svg class="w-3.5 h-3.5" style="color:var(--text-faint)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="2 3"><line x1="12" y1="3" x2="12" y2="17"/><polyline points="6 11 12 17 18 11"/></svg>
+          <span class="text-[10px] font-medium" style="color:var(--text-faint)">免评审</span>
+        </div>
+      </div>
+
+      <!-- ===== LOWER TRACK · REVIEW GATES ===== -->
+      <div class="flex items-center gap-2 mb-3 mt-1">
+        <span class="text-[9.5px] tracking-[.18em] uppercase font-semibold" style="color:var(--review)">评审门 · Review Gates</span>
+        <div class="flex-1 h-px" style="background:var(--review-soft)"></div>
+      </div>
+
+      <div class="grid grid-cols-4 gap-0 relative">
+
+        <!-- Review 1 — APPROVED -->
+        <div class="relative pr-8">
+          <div class="absolute top-[14px] left-[28px] right-0 h-[2px]" style="background:var(--done); opacity:.35"></div>
+          <div class="relative rounded-xl border p-3 bg-white" style="border-color:var(--done-soft)">
+            <div class="flex items-start gap-2.5">
+              <div class="w-7 h-7 rounded-full bg-white border-2 flex items-center justify-center flex-shrink-0 z-10" style="border-color:var(--done)">
+                <svg class="w-3.5 h-3.5" style="color:var(--done)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="text-[10px] tracking-[.14em] uppercase font-semibold" style="color:var(--done)">评审 · 通过</div>
+                <div class="flex items-center gap-1.5 mt-1.5">
+                  <div class="w-4 h-4 rounded-full bg-gradient-to-br from-violet-300 to-violet-500 text-white text-[8.5px] font-semibold flex items-center justify-center">张</div>
+                  <span class="text-[12px] text-[var(--text-strong)] font-medium">张工</span>
+                </div>
+                <div class="text-[11px] text-[var(--text-muted)] mt-1 leading-snug">"语义清晰 · 拆解粒度合理"</div>
+                <div class="font-mono text-[10px] text-[var(--text-faint)] mt-1.5">14:31 · 等待 19s</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Review 2 — APPROVED with comment -->
+        <div class="relative pr-8">
+          <div class="absolute top-[14px] left-[28px] right-0 h-[2px]" style="background:var(--done); opacity:.35"></div>
+          <div class="relative rounded-xl border p-3 bg-white" style="border-color:var(--done-soft)">
+            <div class="flex items-start gap-2.5">
+              <div class="w-7 h-7 rounded-full bg-white border-2 flex items-center justify-center flex-shrink-0 z-10" style="border-color:var(--done)">
+                <svg class="w-3.5 h-3.5" style="color:var(--done)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                  <div class="text-[10px] tracking-[.14em] uppercase font-semibold" style="color:var(--done)">评审 · 通过</div>
+                  <span class="chip text-[9.5px] !px-1.5 !py-0" style="background:var(--review-soft); color:var(--review)">1 建议</span>
+                </div>
+                <div class="flex items-center gap-1.5 mt-1.5">
+                  <div class="w-4 h-4 rounded-full bg-gradient-to-br from-amber-300 to-amber-500 text-white text-[8.5px] font-semibold flex items-center justify-center">李</div>
+                  <span class="text-[12px] text-[var(--text-strong)] font-medium">李工</span>
+                </div>
+                <div class="text-[11px] text-[var(--text-muted)] mt-1 leading-snug">"建议 LoginService 单一职责拆分"</div>
+                <div class="font-mono text-[10px] text-[var(--text-faint)] mt-1.5">14:35 · 等待 47s</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Review 3 — PENDING (will activate after exec done) -->
+        <div class="relative pr-8">
+          <div class="absolute top-[14px] left-[28px] right-0 h-[2px]" style="background:repeating-linear-gradient(90deg, var(--review-soft) 0 4px, transparent 4px 8px);"></div>
+          <div class="relative rounded-xl border-2 border-dashed p-3 bg-[var(--review-soft)]/30" style="border-color:var(--review)">
+            <div class="flex items-start gap-2.5">
+              <div class="w-7 h-7 rounded-full bg-white border-2 border-dashed flex items-center justify-center flex-shrink-0 z-10" style="border-color:var(--review)">
+                <svg class="w-3.5 h-3.5" style="color:var(--review)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="text-[10px] tracking-[.14em] uppercase font-semibold" style="color:var(--review)">评审 · 待启动</div>
+                <div class="flex items-center gap-1.5 mt-1.5">
+                  <div class="w-4 h-4 rounded-full bg-gradient-to-br from-violet-200 to-violet-400 text-white text-[8.5px] font-semibold flex items-center justify-center opacity-60">?</div>
+                  <span class="text-[12px] text-[var(--text-muted)]">2 候选评审人</span>
+                </div>
+                <div class="text-[11px] text-[var(--text-muted)] mt-1 leading-snug">执行完成后自动指派 · SLA <span class="font-mono">30m</span></div>
+                <div class="font-mono text-[10px] text-[var(--text-faint)] mt-1.5">预计 14:52 启动</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Review 4 — SKIPPED -->
+        <div class="relative">
+          <div class="relative rounded-xl border border-dashed p-3 bg-[var(--bg-elev)]/50 opacity-70" style="border-color:var(--border-mid)">
+            <div class="flex items-start gap-2.5">
+              <div class="w-7 h-7 rounded-full bg-white border-2 border-dashed border-[var(--border-mid)] flex items-center justify-center flex-shrink-0 z-10">
+                <svg class="w-3.5 h-3.5 text-[var(--text-faint)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="text-[10px] tracking-[.14em] uppercase font-semibold text-[var(--text-faint)]">评审 · 免</div>
+                <div class="text-[12px] text-[var(--text-muted)] mt-1.5">已配置免评审</div>
+                <div class="text-[11px] text-[var(--text-faint)] mt-1 leading-snug">本节点直接产出 · 可在策略中开启</div>
+                <button class="text-[10.5px] text-[var(--text-muted)] hover:text-[var(--text-strong)] mt-1.5 underline">改为必审 →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== TRIPLE-REPORT GATE · STAGE 03 ==================== -->
+    <section class="card mb-6 px-7 py-6">
+      <div class="flex items-start justify-between mb-5">
+        <div>
+          <div class="caps">人评门 · 阶段 03 · 待 go / nogo</div>
+          <div class="text-[11.5px] text-[var(--text-muted)] mt-0.5">执行 Agent 报告　×　AI Review Agent 报告　→　人评决策　→　回流 Agent / Skill / KG</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="chip text-[10px]" style="background:var(--review-soft); color:var(--review)"><span class="chip-dot" style="background:var(--review)"></span>等待人评 02:47</span>
+          <span class="chip text-[10px]" style="background:var(--bg-elev); color:var(--text-muted)">SLA 30m</span>
+        </div>
+      </div>
+
+      <!-- Two report cards side-by-side -->
+      <div class="grid grid-cols-2 gap-5 mb-5">
+
+        <!-- EXEC AGENT REPORT -->
+        <div class="rounded-xl border bg-white p-5 relative overflow-hidden" style="border-color:var(--border-soft)">
+          <div class="absolute top-0 left-0 w-full h-[3px]" style="background:linear-gradient(90deg, var(--a-dev), var(--a-sec))"></div>
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <div class="caps" style="color:var(--text-muted)">执行 Agent · 自评报告</div>
+              <div class="font-display text-[18px] text-[var(--text-strong)] mt-1">DEV-Senior · SEC-Reviewer · PRF</div>
+              <div class="text-[11.5px] text-[var(--text-muted)] mt-0.5">三 Agent 协同 · 19m 44s</div>
+            </div>
+            <div class="text-right">
+              <div class="text-[10px] tracking-[.14em] uppercase font-semibold" style="color:var(--done)">SELF-PASS</div>
+              <div class="font-mono text-[22px] font-semibold text-[var(--text-strong)] mt-0.5">94<span class="text-[12px] text-[var(--text-muted)]">/100</span></div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 text-[10.5px] mb-3">
+            <div class="rounded-lg bg-[var(--bg-elev)] p-2">
+              <div class="text-[var(--text-faint)]">改动</div>
+              <div class="font-mono text-[13px] text-[var(--text-strong)] mt-0.5">+312 / −47</div>
+            </div>
+            <div class="rounded-lg bg-[var(--bg-elev)] p-2">
+              <div class="text-[var(--text-faint)]">单测</div>
+              <div class="font-mono text-[13px] text-[var(--text-strong)] mt-0.5">26 pass</div>
+            </div>
+            <div class="rounded-lg bg-[var(--bg-elev)] p-2">
+              <div class="text-[var(--text-faint)]">军规</div>
+              <div class="font-mono text-[13px] text-[var(--text-strong)] mt-0.5">23 / 23</div>
+            </div>
+          </div>
+
+          <ul class="space-y-1.5 text-[12px] text-[var(--text-strong)] mb-3">
+            <li class="flex gap-2"><span style="color:var(--done)">✓</span>LoginService 拆分为 3 类 · 单一职责</li>
+            <li class="flex gap-2"><span style="color:var(--done)">✓</span>CSRF / SQL 注入边界全部加固</li>
+            <li class="flex gap-2"><span style="color:var(--run)">!</span>1 处 N+1 查询 · 已加 batch fetch</li>
+          </ul>
+          <a href="artifact-diff.html" class="text-[11px] font-medium hover:underline" style="color:var(--a-dev)">查看完整 diff →</a>
+        </div>
+
+        <!-- AI REVIEWER REPORT -->
+        <div class="rounded-xl border bg-white p-5 relative overflow-hidden" style="border-color:var(--run-soft); box-shadow:0 0 0 4px rgba(217,119,6,.04)">
+          <div class="absolute top-0 left-0 w-full h-[3px]" style="background:linear-gradient(90deg, var(--run), var(--review))"></div>
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-start gap-2">
+              <div class="w-9 h-9 rounded-lg border-2 flex items-center justify-center relative" style="border-color:var(--run); background:white">
+                <svg class="w-4 h-4" style="color:var(--run)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+                <span class="absolute -top-1.5 -right-1.5 text-[8px] font-bold px-1 py-[1px] rounded text-white" style="background:var(--run)">AI</span>
+              </div>
+              <div>
+                <div class="caps" style="color:var(--run)">AI Review Agent · 独立审查</div>
+                <div class="font-display text-[18px] text-[var(--text-strong)] mt-1">CODE-Reviewer v1.2</div>
+                <div class="text-[11.5px] text-[var(--text-muted)] mt-0.5">独立 Agent · 2m 18s</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-[10px] tracking-[.14em] uppercase font-semibold" style="color:var(--done)">PASS · WARN</div>
+              <div class="font-mono text-[22px] font-semibold text-[var(--text-strong)] mt-0.5">87<span class="text-[12px] text-[var(--text-muted)]">/100</span></div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 text-[10.5px] mb-3">
+            <div class="rounded-lg p-2" style="background:rgba(16,185,129,.08)">
+              <div style="color:var(--done)">通过</div>
+              <div class="font-mono text-[13px] text-[var(--text-strong)] mt-0.5">42 项</div>
+            </div>
+            <div class="rounded-lg p-2" style="background:rgba(217,119,6,.08)">
+              <div style="color:var(--run)">告警</div>
+              <div class="font-mono text-[13px] text-[var(--text-strong)] mt-0.5">3 项</div>
+            </div>
+            <div class="rounded-lg p-2" style="background:rgba(244,63,94,.08)">
+              <div style="color:var(--halt)">阻断</div>
+              <div class="font-mono text-[13px] text-[var(--text-strong)] mt-0.5">0 项</div>
+            </div>
+          </div>
+
+          <ul class="space-y-1.5 text-[12px] text-[var(--text-strong)] mb-3">
+            <li class="flex gap-2"><span style="color:var(--run)">⚠</span>SessionToken TTL 与 KG 中 "鉴权" 实体不一致</li>
+            <li class="flex gap-2"><span style="color:var(--run)">⚠</span>建议复用 OrgPolicy.cache 替代新增 LRU</li>
+            <li class="flex gap-2"><span style="color:var(--text-muted)">·</span>风格与团队约定相符 · 复用率 71%</li>
+          </ul>
+          <a href="review-detail.html" class="text-[11px] font-medium hover:underline" style="color:var(--run)">查看 AI 报告全文 →</a>
+        </div>
+
+      </div>
+
+      <!-- Human decision row -->
+      <div class="rounded-xl border-2 p-5" style="border-color:var(--review); background:linear-gradient(180deg, rgba(124,58,237,.04) 0%, transparent 60%)">
+        <div class="flex items-start justify-between gap-5">
+          <div class="flex items-start gap-3 flex-1">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-300 to-violet-500 text-white text-[13px] font-semibold flex items-center justify-center flex-shrink-0">王</div>
+            <div class="flex-1">
+              <div class="flex items-center gap-2 mb-1.5">
+                <div class="text-[14px] font-medium text-[var(--text-strong)]">王工 · 主评审</div>
+                <span class="chip text-[10px]" style="background:var(--review-soft); color:var(--review)">本阶段决策人</span>
+              </div>
+              <div class="text-[12px] text-[var(--text-muted)] mb-3">综合两份报告 · 结合 KG 上下文 · 给出 go / nogo 与书面意见 (回流 Agent + Skill)</div>
+              <div class="grid grid-cols-2 gap-3">
+                <select class="text-[12px] rounded-lg border px-3 py-2 bg-white" style="border-color:var(--border-mid); color:var(--text-strong)">
+                  <option>意见类型 · 选择</option>
+                  <option>风险点 (回流 SEC-Reviewer Agent)</option>
+                  <option>风格偏好 (回流 CODE-Reviewer Skill)</option>
+                  <option>知识缺失 (回流 KG 实体)</option>
+                  <option>误报 (调低 AI Reviewer 权重)</option>
+                </select>
+                <select class="text-[12px] rounded-lg border px-3 py-2 bg-white" style="border-color:var(--border-mid); color:var(--text-strong)">
+                  <option>反馈目标 · 自动定位</option>
+                  <option>DEV-Senior · prompt</option>
+                  <option>SEC-Reviewer · 军规库</option>
+                  <option>CODE-Reviewer · 规则集</option>
+                  <option>KG · 鉴权 实体</option>
+                </select>
+              </div>
+              <textarea rows="2" class="w-full text-[12.5px] rounded-lg border mt-3 px-3 py-2 bg-white resize-none" style="border-color:var(--border-mid); color:var(--text-strong)" placeholder="书面意见 · 将被结构化存档,沉淀为 Agent / Skill 改进语料..."></textarea>
+            </div>
+          </div>
+          <div class="flex flex-col gap-2 w-[180px] flex-shrink-0">
+            <button class="btn btn-primary justify-center" style="background:var(--done); border-color:var(--done)">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+              GO · 放行下一阶段
+            </button>
+            <button class="btn justify-center" style="color:var(--run); border-color:var(--run-soft)">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9"/><polyline points="3 4 3 12 11 12"/></svg>
+              退回 · 让 Agent 重做
+            </button>
+            <button class="btn justify-center" style="color:var(--halt); border-color:rgba(244,63,94,.25)">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>
+              NOGO · 中断
+            </button>
+          </div>
+        </div>
+
+        <!-- Feedback loop visualization -->
+        <div class="mt-5 pt-4 border-t" style="border-color:var(--border-soft)">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="caps">反馈回流 · Feedback Loop</span>
+            <div class="flex-1 h-px bg-[var(--border-soft)]"></div>
+            <span class="text-[10px] text-[var(--text-muted)]">人评意见自动沉淀,改进下一次执行</span>
+          </div>
+          <div class="grid grid-cols-4 gap-3">
+            <div class="rounded-lg border p-3 bg-white" style="border-color:var(--border-soft)">
+              <div class="flex items-center gap-2 mb-1">
+                <div class="agent-avatar !w-5 !h-5 !text-[9px]" style="background:var(--a-dev)">DEV</div>
+                <span class="text-[11px] font-medium text-[var(--text-strong)]">执行 Agent</span>
+              </div>
+              <div class="text-[10.5px] text-[var(--text-muted)] leading-snug">人评意见 → prompt 模板 · few-shot 语料</div>
+              <div class="font-mono text-[10px] mt-1.5" style="color:var(--done)">本周已采纳 14 条</div>
+            </div>
+            <div class="rounded-lg border p-3 bg-white" style="border-color:var(--border-soft)">
+              <div class="flex items-center gap-2 mb-1">
+                <div class="w-5 h-5 rounded-md border-2 flex items-center justify-center text-[7.5px] font-bold text-white" style="background:var(--run); border-color:var(--run)">AI</div>
+                <span class="text-[11px] font-medium text-[var(--text-strong)]">AI Review Agent</span>
+              </div>
+              <div class="text-[10.5px] text-[var(--text-muted)] leading-snug">误报标注 → 规则权重 · 阈值调整</div>
+              <div class="font-mono text-[10px] mt-1.5" style="color:var(--done)">本周调优 6 项</div>
+            </div>
+            <div class="rounded-lg border p-3 bg-white" style="border-color:var(--border-soft)">
+              <div class="flex items-center gap-2 mb-1">
+                <div class="w-5 h-5 rounded-md flex items-center justify-center" style="background:var(--review-soft)">
+                  <svg class="w-3 h-3" style="color:var(--review)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/></svg>
+                </div>
+                <span class="text-[11px] font-medium text-[var(--text-strong)]">Skill 库</span>
+              </div>
+              <div class="text-[10.5px] text-[var(--text-muted)] leading-snug">高频意见 → 新 Skill · 既有 Skill 改写</div>
+              <div class="font-mono text-[10px] mt-1.5" style="color:var(--done)">本周新增 2 个</div>
+            </div>
+            <div class="rounded-lg border p-3 bg-white" style="border-color:var(--border-soft)">
+              <div class="flex items-center gap-2 mb-1">
+                <div class="w-5 h-5 rounded-md flex items-center justify-center" style="background:rgba(99,102,241,.10)">
+                  <svg class="w-3 h-3" style="color:#6366f1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>
+                </div>
+                <a href="knowledge-graph.html" class="text-[11px] font-medium text-[var(--text-strong)] hover:underline">知识图谱</a>
+              </div>
+              <div class="text-[10.5px] text-[var(--text-muted)] leading-snug">知识缺失 → 新实体 / 修正关系</div>
+              <div class="font-mono text-[10px] mt-1.5" style="color:var(--done)">本周补全 31 关系</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== BENTO ROW 1: ACTIVE STAGE ==================== -->
+    <section class="grid grid-cols-12 gap-5 mb-5">
+
+      <!-- LARGE: Active stage detail with multi-agent collab -->
+      <div class="col-span-8 card card-elev p-7 relative overflow-hidden">
+        <div class="absolute -top-32 -right-24 w-[28rem] h-[28rem] rounded-full opacity-25 blur-3xl" style="background: radial-gradient(circle, var(--run) 0%, transparent 70%);"></div>
+
+        <div class="relative">
+          <!-- Header -->
+          <div class="flex items-start justify-between mb-6">
+            <div>
+              <div class="caps mb-1 flex items-center gap-2" style="color:var(--run)">
+                <span>阶段 03 · 进行中 · 中断后续跑</span>
+                <span class="font-mono text-[9.5px] px-1.5 py-[1px] rounded normal-case tracking-normal" style="background:rgba(217,119,6,.14); color:var(--run)" title="14:38 王工 中断 · 14:41 续跑">↻ 14:41 续跑</span>
+              </div>
+              <h2 class="font-display text-[28px] leading-tight text-[var(--text-strong)]">
+                编码 + UT <span class="italic font-light text-[var(--text-muted)]">— UT 通过即合 git</span>
+              </h2>
+            </div>
+            <div class="flex items-center gap-2">
+              <button class="btn">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                暂停
+              </button>
+              <button class="btn">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                中断
+              </button>
+              <button class="btn btn-primary">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                补充上下文
+              </button>
+            </div>
+          </div>
+
+          <!-- Progress bar -->
+          <div class="mb-6">
+            <div class="flex items-center justify-between mb-2">
+              <div class="text-[13px] text-[var(--text-strong)]">
+                <span class="font-mono text-[var(--run)] font-medium">[3/5]</span>
+                应用安全军规 · 检查 SQL 注入与权限边界
+              </div>
+              <div class="font-mono text-[12px] text-[var(--text-muted)]">68%</div>
+            </div>
+            <div class="h-1.5 rounded-full bg-[var(--border-soft)] overflow-hidden relative">
+              <div class="h-full rounded-full relative" style="width:68%; background:var(--run);">
+                <div class="absolute inset-0 shimmer-bar opacity-60"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- AGENT SWIMLANES + CONVERSATION -->
+          <div class="grid grid-cols-7 gap-5">
+
+            <!-- LEFT: Agent roster (swimlane heads) -->
+            <div class="col-span-3 space-y-2.5">
+              <div class="caps mb-1">参与 Agent</div>
+
+              <!-- main dev -->
+              <div class="flex items-center gap-3 p-2.5 rounded-xl bg-[var(--bg-elev)] border border-[var(--border-soft)]">
+                <div class="agent-avatar" style="background:var(--a-dev)">DEV</div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-[12.5px] font-medium text-[var(--text-strong)]">主开发 · senior</div>
+                  <div class="text-[10.5px] text-[var(--text-muted)] truncate">完成 2 文件,等待安全军规反馈</div>
+                </div>
+                <span class="chip" style="background:var(--done-soft); color:var(--done);">
+                  <span class="chip-dot" style="background:var(--done)"></span>就绪
+                </span>
+              </div>
+
+              <!-- code rule agent -->
+              <div class="flex items-center gap-3 p-2.5 rounded-xl bg-[var(--bg-elev)] border border-[var(--border-soft)]">
+                <div class="agent-avatar" style="background:var(--a-arch)">CR</div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-[12.5px] font-medium text-[var(--text-strong)]">代码军规审查</div>
+                  <div class="text-[10.5px] text-[var(--text-muted)] truncate">23 / 23 条规则通过</div>
+                </div>
+                <span class="chip" style="background:var(--done-soft); color:var(--done);">
+                  <span class="chip-dot" style="background:var(--done)"></span>完成
+                </span>
+              </div>
+
+              <!-- sec agent (active) -->
+              <div class="flex items-center gap-3 p-2.5 rounded-xl border-2 bg-white" style="border-color:var(--run); box-shadow: 0 0 0 4px var(--run-soft);">
+                <div class="agent-avatar pulse-run" style="background:var(--a-sec)">SEC</div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-[12.5px] font-medium text-[var(--text-strong)]">安全军规审查</div>
+                  <div class="text-[10.5px] truncate" style="color:var(--run)">检查 CSRF 边界…</div>
+                </div>
+                <span class="chip" style="background:var(--run-soft); color:var(--run);">
+                  <span class="chip-dot blink" style="background:var(--run)"></span>工作中
+                </span>
+              </div>
+
+              <!-- perf agent (queued) -->
+              <div class="flex items-center gap-3 p-2.5 rounded-xl bg-[var(--bg-elev)] border border-dashed border-[var(--border-mid)] opacity-70">
+                <div class="agent-avatar" style="background:var(--a-perf)">PRF</div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-[12.5px] font-medium text-[var(--text-muted)]">性能军规审查</div>
+                  <div class="text-[10.5px] text-[var(--text-faint)] truncate">排队中 · 等待 SEC</div>
+                </div>
+                <span class="chip" style="background:var(--idle-soft); color:var(--text-muted); border-color:var(--border-mid)">
+                  <span class="chip-dot" style="background:var(--text-faint)"></span>排队
+                </span>
+              </div>
+
+              <!-- self-heal agent -->
+              <div class="flex items-center gap-3 p-2.5 rounded-xl bg-[var(--bg-elev)] border border-dashed border-[var(--border-mid)] opacity-70">
+                <div class="agent-avatar" style="background:var(--a-test)">FIX</div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-[12.5px] font-medium text-[var(--text-muted)]">自检 &amp; 修复</div>
+                  <div class="text-[10.5px] text-[var(--text-faint)] truncate">排队中</div>
+                </div>
+                <span class="chip" style="background:var(--idle-soft); color:var(--text-muted); border-color:var(--border-mid)">
+                  <span class="chip-dot" style="background:var(--text-faint)"></span>排队
+                </span>
+              </div>
+            </div>
+
+            <!-- RIGHT: Agent conversation thread -->
+            <div class="col-span-4 rounded-2xl border border-[var(--border-soft)] bg-[var(--bg-elev)] overflow-hidden">
+              <div class="flex items-center justify-between px-4 py-2.5 border-b border-[var(--border-soft)] bg-white">
+                <div class="caps">Agent 对话流</div>
+                <div class="flex items-center gap-2 text-[10.5px] text-[var(--text-muted)] font-mono">
+                  <span class="w-1.5 h-1.5 rounded-full bg-[var(--run)] blink"></span>实时
+                </div>
+              </div>
+
+              <div class="p-4 h-[300px] overflow-y-auto space-y-3.5 text-[12.5px] leading-relaxed">
+
+                <!-- msg: dev -->
+                <div class="flex items-start gap-2.5">
+                  <div class="agent-avatar flex-shrink-0" style="background:var(--a-dev)">DEV</div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-baseline gap-2">
+                      <span class="text-[12px] font-medium text-[var(--text-strong)]">主开发</span>
+                      <span class="font-mono text-[10px] text-[var(--text-faint)]">14:38:02</span>
+                    </div>
+                    <div class="text-[var(--text-body)] mt-0.5">已根据 <span class="font-mono text-[var(--text-strong)] bg-[var(--bg-card)] px-1 rounded">设计稿 #2451-D</span> 生成 2 个文件:<code class="font-mono text-[11.5px] text-[var(--text-strong)]">AuthController.java</code> 与 <code class="font-mono text-[11.5px] text-[var(--text-strong)]">LoginService.java</code>,移交军规审查。</div>
+                  </div>
+                </div>
+
+                <!-- msg: code rule -->
+                <div class="flex items-start gap-2.5">
+                  <div class="agent-avatar flex-shrink-0" style="background:var(--a-arch)">CR</div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-baseline gap-2">
+                      <span class="text-[12px] font-medium text-[var(--text-strong)]">代码军规审查</span>
+                      <span class="font-mono text-[10px] text-[var(--text-faint)]">14:41:18</span>
+                    </div>
+                    <div class="text-[var(--text-body)] mt-0.5">23 条规则全部通过 ✓ 包括方法长度、命名、异常处理。无需修改,交付 @SEC。</div>
+                  </div>
+                </div>
+
+                <!-- msg: sec finds issue -->
+                <div class="flex items-start gap-2.5">
+                  <div class="agent-avatar flex-shrink-0" style="background:var(--a-sec)">SEC</div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-baseline gap-2">
+                      <span class="text-[12px] font-medium text-[var(--text-strong)]">安全军规审查</span>
+                      <span class="font-mono text-[10px] text-[var(--text-faint)]">14:43:41</span>
+                    </div>
+                    <div class="text-[var(--text-body)] mt-0.5">
+                      <span class="font-medium" style="color:var(--halt)">AUTH-003 违规</span> · <code class="font-mono text-[11.5px] text-[var(--text-strong)]">RateLimitController.refresh()</code> 缺少 <code class="font-mono text-[11.5px]">@PreAuthorize</code> 注解。
+                      <div class="mt-2 px-3 py-2 rounded-lg bg-white border border-[var(--border-soft)] font-mono text-[11px] text-[var(--text-body)]">
+                        <span style="color:var(--halt)">- public void refresh()</span><br>
+                        <span style="color:var(--done)">+ @PreAuthorize("hasRole('ADMIN')")<br>+ public void refresh()</span>
+                      </div>
+                      <div class="mt-2 text-[11.5px]">@DEV 请确认修复 · <button class="text-[var(--review)] hover:underline">[人工介入]</button></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- msg: dev fix -->
+                <div class="flex items-start gap-2.5">
+                  <div class="agent-avatar flex-shrink-0" style="background:var(--a-dev)">DEV</div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-baseline gap-2">
+                      <span class="text-[12px] font-medium text-[var(--text-strong)]">主开发</span>
+                      <span class="font-mono text-[10px] text-[var(--text-faint)]">14:43:46</span>
+                    </div>
+                    <div class="text-[var(--text-body)] mt-0.5">已应用补丁,新文件 <code class="font-mono text-[11.5px] text-[var(--text-strong)]">RateLimitController.java</code> 提交,移交 @SEC 复检。</div>
+                  </div>
+                </div>
+
+                <!-- msg: sec pass -->
+                <div class="flex items-start gap-2.5">
+                  <div class="agent-avatar flex-shrink-0" style="background:var(--a-sec)">SEC</div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-baseline gap-2">
+                      <span class="text-[12px] font-medium text-[var(--text-strong)]">安全军规审查</span>
+                      <span class="font-mono text-[10px] text-[var(--text-faint)]">14:43:52</span>
+                    </div>
+                    <div class="text-[var(--text-body)] mt-0.5">AUTH-003 复检通过 ✓ 继续检查 CSRF 边界…</div>
+                  </div>
+                </div>
+
+                <!-- typing indicator -->
+                <div class="flex items-start gap-2.5">
+                  <div class="agent-avatar flex-shrink-0 pulse-run" style="background:var(--a-sec)">SEC</div>
+                  <div class="flex-1">
+                    <div class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-white border border-[var(--border-soft)]">
+                      <span class="w-1.5 h-1.5 rounded-full bg-[var(--text-faint)] blink"></span>
+                      <span class="w-1.5 h-1.5 rounded-full bg-[var(--text-faint)] blink" style="animation-delay:.2s"></span>
+                      <span class="w-1.5 h-1.5 rounded-full bg-[var(--text-faint)] blink" style="animation-delay:.4s"></span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <div class="px-4 py-2.5 border-t border-[var(--border-soft)] bg-white flex items-center gap-2">
+                <input type="text" placeholder="向 agent 补充上下文 / 提问..." class="flex-1 bg-transparent text-[12.5px] outline-none placeholder:text-[var(--text-faint)]">
+                <button class="text-[var(--text-muted)] hover:text-[var(--text-strong)]">
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN: Knowledge graph + Code rules -->
+      <div class="col-span-4 space-y-5">
+
+        <!-- Knowledge graph -->
+        <div class="card p-5 relative overflow-hidden">
+          <div class="absolute -top-12 -right-12 w-40 h-40 rounded-full opacity-20 blur-2xl" style="background: var(--a-graph)"></div>
+          <div class="relative">
+            <div class="flex items-center justify-between mb-3">
+              <div class="caps">知识图谱命中</div>
+              <span class="font-mono text-[11px] text-[var(--text-faint)]">来自阶段 01</span>
+            </div>
+            <div class="flex items-baseline gap-2 mb-3">
+              <div class="font-display text-[42px] leading-none text-[var(--text-strong)]">12</div>
+              <div class="text-[12px] text-[var(--text-muted)]">实体关联 · 4 类</div>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="px-2 py-1 rounded-md text-[11px]" style="background:oklch(94% 0.04 245); color:oklch(38% 0.10 245)">认证服务</span>
+              <span class="px-2 py-1 rounded-md text-[11px]" style="background:oklch(94% 0.04 245); color:oklch(38% 0.10 245)">JWT</span>
+              <span class="px-2 py-1 rounded-md text-[11px]" style="background:oklch(94% 0.04 295); color:oklch(38% 0.12 295)">Redis 计数器</span>
+              <span class="px-2 py-1 rounded-md text-[11px]" style="background:oklch(94% 0.04 295); color:oklch(38% 0.12 295)">滑动窗口限流</span>
+              <span class="px-2 py-1 rounded-md text-[11px]" style="background:oklch(94% 0.04 150); color:oklch(38% 0.10 150)">RBAC</span>
+              <span class="px-2 py-1 rounded-md text-[11px]" style="background:oklch(94% 0.04 150); color:oklch(38% 0.10 150)">审计日志</span>
+              <span class="px-2 py-1 rounded-md text-[11px] text-[var(--text-muted)] bg-[var(--bg-elev)]">+6</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Code rules -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div class="caps">军规应用 · 实时</div>
+            <button class="text-[11px] text-[var(--text-muted)] hover:text-[var(--text-strong)]">清单 →</button>
+          </div>
+          <div class="space-y-3.5">
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[12.5px] text-[var(--text-body)]">代码军规</span>
+                <span class="font-mono text-[12px] text-[var(--text-strong)]">23 / 23</span>
+              </div>
+              <div class="h-1.5 rounded-full bg-[var(--border-soft)] overflow-hidden">
+                <div class="h-full rounded-full" style="width:100%; background:var(--done)"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[12.5px] text-[var(--text-body)]">安全军规</span>
+                <span class="font-mono text-[12px] text-[var(--text-strong)]">8 <span class="text-[var(--text-faint)]">/ 12</span></span>
+              </div>
+              <div class="h-1.5 rounded-full bg-[var(--border-soft)] overflow-hidden">
+                <div class="h-full rounded-full relative" style="width:66%; background:var(--run)">
+                  <div class="absolute inset-0 shimmer-bar opacity-60"></div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[12.5px] text-[var(--text-faint)]">性能军规</span>
+                <span class="font-mono text-[12px] text-[var(--text-faint)]">0 / 8</span>
+              </div>
+              <div class="h-1.5 rounded-full bg-[var(--border-soft)] overflow-hidden">
+                <div class="h-full rounded-full" style="width:0%; background:var(--border-mid)"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-4 border-t border-[var(--border-soft)] flex items-center justify-between">
+            <span class="text-[11.5px] text-[var(--text-muted)]">本次自动修复</span>
+            <span class="font-mono text-[12px] text-[var(--text-strong)]">1 项</span>
+          </div>
+        </div>
+
+        <!-- Live artifacts -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div class="caps">生成中的制品</div>
+            <span class="font-mono text-[11px] text-[var(--text-faint)]">3 个</span>
+          </div>
+          <div class="space-y-2">
+            <div class="flex items-center gap-3 p-2.5 rounded-lg bg-[var(--bg-elev)] border border-[var(--border-soft)]">
+              <div class="w-7 h-7 rounded-md flex items-center justify-center" style="background:var(--done-soft)">
+                <svg class="w-3.5 h-3.5" style="color:var(--done)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[12.5px] font-medium text-[var(--text-strong)] truncate">AuthController.java</div>
+                <div class="text-[10.5px] text-[var(--text-faint)] font-mono">+184 -32</div>
+              </div>
+              <button class="text-[var(--text-muted)] hover:text-[var(--text-strong)]">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+              </button>
+            </div>
+            <div class="flex items-center gap-3 p-2.5 rounded-lg bg-[var(--bg-elev)] border border-[var(--border-soft)]">
+              <div class="w-7 h-7 rounded-md flex items-center justify-center" style="background:var(--done-soft)">
+                <svg class="w-3.5 h-3.5" style="color:var(--done)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[12.5px] font-medium text-[var(--text-strong)] truncate">LoginService.java</div>
+                <div class="text-[10.5px] text-[var(--text-faint)] font-mono">+97 -18</div>
+              </div>
+              <button class="text-[var(--text-muted)] hover:text-[var(--text-strong)]">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+              </button>
+            </div>
+            <div class="flex items-center gap-3 p-2.5 rounded-lg bg-[var(--bg-elev)] border border-[var(--border-soft)] opacity-70">
+              <div class="w-7 h-7 rounded-md flex items-center justify-center" style="background:var(--run-soft)">
+                <svg class="w-3.5 h-3.5 animate-spin" style="color:var(--run)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 12a9 9 0 1 1-6.219-8.56" stroke-linecap="round"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[12.5px] font-medium text-[var(--text-strong)] truncate">RateLimitController.java</div>
+                <div class="text-[10.5px] text-[var(--text-faint)] font-mono">编辑中…</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== BENTO ROW 2: OTHER STAGES SUMMARY ==================== -->
+    <section class="grid grid-cols-12 gap-5 mb-5">
+
+      <!-- Stage 1 collapsed -->
+      <div class="col-span-3 card p-5 group cursor-pointer">
+        <div class="flex items-center justify-between mb-3">
+          <span class="chip" style="background:var(--done-soft); color:var(--done);">
+            <span class="chip-dot" style="background:var(--done)"></span>已完成
+          </span>
+          <span class="font-mono text-[11px] text-[var(--text-faint)]">01</span>
+        </div>
+        <div class="font-display text-[22px] text-[var(--text-strong)] leading-tight mb-1">需求富化</div>
+        <div class="text-[11.5px] text-[var(--text-muted)] leading-snug mb-4">业务原始诉求 → 注入领域语义 / 业务约束 / 验收条件,产出富化原始需求</div>
+
+        <!-- agents used -->
+        <div class="flex items-center gap-1 mb-4">
+          <div class="agent-avatar !w-6 !h-6 !text-[9px]" style="background:var(--a-req)" title="需求分析师">REQ</div>
+          <div class="agent-avatar !w-6 !h-6 !text-[9px] -ml-1.5" style="background:var(--a-graph)" title="知识图谱">KG</div>
+          <div class="agent-avatar !w-6 !h-6 !text-[9px] -ml-1.5" style="background:var(--a-arch)" title="业务领域">BIZ</div>
+          <span class="text-[10.5px] text-[var(--text-muted)] ml-2">3 agents</span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-1 text-center mb-4">
+          <div>
+            <div class="font-mono text-[20px] text-[var(--text-strong)]">6</div>
+            <div class="text-[10px] text-[var(--text-faint)] uppercase tracking-wide mt-0.5">富化项</div>
+          </div>
+          <div>
+            <div class="font-mono text-[20px] text-[var(--text-strong)]">23</div>
+            <div class="text-[10px] text-[var(--text-faint)] uppercase tracking-wide mt-0.5">约束注入</div>
+          </div>
+          <div>
+            <div class="font-mono text-[20px]" style="color:var(--done)">✓</div>
+            <div class="text-[10px] text-[var(--text-faint)] uppercase tracking-wide mt-0.5">已评审</div>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-[var(--border-soft)] flex items-center justify-between text-[11px]">
+          <span class="text-[var(--text-faint)] font-mono">5m 12s</span>
+          <button class="text-[var(--text-muted)] group-hover:text-[var(--text-strong)] flex items-center gap-1">下载富化版 PRD
+            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Stage 2 collapsed -->
+      <div class="col-span-3 card p-5 group cursor-pointer">
+        <div class="flex items-center justify-between mb-3">
+          <span class="chip" style="background:var(--done-soft); color:var(--done);">
+            <span class="chip-dot" style="background:var(--done)"></span>已完成
+          </span>
+          <span class="font-mono text-[11px] text-[var(--text-faint)]">02</span>
+        </div>
+        <div class="font-display text-[22px] text-[var(--text-strong)] leading-tight mb-1">设计与拆解</div>
+        <div class="text-[11.5px] text-[var(--text-muted)] leading-snug mb-4">富化需求 → <span class="font-mono" style="color:var(--text-strong)">4 IR</span> · 并行产出 US / 测试策略 / SIT 用例</div>
+
+        <div class="flex items-center gap-1 mb-4">
+          <div class="agent-avatar !w-6 !h-6 !text-[9px]" style="background:var(--a-arch)" title="架构师">ARC</div>
+          <div class="agent-avatar !w-6 !h-6 !text-[9px] -ml-1.5" style="background:var(--a-graph)" title="代码索引">IDX</div>
+          <div class="agent-avatar !w-6 !h-6 !text-[9px] -ml-1.5" style="background:var(--a-test)" title="测试设计师">TS</div>
+          <div class="agent-avatar !w-6 !h-6 !text-[9px] -ml-1.5" style="background:var(--a-req)" title="US 拆分">US</div>
+          <span class="text-[10.5px] text-[var(--text-muted)] ml-2">4 agents</span>
+        </div>
+
+        <!-- IR fan-out micro-viz -->
+        <div class="mb-3 p-2 rounded-lg" style="background:var(--bg-elev)">
+          <div class="text-[9px] tracking-[.14em] uppercase text-[var(--text-faint)] mb-1.5">IR · Fan-out</div>
+          <div class="flex items-center gap-1.5 text-[10px]">
+            <span class="font-mono" style="color:var(--text-strong)">4 IR</span>
+            <svg class="w-3 h-3 text-[var(--text-faint)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            <span class="chip text-[9px] !px-1 !py-[1px]" style="background:rgba(99,102,241,.10); color:#6366f1">US ×7</span>
+            <span class="chip text-[9px] !px-1 !py-[1px]" style="background:rgba(16,185,129,.10); color:#059669">策略</span>
+            <span class="chip text-[9px] !px-1 !py-[1px]" style="background:rgba(217,119,6,.10); color:var(--run)">SIT ×12</span>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-[var(--border-soft)] flex items-center justify-between text-[11px]">
+          <span class="text-[var(--text-faint)] font-mono">6m 18s</span>
+          <button class="text-[var(--text-muted)] group-hover:text-[var(--text-strong)] flex items-center gap-1">下载 IR + 用例集
+            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Stage 4 idle -->
+      <div class="col-span-3 card p-5 group cursor-pointer relative overflow-hidden">
+        <div class="absolute inset-0 opacity-50" style="background: linear-gradient(135deg, transparent 60%, oklch(95% 0.05 65) 100%)"></div>
+        <div class="relative">
+          <div class="flex items-center justify-between mb-3">
+            <span class="chip" style="background:var(--idle-soft); color:var(--text-muted); border-color:var(--border-mid)">
+              <span class="chip-dot" style="background:var(--text-faint)"></span>等待中
+            </span>
+            <span class="font-mono text-[11px] text-[var(--text-faint)]">04</span>
+          </div>
+          <div class="font-display text-[22px] text-[var(--text-strong)] leading-tight mb-1">SIT 集成测试</div>
+          <div class="text-[11.5px] text-[var(--text-muted)] leading-snug mb-4">多 US 合并 main 后 · 跑 Stage 02 已设计的 12 条 SIT 用例</div>
+
+          <div class="flex items-center gap-1 mb-4 opacity-60">
+            <div class="agent-avatar !w-6 !h-6 !text-[9px]" style="background:var(--a-test)" title="SIT 执行">SIT</div>
+            <div class="agent-avatar !w-6 !h-6 !text-[9px] -ml-1.5" style="background:var(--a-perf)" title="性能基线">PRF</div>
+            <span class="text-[10.5px] text-[var(--text-muted)] ml-2">等待触发</span>
+          </div>
+
+          <div class="space-y-1.5 text-[11.5px] mb-4">
+            <div class="flex items-center justify-between text-[var(--text-muted)]">
+              <span class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-[var(--text-faint)]"></span>SIT 用例集</span>
+              <span class="font-mono text-[var(--text-strong)]">12 已就绪</span>
+            </div>
+            <div class="flex items-center justify-between text-[var(--text-muted)]">
+              <span class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-[var(--text-faint)]"></span>已合 US</span>
+              <span class="font-mono">2 / ≥3</span>
+            </div>
+            <div class="flex items-center justify-between text-[var(--text-muted)]">
+              <span class="flex items-center gap-2"><span class="w-1 h-1 rounded-full bg-[var(--text-faint)]"></span>性能基线对比</span>
+              <span class="font-mono">v1.4 → v1.5</span>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-[var(--border-soft)] flex items-center justify-between text-[11px]">
+            <span class="text-[var(--text-faint)] font-mono">预计 ~9m</span>
+            <span class="text-[var(--text-muted)]">等 ≥3 US 合 main</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Review Queue -->
+      <div class="col-span-3 card p-5 relative overflow-hidden" style="background: linear-gradient(150deg, var(--bg-card) 40%, var(--review-soft) 130%);">
+        <div class="flex items-center justify-between mb-4">
+          <div class="caps" style="color:var(--review)">评审队列</div>
+          <span class="chip" style="background:white; color:var(--review); border-color:var(--review-soft);">
+            <span class="chip-dot blink" style="background:var(--review)"></span>2 待处理
+          </span>
+        </div>
+
+        <div class="space-y-3 mb-2">
+          <div class="flex items-start gap-2.5 pb-3 border-b border-[var(--border-soft)]">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-300 to-violet-500 flex items-center justify-center text-white text-[11px] font-semibold flex-shrink-0">王</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[12.5px] text-[var(--text-strong)] font-medium leading-tight">订单超时回退</div>
+              <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">运行 <span class="font-mono">#2447</span> · 设计阶段 · 等待 <span class="font-mono">3m</span></div>
+            </div>
+          </div>
+          <div class="flex items-start gap-2.5">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-amber-300 to-amber-500 flex items-center justify-center text-white text-[11px] font-semibold flex-shrink-0">陈</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[12.5px] text-[var(--text-strong)] font-medium leading-tight">支付通道路由</div>
+              <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">运行 <span class="font-mono">#2448</span> · 开发阶段 · 等待 <span class="font-mono">12m</span></div>
+            </div>
+          </div>
+        </div>
+
+        <button class="w-full mt-3 py-2 rounded-lg text-[12px] font-medium text-white" style="background:var(--review)">进入评审 →</button>
+      </div>
+
+    </section>
+
+    <!-- ==================== BENTO ROW 3: REVIEW POLICY + RECENT RUNS ==================== -->
+    <section class="grid grid-cols-12 gap-5 mb-5">
+
+      <!-- Review policy -->
+      <div class="col-span-8 card p-6">
+        <div class="flex items-center justify-between mb-1">
+          <div>
+            <div class="caps mb-1">本次运行 · 评审策略</div>
+            <div class="text-[12.5px] text-[var(--text-muted)]">每个节点完成后是否要求人工评审才能进入下一节点 · 中断的节点可补充上下文后重启</div>
+          </div>
+          <button class="text-[12px] text-[var(--text-muted)] hover:text-[var(--text-strong)] underline">设为默认 →</button>
+        </div>
+
+        <div class="grid grid-cols-4 gap-3 mt-5">
+          <!-- toggle 1 -->
+          <div class="flex items-center justify-between p-3 rounded-xl border border-[var(--border-soft)] bg-[var(--bg-elev)]">
+            <div class="min-w-0">
+              <div class="text-[12.5px] font-medium text-[var(--text-strong)]">需求富化</div>
+              <div class="text-[10.5px] text-[var(--text-muted)] truncate">已由 张工 通过 · 中断 0 次</div>
+            </div>
+            <div class="w-9 h-5 rounded-full relative flex-shrink-0" style="background:var(--done)">
+              <div class="w-4 h-4 rounded-full bg-white absolute top-0.5 right-0.5 shadow-sm"></div>
+            </div>
+          </div>
+          <!-- toggle 2 -->
+          <div class="flex items-center justify-between p-3 rounded-xl border border-[var(--border-soft)] bg-[var(--bg-elev)]">
+            <div class="min-w-0">
+              <div class="text-[12.5px] font-medium text-[var(--text-strong)]">设计与拆解</div>
+              <div class="text-[10.5px] text-[var(--text-muted)] truncate">李工 通过 · 补 1 条 SIT 用例后续跑</div>
+            </div>
+            <div class="w-9 h-5 rounded-full relative flex-shrink-0" style="background:var(--done)">
+              <div class="w-4 h-4 rounded-full bg-white absolute top-0.5 right-0.5 shadow-sm"></div>
+            </div>
+          </div>
+          <!-- toggle 3 -->
+          <div class="flex items-center justify-between p-3 rounded-xl border-2 bg-white" style="border-color:var(--review-soft)">
+            <div class="min-w-0">
+              <div class="text-[12.5px] font-medium text-[var(--text-strong)]">编码 + UT</div>
+              <div class="text-[10.5px] truncate" style="color:var(--review)">UT 通过自动合 git · 完成后送评审</div>
+            </div>
+            <div class="w-9 h-5 rounded-full relative flex-shrink-0" style="background:var(--review)">
+              <div class="w-4 h-4 rounded-full bg-white absolute top-0.5 right-0.5 shadow-sm"></div>
+            </div>
+          </div>
+          <!-- toggle 4 -->
+          <div class="flex items-center justify-between p-3 rounded-xl border border-[var(--border-soft)] bg-[var(--bg-elev)]">
+            <div class="min-w-0">
+              <div class="text-[12.5px] font-medium text-[var(--text-strong)]">SIT 集成测试</div>
+              <div class="text-[10.5px] text-[var(--text-muted)] truncate">免评审 · 失败自动中断送评</div>
+            </div>
+            <div class="w-9 h-5 rounded-full relative bg-[var(--border-mid)] flex-shrink-0">
+              <div class="w-4 h-4 rounded-full bg-white absolute top-0.5 left-0.5 shadow-sm"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent runs -->
+      <div class="col-span-4 card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div class="caps">最近运行</div>
+          <button class="text-[11px] text-[var(--text-muted)] hover:text-[var(--text-strong)]">查看全部 →</button>
+        </div>
+        <div class="space-y-3">
+          <div class="flex items-center gap-3">
+            <span class="w-1.5 h-1.5 rounded-full pulse-run" style="background:var(--run)"></span>
+            <div class="flex-1 min-w-0">
+              <div class="text-[12.5px] text-[var(--text-strong)] font-medium truncate">用户登录限流优化</div>
+              <div class="text-[10.5px] text-[var(--text-muted)] font-mono">#2451 · 14:23 · @zhangwei</div>
+            </div>
+            <span class="font-mono text-[10.5px]" style="color:var(--run)">28m</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="w-1.5 h-1.5 rounded-full" style="background:var(--review)"></span>
+            <div class="flex-1 min-w-0">
+              <div class="text-[12.5px] text-[var(--text-strong)] font-medium truncate">支付通道路由重构</div>
+              <div class="text-[10.5px] text-[var(--text-muted)] font-mono">#2448 · 13:12 · @chenping</div>
+            </div>
+            <span class="font-mono text-[10.5px]" style="color:var(--review)">评审</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="w-1.5 h-1.5 rounded-full" style="background:var(--halt)"></span>
+            <div class="flex-1 min-w-0">
+              <div class="text-[12.5px] text-[var(--text-strong)] font-medium truncate">商品搜索去 Elasticsearch</div>
+              <div class="text-[10.5px] text-[var(--text-muted)] font-mono">#2445 · 11:48 · @wangjun</div>
+            </div>
+            <span class="font-mono text-[10.5px]" style="color:var(--halt)">中断</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="w-1.5 h-1.5 rounded-full" style="background:var(--done)"></span>
+            <div class="flex-1 min-w-0">
+              <div class="text-[12.5px] text-[var(--text-strong)] font-medium truncate">订单超时回退</div>
+              <div class="text-[10.5px] text-[var(--text-muted)] font-mono">#2447 · 10:30 · @lima</div>
+            </div>
+            <span class="font-mono text-[10.5px]" style="color:var(--done)">41m</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="w-1.5 h-1.5 rounded-full" style="background:var(--done)"></span>
+            <div class="flex-1 min-w-0">
+              <div class="text-[12.5px] text-[var(--text-strong)] font-medium truncate">用户头像异步加载</div>
+              <div class="text-[10.5px] text-[var(--text-muted)] font-mono">#2443 · 09:05 · @sunyi</div>
+            </div>
+            <span class="font-mono text-[10.5px]" style="color:var(--done)">22m</span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==================== FOOTER ==================== -->
+    <footer class="mt-10 mb-2 pt-6 border-t border-[var(--border-soft)] flex items-center justify-between text-[11.5px] text-[var(--text-faint)]">
+      <div>
+        <span class="font-medium text-[var(--text-muted)]">DevPipeline</span> · AI 研发流水线驾驶舱 · 原型 v0.3
+      </div>
+      <div class="flex items-center gap-4 font-mono">
+        <span>后端 · Dify Workflow</span>
+        <span>前端 · Next.js + React Flow + shadcn</span>
+        <span>风格 · Bento light</span>
+      </div>
+    </footer>
+
+  </main>
+
+</body>
+</html>

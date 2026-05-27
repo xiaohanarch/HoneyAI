@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>运行详情 · AI 数字产线</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-base: oklch(98% 0.006 85);
+    --bg-card: #ffffff;
+    --bg-elev: oklch(99% 0.004 85);
+    --border-soft: oklch(93% 0.005 85);
+    --border-mid: oklch(88% 0.008 85);
+    --text-strong: oklch(22% 0.03 260);
+    --text-body: oklch(38% 0.02 260);
+    --text-muted: oklch(56% 0.015 260);
+    --text-faint: oklch(72% 0.01 260);
+    --done: oklch(62% 0.13 150);
+    --done-soft: oklch(94% 0.04 150);
+    --run: oklch(70% 0.15 65);
+    --run-soft: oklch(95% 0.05 75);
+    --review: oklch(58% 0.18 290);
+    --review-soft: oklch(95% 0.04 290);
+    --halt: oklch(60% 0.21 25);
+    --halt-soft: oklch(95% 0.04 25);
+    --shadow-sm: 0 1px 2px oklch(20% 0.02 260 / 0.04);
+    --shadow-md: 0 2px 6px oklch(20% 0.02 260 / 0.06), 0 1px 2px oklch(20% 0.02 260 / 0.06);
+  }
+  * { -webkit-font-smoothing: antialiased; }
+  html, body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg-base); color: var(--text-body); }
+  .display { font-family: 'Instrument Serif', 'Songti SC', serif; letter-spacing: -0.01em; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .card { background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: 16px; box-shadow: var(--shadow-sm); }
+  .caps { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; font-weight: 500; color: var(--text-muted); }
+
+  .bg-atmosphere {
+    background:
+      radial-gradient(900px 460px at 8% -8%, oklch(93% 0.05 245 / 0.55), transparent 60%),
+      radial-gradient(700px 340px at 105% 0%, oklch(94% 0.05 295 / 0.45), transparent 60%),
+      var(--bg-base);
+  }
+  .grain::before {
+    content:''; position: fixed; inset: 0; pointer-events: none;
+    opacity: .03; mix-blend-mode: multiply; z-index: 100;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Stage progress bar */
+  .stage-bar { display: grid; grid-template-columns: 1fr 28px 1fr 28px 1fr; align-items: center; gap: 0; }
+  .stage-node { display: flex; flex-direction: column; align-items: center; gap: 8px; position: relative; }
+  .stage-circle { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; font-family: 'JetBrains Mono', monospace; border: 2px solid var(--border-mid); background: var(--bg-card); color: var(--text-faint); transition: all 0.3s; }
+  .stage-circle.done { background: var(--done); border-color: var(--done); color: white; }
+  .stage-circle.running { background: var(--run-soft); border-color: var(--run); color: oklch(46% 0.16 65); animation: pulse-stage 2s infinite; }
+  .stage-circle.review { background: var(--review-soft); border-color: var(--review); color: var(--review); }
+  .stage-label { font-size: 12px; font-weight: 500; color: var(--text-muted); text-align: center; }
+  .stage-label.active { color: var(--text-strong); }
+  .stage-connector { height: 2px; background: var(--border-mid); margin: 0 4px; transition: background 0.3s; }
+  .stage-connector.done { background: var(--done); }
+
+  @keyframes pulse-stage {
+    0%, 100% { box-shadow: 0 0 0 0 oklch(70% 0.15 65 / 0.4); }
+    50% { box-shadow: 0 0 0 10px oklch(70% 0.15 65 / 0); }
+  }
+
+  /* Node timeline */
+  .tl-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; position: relative; }
+  .tl-item:not(:last-child)::before {
+    content: ''; position: absolute; left: 11px; top: 30px; bottom: -10px;
+    width: 2px; background: var(--border-soft);
+  }
+  .tl-dot { width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; position: relative; z-index: 1; }
+  .tl-dot.idle { background: var(--bg-card); border: 2px solid var(--border-mid); }
+  .tl-dot.running { background: var(--run-soft); border: 2px solid var(--run); animation: pulse-stage 2s infinite; }
+  .tl-dot.success { background: var(--done); border: 2px solid var(--done); }
+  .tl-dot.pending { background: var(--review-soft); border: 2px solid var(--review); }
+  .tl-dot.failed { background: var(--halt-soft); border: 2px solid var(--halt); }
+  .tl-content { flex: 1; padding-top: 2px; }
+  .tl-name { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; color: var(--text-strong); }
+  .tl-meta { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+
+  /* Gate panel */
+  .gate-panel { background: oklch(97% 0.04 290); border: 1.5px solid oklch(85% 0.08 290); border-radius: 16px; padding: 24px; }
+  .gate-panel .gate-title { font-size: 16px; font-weight: 600; color: var(--text-strong); }
+  .gate-panel .gate-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: 1.5px solid transparent; }
+  .btn-approve { background: var(--done); color: white; }
+  .btn-approve:hover { background: oklch(55% 0.15 150); }
+  .btn-approve:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-reject { background: var(--bg-card); border-color: var(--halt); color: var(--halt); }
+  .btn-reject:hover { background: var(--halt-soft); }
+  .btn-cancel { background: var(--bg-card); border-color: var(--border-mid); color: var(--text-muted); }
+
+  /* Status chips */
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 500; border: 1px solid transparent; }
+  .chip-dot { width: 6px; height: 6px; border-radius: 999px; }
+  .chip-run { background: var(--run-soft); color: oklch(46% 0.16 65); border-color: oklch(85% 0.08 65); }
+  .chip-done { background: var(--done-soft); color: oklch(40% 0.13 150); border-color: oklch(85% 0.08 150); }
+  .chip-review { background: var(--review-soft); color: oklch(40% 0.18 290); border-color: oklch(85% 0.08 290); }
+  .chip-halt { background: var(--halt-soft); color: var(--halt); border-color: oklch(85% 0.08 25); }
+  .chip-idle { background: oklch(97% 0.005 260); color: var(--text-muted); border-color: var(--border-soft); }
+</style>
+</head>
+<body class="bg-atmosphere grain min-h-screen">
+
+<!-- ─── Top bar ─────────────────────────────────────────────────────────── -->
+<header class="border-b border-[var(--border-soft)] bg-white/70 backdrop-blur-xl sticky top-0 z-50">
+  <div class="max-w-[1280px] mx-auto px-8 py-3.5 flex items-center gap-4">
+    <a href="runs-list.html" class="flex items-center gap-1.5 text-[12.5px] text-[var(--text-muted)] hover:text-[var(--text-strong)]">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      历史运行
+    </a>
+    <span class="text-[var(--border-mid)]">/</span>
+    <span id="hdr-title" class="text-[12.5px] font-medium text-[var(--text-strong)]">加载中…</span>
+    <div class="ml-auto flex items-center gap-3">
+      <span id="hdr-status-chip" class="chip chip-idle">加载中</span>
+      <button onclick="loadRun()" class="text-[12px] text-[var(--text-muted)] hover:text-[var(--text-strong)]">↻ 刷新</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-[1280px] mx-auto px-8 py-8">
+
+  <!-- Run title -->
+  <section class="mb-8">
+    <div class="caps mb-2">AI 研发产线 · 运行详情</div>
+    <h1 id="run-title" class="display text-[42px] leading-[1.1] text-[var(--text-strong)] mb-2">加载中…</h1>
+    <p id="run-oneliner" class="text-[14px] text-[var(--text-muted)] max-w-[700px] leading-relaxed"></p>
+  </section>
+
+  <!-- Stage progress bar -->
+  <section class="card p-6 mb-6">
+    <div class="caps mb-5">流水线进度</div>
+    <div class="stage-bar">
+      <div class="stage-node">
+        <div id="stage-1-circle" class="stage-circle">01</div>
+        <div class="stage-label" id="stage-1-label">需求富化</div>
+      </div>
+      <div id="stage-1-2-connector" class="stage-connector"></div>
+      <div class="stage-node">
+        <div id="stage-2-circle" class="stage-circle">02</div>
+        <div class="stage-label" id="stage-2-label">设计与拆解</div>
+      </div>
+      <div id="stage-2-3-connector" class="stage-connector"></div>
+      <div class="stage-node">
+        <div id="stage-3-circle" class="stage-circle">03</div>
+        <div class="stage-label" id="stage-3-label">编码 + UT</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="grid grid-cols-12 gap-6">
+
+    <!-- Node timeline -->
+    <div class="col-span-5">
+      <div class="card p-5">
+        <div class="caps mb-4">节点时间线</div>
+        <div id="node-timeline">
+          <div class="text-[13px] text-[var(--text-muted)]">加载节点中…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right column: gate panel + output -->
+    <div class="col-span-7 space-y-5">
+
+      <!-- Gate approval panel (hidden by default) -->
+      <div id="gate-panel" class="gate-panel hidden">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <div class="caps mb-1">人工评审 · 待审批</div>
+            <div class="gate-title">请审阅 AI 产出并决策</div>
+            <div id="gate-stage-desc" class="gate-sub mt-1">当前阶段已完成，请确认是否进入下一阶段</div>
+          </div>
+          <span class="chip chip-review">
+            <span class="chip-dot" style="background:var(--review)"></span>等待审批
+          </span>
+        </div>
+
+        <div id="gate-approve-area">
+          <div class="flex gap-3">
+            <button id="btn-approve" class="btn btn-approve">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              通过 · 进入下一阶段
+            </button>
+            <button id="btn-show-reject" class="btn btn-reject">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              拒绝
+            </button>
+          </div>
+        </div>
+
+        <div id="gate-reject-area" class="hidden">
+          <div class="caps mb-2">拒绝原因</div>
+          <textarea id="reject-reason" rows="3" class="w-full p-3 rounded-xl border border-[var(--border-mid)] text-[13px] bg-white resize-none focus:outline-none focus:border-[var(--review)]" placeholder="请输入拒绝理由…"></textarea>
+          <div class="flex gap-2 mt-3">
+            <button id="btn-reject-submit" class="btn btn-reject">确认拒绝</button>
+            <button id="btn-reject-cancel" class="btn btn-cancel">取消</button>
+          </div>
+        </div>
+
+        <div id="gate-feedback" class="text-[12px] text-[var(--text-muted)] mt-3"></div>
+      </div>
+
+      <!-- Run output / status card -->
+      <div class="card p-5">
+        <div class="caps mb-3">当前状态</div>
+        <div id="output-content">
+          <div class="text-[13px] text-[var(--text-muted)]">等待 Agent 输出…</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<footer class="px-8 py-6 text-[10.5px] mono text-[var(--text-muted)] flex items-center gap-3">
+  <span class="w-1.5 h-1.5 rounded-full" style="background: var(--text-faint)"></span>
+  run-detail.html · AI 研发产线 · 实时运行视图
+</footer>
+
+<script>
+// ── Parse runId from URL ─────────────────────────────────────────────────────
+var params = new URLSearchParams(window.location.search);
+var runId = params.get('runId');
+if (!runId) window.location.href = 'runs-list.html';
+
+// ── Auth check ───────────────────────────────────────────────────────────────
+fetch('/api/prototype/me').then(function(r) {
+  if (r.status === 401) window.location.href = '/login?callbackUrl=/prototype/run-detail.html?runId=' + runId;
+});
+
+// ── State ────────────────────────────────────────────────────────────────────
+var currentGateNodeId = null;
+var currentRunStatus = null;
+var sseSource = null;
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+var STAGE_NAMES = { 1: '需求富化', 2: '设计与拆解', 3: '编码+UT' };
+var NODE_KIND_LABEL = { agent: 'Agent', gate: '人工评审' };
+var STATUS_LABEL = { running: '运行中', success: '已完成', pending: '待审批', failed: '失败', created: '已创建' };
+
+function statusChipHtml(status) {
+  var cls = { running:'chip-run', success:'chip-done', paused_at_gate:'chip-review', completed:'chip-done', failed:'chip-halt', cancelled:'chip-idle', created:'chip-idle' }[status] || 'chip-idle';
+  var label = { running:'运行中', success:'已完成', paused_at_gate:'待审批', completed:'已完成', failed:'失败', cancelled:'已取消', created:'已创建' }[status] || status;
+  var dotColor = { running:'var(--run)', success:'var(--done)', paused_at_gate:'var(--review)', completed:'var(--done)', failed:'var(--halt)', cancelled:'var(--text-muted)', created:'var(--text-muted)' }[status] || 'var(--text-muted)';
+  return '<span class="chip ' + cls + '"><span class="chip-dot" style="background:' + dotColor + '"></span>' + label + '</span>';
+}
+
+function nodeDotClass(status) {
+  return { running:'running', success:'success', pending:'pending', failed:'failed' }[status] || 'idle';
+}
+function nodeDotIcon(status, kind) {
+  if (status === 'success') return '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+  if (status === 'running') return '<div style="width:8px;height:8px;border-radius:50%;background:var(--run);animation:pulse-stage 1.5s infinite"></div>';
+  if (status === 'pending') return '<div style="width:6px;height:6px;border-radius:50%;background:var(--review)"></div>';
+  if (status === 'failed') return '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--halt)" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+  if (kind === 'gate') return '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+  return '';
+}
+
+// ── Render nodes timeline ─────────────────────────────────────────────────────
+function renderTimeline(nodes) {
+  var el = document.getElementById('node-timeline');
+  if (!nodes || nodes.length === 0) {
+    el.innerHTML = '<div class="text-[13px] text-[var(--text-muted)]">暂无节点</div>';
+    return;
+  }
+  var html = '';
+  nodes.forEach(function(n) {
+    var dotCls = nodeDotClass(n.status);
+    var icon = nodeDotIcon(n.status, n.kind);
+    var nameColor = n.status === 'success' ? 'color:var(--done)' : (n.status === 'running' ? 'color:oklch(46% 0.16 65)' : (n.status === 'pending' ? 'color:var(--review)' : (n.status === 'failed' ? 'color:var(--halt)' : '')));
+    var kindLabel = n.kind === 'gate' ? '人工评审' : ('Stage ' + n.stage);
+    html += '<div class="tl-item">';
+    html += '<div class="tl-dot ' + dotCls + '">' + icon + '</div>';
+    html += '<div class="tl-content">';
+    html += '<div class="tl-name" style="' + nameColor + '">' + n.name + '</div>';
+    html += '<div class="tl-meta">' + kindLabel + ' · ' + (STATUS_LABEL[n.status] || n.status) + '</div>';
+    html += '</div></div>';
+  });
+  el.innerHTML = html;
+}
+
+// ── Render stage bar ──────────────────────────────────────────────────────────
+function renderStageBar(nodes, runStatus) {
+  var stageState = { 1: 'idle', 2: 'idle', 3: 'idle' };
+  (nodes || []).forEach(function(n) {
+    var s = n.stage;
+    if (!stageState[s]) return;
+    if (stageState[s] === 'done') return; // already done
+    if (n.status === 'success' && n.kind === 'gate' && s < 3) {
+      // gate success means stage is done, next stage starts
+    } else if (n.status === 'running') {
+      stageState[s] = 'running';
+    } else if (n.status === 'success' && n.kind === 'agent') {
+      stageState[s] = 'done'; // agent done
+    }
+  });
+  // A stage is 'done' if ALL agent nodes in that stage are success
+  var stageDone = { 1: false, 2: false, 3: false };
+  var stageRunning = { 1: false, 2: false, 3: false };
+  (nodes || []).forEach(function(n) {
+    if (!n.stage || n.stage > 3) return;
+    if (n.kind === 'agent' && n.status === 'success') stageDone[n.stage] = true;
+    if (n.kind === 'agent' && n.status === 'running') stageRunning[n.stage] = true;
+  });
+  if (runStatus === 'completed') { stageDone[1] = stageDone[2] = stageDone[3] = true; }
+
+  [1, 2, 3].forEach(function(i) {
+    var circ = document.getElementById('stage-' + i + '-circle');
+    var lbl = document.getElementById('stage-' + i + '-label');
+    circ.className = 'stage-circle';
+    lbl.className = 'stage-label';
+    if (stageDone[i]) {
+      circ.classList.add('done');
+      circ.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+      lbl.classList.add('active');
+    } else if (stageRunning[i]) {
+      circ.classList.add('running');
+      circ.textContent = '0' + i;
+      lbl.classList.add('active');
+    } else {
+      circ.textContent = '0' + i;
+    }
+    if (i < 3) {
+      var conn = document.getElementById('stage-' + i + '-' + (i+1) + '-connector');
+      conn.className = 'stage-connector' + (stageDone[i] ? ' done' : '');
+    }
+  });
+}
+
+// ── Render gate panel ─────────────────────────────────────────────────────────
+function renderGatePanel(nodes, runStatus) {
+  var gatePanel = document.getElementById('gate-panel');
+  if (runStatus !== 'paused_at_gate') {
+    gatePanel.classList.add('hidden');
+    currentGateNodeId = null;
+    return;
+  }
+  var gateNode = null;
+  (nodes || []).forEach(function(n) {
+    if (n.kind === 'gate' && n.status === 'pending') gateNode = n;
+  });
+  if (!gateNode) {
+    gatePanel.classList.add('hidden');
+    currentGateNodeId = null;
+    return;
+  }
+  currentGateNodeId = gateNode.id;
+  var stageDesc = gateNode.stage === 1 ? '需求富化阶段已完成，请确认进入设计与拆解阶段' : '设计与拆解阶段已完成，请确认进入编码+UT阶段';
+  document.getElementById('gate-stage-desc').textContent = stageDesc;
+  document.getElementById('gate-feedback').textContent = '';
+  document.getElementById('gate-approve-area').classList.remove('hidden');
+  document.getElementById('gate-reject-area').classList.add('hidden');
+  document.getElementById('btn-approve').disabled = false;
+  document.getElementById('btn-approve').textContent = '通过 · 进入下一阶段';
+  gatePanel.classList.remove('hidden');
+}
+
+// ── Render output status ──────────────────────────────────────────────────────
+function renderOutput(runStatus, nodes) {
+  var el = document.getElementById('output-content');
+  var runningNode = null;
+  (nodes || []).forEach(function(n) { if (n.status === 'running') runningNode = n; });
+
+  if (runStatus === 'completed') {
+    el.innerHTML = '<div class="flex items-center gap-2 text-[14px] font-medium" style="color:var(--done)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>运行已完成</div><p class="text-[13px] text-[var(--text-muted)] mt-2">所有阶段均已成功完成。</p>';
+  } else if (runStatus === 'failed' || runStatus === 'cancelled') {
+    el.innerHTML = '<div class="flex items-center gap-2 text-[14px] font-medium" style="color:var(--halt)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' + (runStatus === 'cancelled' ? '运行已取消' : '运行失败') + '</div>';
+  } else if (runStatus === 'paused_at_gate') {
+    el.innerHTML = '<div class="flex items-center gap-2 text-[14px] font-medium" style="color:var(--review)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>等待人工审批</div><p class="text-[13px] text-[var(--text-muted)] mt-2">请在上方审批面板中确认或拒绝。</p>';
+  } else if (runningNode) {
+    var stageName = STAGE_NAMES[runningNode.stage] || ('Stage ' + runningNode.stage);
+    el.innerHTML = '<div class="flex items-center gap-2 text-[13px]" style="color:oklch(46% 0.16 65)"><div style="width:8px;height:8px;border-radius:50%;background:var(--run);animation:pulse-stage 1.5s infinite;flex-shrink:0"></div>Agent 运行中…</div><p class="text-[13px] text-[var(--text-muted)] mt-2">当前阶段：' + stageName + ' · 节点：' + runningNode.name + '</p><p class="text-[11.5px] text-[var(--text-faint)] mt-3 mono">等待 Agent 完成，结果将自动更新</p>';
+  } else {
+    el.innerHTML = '<div class="text-[13px] text-[var(--text-muted)]">等待中…</div>';
+  }
+}
+
+// ── Load run data ─────────────────────────────────────────────────────────────
+function loadRun() {
+  fetch('/api/prototype/runs/' + runId)
+    .then(function(r) {
+      if (r.status === 404) { window.location.href = 'runs-list.html'; return null; }
+      return r.json();
+    })
+    .then(function(data) {
+      if (!data) return;
+      var run = data.run;
+      var nodes = data.nodes || [];
+      currentRunStatus = run.status;
+
+      document.getElementById('hdr-title').textContent = run.title || '(无标题)';
+      document.getElementById('run-title').textContent = run.title || '(无标题)';
+      document.getElementById('run-oneliner').textContent = run.oneLiner || '';
+      document.getElementById('hdr-status-chip').outerHTML = '<span id="hdr-status-chip">' + statusChipHtml(run.status) + '</span>';
+
+      renderTimeline(nodes);
+      renderStageBar(nodes, run.status);
+      renderGatePanel(nodes, run.status);
+      renderOutput(run.status, nodes);
+    })
+    .catch(function(err) { console.warn('loadRun error:', err); });
+}
+
+// ── Gate approval ─────────────────────────────────────────────────────────────
+document.getElementById('btn-approve').addEventListener('click', function() {
+  if (!currentGateNodeId) return;
+  var btn = document.getElementById('btn-approve');
+  btn.disabled = true;
+  btn.textContent = '提交中…';
+  document.getElementById('gate-feedback').textContent = '';
+
+  fetch('/api/prototype/runs/' + runId + '/approve', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nodeId: currentGateNodeId }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      document.getElementById('gate-feedback').textContent = '审批已通过，下一阶段启动中…';
+      document.getElementById('gate-feedback').style.color = 'var(--done)';
+      document.getElementById('gate-panel').classList.add('hidden');
+      loadRun();
+    } else {
+      document.getElementById('gate-feedback').textContent = '错误: ' + (data.error || '未知错误');
+      document.getElementById('gate-feedback').style.color = 'var(--halt)';
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 通过 · 进入下一阶段';
+    }
+  })
+  .catch(function(err) {
+    document.getElementById('gate-feedback').textContent = '请求失败: ' + err.message;
+    document.getElementById('gate-feedback').style.color = 'var(--halt)';
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 通过 · 进入下一阶段';
+  });
+});
+
+document.getElementById('btn-show-reject').addEventListener('click', function() {
+  document.getElementById('gate-approve-area').classList.add('hidden');
+  document.getElementById('gate-reject-area').classList.remove('hidden');
+});
+document.getElementById('btn-reject-cancel').addEventListener('click', function() {
+  document.getElementById('gate-reject-area').classList.add('hidden');
+  document.getElementById('gate-approve-area').classList.remove('hidden');
+});
+document.getElementById('btn-reject-submit').addEventListener('click', function() {
+  var reason = document.getElementById('reject-reason').value.trim();
+  if (!reason) { document.getElementById('gate-feedback').textContent = '请填写拒绝原因'; document.getElementById('gate-feedback').style.color = 'var(--halt)'; return; }
+
+  fetch('/api/prototype/runs/' + runId + '/reject', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nodeId: currentGateNodeId, reason: reason }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      document.getElementById('gate-panel').classList.add('hidden');
+      loadRun();
+    } else {
+      document.getElementById('gate-feedback').textContent = '错误: ' + (data.error || '未知');
+      document.getElementById('gate-feedback').style.color = 'var(--halt)';
+    }
+  });
+});
+
+// ── SSE subscription ──────────────────────────────────────────────────────────
+function startSSE() {
+  if (sseSource) sseSource.close();
+  sseSource = new EventSource('/api/runs/' + runId + '/stream');
+  sseSource.onmessage = function(evt) {
+    try {
+      var msg = JSON.parse(evt.data);
+      if (msg.type === 'run_status' || msg.type === 'node_status' || msg.type === 'run_completed') {
+        loadRun();
+      }
+    } catch(e) {}
+  };
+  sseSource.onerror = function() {
+    // Reconnect on error (browser does this automatically for EventSource)
+  };
+}
+
+// ── Stop polling when completed/failed ───────────────────────────────────────
+var pollInterval = setInterval(function() {
+  if (currentRunStatus === 'completed' || currentRunStatus === 'failed' || currentRunStatus === 'cancelled') {
+    clearInterval(pollInterval);
+    if (sseSource) sseSource.close();
+  } else {
+    loadRun();
+  }
+}, 5000);
+
+// ── Initial load ──────────────────────────────────────────────────────────────
+loadRun();
+startSSE();
+</script>
+</body>
+</html>

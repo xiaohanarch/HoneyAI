@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>产物 diff · DEV-3 · AI 数字产线</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-base: oklch(98.8% 0.006 90);
+    --ink: oklch(18% 0.02 260);
+    --ink-soft: oklch(38% 0.02 260);
+    --ink-mute: oklch(58% 0.015 260);
+    --line: oklch(90% 0.01 260);
+    --line-soft: oklch(94% 0.008 260);
+    --surface: oklch(100% 0 0);
+    --done: oklch(72% 0.16 150);
+    --run: oklch(80% 0.16 65);
+    --review: oklch(70% 0.16 290);
+    --halt: oklch(67% 0.20 25);
+    --add: oklch(72% 0.16 150);
+    --del: oklch(67% 0.20 25);
+    --mod: oklch(80% 0.16 65);
+  }
+  *{ -webkit-font-smoothing:antialiased; }
+  html,body{ background: var(--bg-base); color: var(--ink); font-family:'Inter',ui-sans-serif,system-ui,sans-serif; }
+  .display{ font-family:'Instrument Serif', ui-serif, Georgia, serif; letter-spacing:-0.01em; }
+  .mono{ font-family:'JetBrains Mono', ui-monospace, SFMono-Regular, monospace; font-variant-numeric: tabular-nums; }
+  .grain::before{
+    content:""; position:fixed; inset:0; pointer-events:none; opacity:.05; mix-blend-mode:multiply; z-index:1;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  .panel{ background: var(--surface); border:1px solid var(--line); border-radius:14px; }
+  .pill{ font-size:11px; padding:3px 8px; border-radius:999px; background: oklch(97% 0.008 260); color: var(--ink-soft); border:1px solid var(--line-soft); }
+  .pill-done{ color: oklch(40% 0.13 150); background: oklch(72% 0.16 150 / .12); border-color: oklch(72% 0.16 150 / .4); }
+  .section-h{ font-size:11px; color: var(--ink-mute); letter-spacing:.16em; text-transform: uppercase; }
+  .seg{ display:inline-flex; padding:3px; background: oklch(97% 0.008 260); border:1px solid var(--line-soft); border-radius:8px; gap:2px; }
+  .seg .opt{ font-size:11.5px; padding:5px 10px; border-radius:6px; cursor:pointer; color: var(--ink-soft); }
+  .seg .opt.active{ background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px oklch(15% 0 0 / .08); }
+  /* tree */
+  .tree-item{ display:flex; align-items:center; gap:6px; padding:5px 8px; border-radius:6px; font-size:12.5px; cursor:pointer; }
+  .tree-item:hover{ background: oklch(97% 0.008 260); }
+  .tree-item.active{ background: oklch(70% 0.16 290 / .1); color: oklch(35% 0.16 290); }
+  .tree-item .badge{ font-family:'JetBrains Mono',monospace; font-size:10px; padding:0 5px; border-radius:4px; }
+  .b-add{ background: oklch(72% 0.16 150 / .15); color: oklch(40% 0.13 150); }
+  .b-mod{ background: oklch(80% 0.16 65 / .18); color: oklch(46% 0.16 65); }
+  .b-del{ background: oklch(67% 0.20 25 / .15); color: oklch(45% 0.18 25); }
+  .b-new{ background: oklch(70% 0.16 290 / .12); color: oklch(40% 0.16 290); }
+  /* diff */
+  .diff-row{ display:grid; grid-template-columns: 50px 50px 14px 1fr; align-items:flex-start; font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.62; padding-right:8px; }
+  .diff-row .ln{ color: oklch(70% 0.015 260); text-align:right; padding-right:10px; user-select:none; }
+  .diff-row .mk{ text-align:center; color: var(--ink-mute); }
+  .diff-row.add{ background: oklch(72% 0.16 150 / .10); }
+  .diff-row.add .mk{ color: var(--add); }
+  .diff-row.del{ background: oklch(67% 0.20 25 / .08); }
+  .diff-row.del .mk{ color: var(--del); }
+  .diff-row.hunk{ background: oklch(70% 0.16 290 / .06); color: oklch(40% 0.16 290); font-style:italic; }
+  .diff-row.ctx{ color: var(--ink-soft); }
+  /* lens */
+  .lens-tab{ font-size:11.5px; padding:6px 10px; border-radius:7px; cursor:pointer; color: var(--ink-mute); border:1px solid transparent; }
+  .lens-tab.active{ background: var(--surface); border-color: var(--line); color: var(--ink); font-weight:600; }
+  .lens-tab .dot{ display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:5px; }
+  .insight{ display:flex; gap:10px; padding:11px 14px; border-radius:10px; border:1px solid var(--line-soft); }
+  .insight-add{ background: oklch(72% 0.16 150 / .06); border-color: oklch(72% 0.16 150 / .25); }
+  .insight-warn{ background: oklch(80% 0.16 65 / .07); border-color: oklch(80% 0.16 65 / .3); }
+  .insight-info{ background: oklch(70% 0.16 290 / .06); border-color: oklch(70% 0.16 290 / .25); }
+  .map-bar{ width:14px; border-radius:3px; }
+  .agent-chip{ display:inline-flex; align-items:center; gap:5px; padding:2px 7px; border-radius:999px; font-size:10.5px; }
+  .chip-dev{ background: oklch(72% 0.17 150 / .14); color: oklch(40% 0.16 150); }
+  .chip-sec{ background: oklch(67% 0.20 25 / .14); color: oklch(45% 0.18 25); }
+  .ruler{ height:1px; background: var(--line-soft); }
+  .kbd{ font-family:'JetBrains Mono',monospace; font-size:10.5px; padding:1.5px 5px; border-radius:4px; background: oklch(97% 0.008 260); border:1px solid var(--line); color: var(--ink-soft); }
+  .atmo{ background:
+    radial-gradient(70% 50% at 0% 0%, oklch(72% 0.17 150 / .07), transparent 60%),
+    radial-gradient(50% 40% at 100% 0%, oklch(67% 0.20 25 / .05), transparent 60%);
+  }
+</style>
+</head>
+<body class="grain atmo">
+
+<header class="px-8 pt-6 pb-3 flex items-center gap-4 sticky top-0 z-20 backdrop-blur bg-[color:oklch(98.8%_0.006_90/.85)] border-b border-[color:var(--line-soft)]">
+  <a href="runs-list.html" class="text-[12.5px] text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] flex items-center gap-1.5">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    Run #2451
+  </a>
+  <div class="h-4 w-px bg-[color:var(--line)]"></div>
+  <span class="text-[12.5px] text-[color:var(--ink-mute)]">Stage 03 · 编码 + UT / <span class="text-[color:var(--ink)] font-medium">DEV-3</span></span>
+  <span class="pill pill-done ml-1">已生成 · 等评审</span>
+  <div class="ml-auto flex items-center gap-2">
+    <button class="kbd">⌘← / ⌘→ 文件</button>
+    <button class="text-[12px] px-3 h-8 rounded-md border border-[color:var(--line)] bg-white hover:bg-[color:var(--line-soft)]">下载补丁</button>
+    <a href="review-detail.html" class="text-[12px] px-3 h-8 rounded-md text-white flex items-center" style="background: oklch(18% 0.02 260)">前往评审 →</a>
+  </div>
+</header>
+
+<main class="px-8 py-6">
+  <div class="max-w-[1400px] mx-auto">
+
+  <!-- Title bar -->
+  <section class="flex items-end justify-between mb-5">
+    <div>
+      <div class="section-h">NODE ARTIFACT · CODE DIFF</div>
+      <h1 class="display text-[36px] leading-tight mt-1.5">DEV-3 · <span class="mono italic text-[28px]">LoginService.login()</span> 产物</h1>
+      <div class="text-[12.5px] text-[color:var(--ink-soft)] mt-1.5 flex items-center gap-3">
+        <span class="agent-chip chip-dev">● DEV-Engineer v2.3.1</span>
+        <span class="agent-chip chip-sec">● SEC-Auditor v1.7</span>
+        <span class="text-[color:var(--ink-mute)]">7 轮辩论 · 收敛 0.93</span>
+      </div>
+    </div>
+
+    <!-- Summary stats -->
+    <div class="flex items-end gap-6 text-right">
+      <div><div class="text-[10.5px] uppercase text-[color:var(--ink-mute)] tracking-wider">新增</div><div class="display text-[30px] leading-none mt-1" style="color: var(--add)">+ 148</div></div>
+      <div><div class="text-[10.5px] uppercase text-[color:var(--ink-mute)] tracking-wider">删除</div><div class="display text-[30px] leading-none mt-1" style="color: var(--del)">− 22</div></div>
+      <div><div class="text-[10.5px] uppercase text-[color:var(--ink-mute)] tracking-wider">文件</div><div class="display text-[30px] leading-none mt-1">3</div></div>
+      <div><div class="text-[10.5px] uppercase text-[color:var(--ink-mute)] tracking-wider">覆盖率</div><div class="display text-[30px] leading-none mt-1" style="color: oklch(40% 0.13 150)">86.4%</div></div>
+    </div>
+  </section>
+
+  <!-- Lens tabs (which artifact view) -->
+  <section class="mb-4 panel p-3 flex items-center gap-2">
+    <span class="text-[11px] text-[color:var(--ink-mute)] mx-1.5">视图</span>
+    <span class="lens-tab active"><span class="dot" style="background: var(--ink)"></span>代码 diff</span>
+    <span class="lens-tab"><span class="dot" style="background: oklch(70% 0.16 290)"></span>测试用例 (12 新增)</span>
+    <span class="lens-tab"><span class="dot" style="background: oklch(80% 0.16 65)"></span>OpenAPI / 契约</span>
+    <span class="lens-tab"><span class="dot" style="background: oklch(72% 0.17 150)"></span>变更说明</span>
+    <span class="lens-tab"><span class="dot" style="background: oklch(67% 0.20 25)"></span>影响图</span>
+    <span class="ml-auto seg">
+      <span class="opt active">分裂</span><span class="opt">合并</span><span class="opt">仅变更</span>
+    </span>
+    <span class="seg">
+      <span class="opt">普通</span><span class="opt active">紧凑</span>
+    </span>
+  </section>
+
+  <!-- 3 column workspace -->
+  <section class="grid grid-cols-12 gap-4">
+
+    <!-- LEFT: file tree -->
+    <aside class="col-span-3 panel p-3">
+      <div class="px-2 mb-2">
+        <div class="section-h">变更文件 · 3</div>
+        <div class="text-[11px] text-[color:var(--ink-mute)] mt-1">点击切换 · 修改未保存</div>
+      </div>
+
+      <div class="text-[11px] text-[color:var(--ink-mute)] mono px-2 mb-1">auth-service /</div>
+      <div class="pl-2">
+        <div class="text-[11.5px] text-[color:var(--ink-mute)] mono py-1">src/main/java/com/acme/auth/</div>
+        <div class="tree-item active">
+          <span class="w-3 text-center mono text-[color:var(--ink-mute)]">●</span>
+          <span class="flex-1">LoginService.java</span>
+          <span class="badge b-mod">M</span>
+          <span class="mono text-[10px] text-[color:var(--ink-mute)]">+92 -22</span>
+        </div>
+        <div class="tree-item">
+          <span class="w-3 text-center mono text-[color:var(--ink-mute)]">○</span>
+          <span class="flex-1">AccountLockService.java</span>
+          <span class="badge b-add">A</span>
+          <span class="mono text-[10px] text-[color:var(--ink-mute)]">+41</span>
+        </div>
+        <div class="tree-item">
+          <span class="w-3 text-center mono text-[color:var(--ink-mute)]">○</span>
+          <span class="flex-1">TokenBucketLimiter.java</span>
+          <span class="badge b-add">A</span>
+          <span class="mono text-[10px] text-[color:var(--ink-mute)]">+15</span>
+        </div>
+      </div>
+
+      <div class="ruler my-3"></div>
+
+      <div class="px-2">
+        <div class="section-h mb-2">关联产物</div>
+        <ul class="space-y-1.5 text-[12px]">
+          <li class="flex items-center gap-2">
+            <span class="w-1 h-1 rounded-full bg-[color:oklch(70%_0.16_290)]"></span>
+            <span class="flex-1">单元测试 LoginServiceTest</span>
+            <span class="badge b-new mono">12 例</span>
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="w-1 h-1 rounded-full bg-[color:oklch(80%_0.16_65)]"></span>
+            <span class="flex-1">OpenAPI 改动 (1 接口)</span>
+            <span class="badge b-mod mono">M</span>
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="w-1 h-1 rounded-full bg-[color:oklch(72%_0.17_150)]"></span>
+            <span class="flex-1">变更说明 (Markdown)</span>
+            <span class="badge b-add mono">A</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="ruler my-3"></div>
+
+      <div class="px-2">
+        <div class="section-h mb-2">对比基准</div>
+        <div class="text-[12px] flex items-center justify-between">
+          <span class="text-[color:var(--ink-soft)]">main</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-mute)]">@ 8f3a1cd</span>
+        </div>
+        <div class="text-[10.5px] text-[color:var(--ink-mute)] mt-1">提交于 2 小时前 · 王工 / payment 合并</div>
+      </div>
+    </aside>
+
+    <!-- CENTER: diff viewer with mini-map column -->
+    <div class="col-span-7">
+      <div class="panel overflow-hidden">
+
+        <!-- file header -->
+        <div class="px-5 py-3 border-b border-[color:var(--line-soft)] flex items-center gap-3 bg-[color:oklch(99%_0.005_90)]">
+          <span class="mono text-[12.5px]">src/main/java/com/acme/auth/LoginService.java</span>
+          <span class="badge b-mod mono">MOD</span>
+          <span class="mono text-[10.5px] text-[color:var(--ink-mute)]">Java · 246 行</span>
+          <div class="ml-auto flex items-center gap-2 text-[10.5px]">
+            <span class="text-[color:var(--ink-mute)] mono">复杂度 8 → 14</span>
+            <span class="text-[color:var(--ink-mute)] mono">覆盖率 78% → 92%</span>
+          </div>
+        </div>
+
+        <!-- diff + mini-map -->
+        <div class="grid grid-cols-[1fr_28px]">
+          <div class="py-2">
+
+            <div class="diff-row hunk"><span class="ln">　</span><span class="ln">　</span><span class="mk">@@</span><span>　-1,12 +1,20 @@ imports</span></div>
+            <div class="diff-row ctx"><span class="ln">1</span><span class="ln">1</span><span class="mk"> </span><span>package com.acme.auth;</span></div>
+            <div class="diff-row add"><span class="ln"></span><span class="ln">3</span><span class="mk">+</span><span>import com.acme.auth.lock.AccountLockService;</span></div>
+            <div class="diff-row add"><span class="ln"></span><span class="ln">4</span><span class="mk">+</span><span>import com.acme.auth.limit.TokenBucketLimiter;</span></div>
+            <div class="diff-row add"><span class="ln"></span><span class="ln">5</span><span class="mk">+</span><span>import org.springframework.security.crypto.password.PasswordEncoder;</span></div>
+            <div class="diff-row del"><span class="ln">5</span><span class="ln"></span><span class="mk">-</span><span>import java.util.Objects;</span></div>
+
+            <div class="diff-row hunk"><span class="ln">　</span><span class="ln">　</span><span class="mk">@@</span><span>　-78,12 +84,38 @@ public ResponseEntity&lt;LoginResp&gt; login(LoginReq req)</span></div>
+            <div class="diff-row ctx"><span class="ln">78</span><span class="ln">84</span><span class="mk"> </span><span>　public ResponseEntity&lt;LoginResp&gt; login(LoginReq req) {</span></div>
+            <div class="diff-row del"><span class="ln">79</span><span class="ln"></span><span class="mk">-</span><span>　　　User u = userRepo.findByName(req.username());</span></div>
+            <div class="diff-row del"><span class="ln">80</span><span class="ln"></span><span class="mk">-</span><span>　　　if (u == null) throw new BizException(USER_NOT_FOUND);</span></div>
+            <div class="diff-row add"><span class="ln"></span><span class="ln">85</span><span class="mk">+</span><span>　　　String key = "login:" + req.username() + ":" + clientIp();</span></div>
+            <div class="diff-row add"><span class="ln"></span><span class="ln">86</span><span class="mk">+</span><span>　　　if (!limiter.tryAcquire(key, 10, Duration.ofMinutes(1))) {</span></div>
+            <div class="diff-row add"><span class="ln"></span><span class="ln">87</span><span class="mk">+</span><span>　　　　　throw new BizException(RATE_LIMITED);</span></div>
+            <div class="diff-row add"><span class="ln"></span><span class="ln">88</span><span class="mk">+</span><span>　　　}</span></div>
+            <div class="diff-row add"><span class="ln"></span><span class="ln">89</span><span class="mk">+</span><span>　　　if (lockService.isLocked(req.username())) {</span></div>
+            <div class="diff-row add"><span class="ln"></span><span class="ln">90</span><span class="mk">+</span><span>　　　　　throw new BizException(ACCOUNT_LOCKED);</span></div>
+            <div class="diff-row add"><span class="ln"></span><span class="ln">91</span><span class="mk">+</span><span>　　　}</span></div>
+            <div class="diff-row ctx"><span class="ln">81</span><span class="ln">92</span><span class="mk"> </span><span>　　　User u = userRepo.findByName(req.username());</span></div>
+            <div class="diff-row ctx"><span class="ln">82</span><span class="ln">93</span><span class="mk"> </span><span>　　　if (u == null) throw new BizException(USER_NOT_FOUND);</span></div>
+            <div class="diff-row del"><span class="ln">83</span><span class="ln"></span><span class="mk">-</span><span>　　　if (!u.password().equals(req.password())) {</span></div>
+            <div class="diff-row del"><span class="ln">84</span><span class="ln"></span><span class="mk">-</span><span>　　　　　throw new BizException(BAD_CREDENTIALS);</span></div>
+            <div class="diff-row del"><span class="ln">85</span><span class="ln"></span><span class="mk">-</span><span>　　　}</span></div>
+            <div class="diff-row add"><span class="ln"></span><span class="ln">94</span><span class="mk">+</span><span>　　　if (!passwordEncoder.matches(req.password(), u.passwordHash())) {</span></div>
+            <div class="diff-row add"><span class="ln"></span><span class="ln">95</span><span class="mk">+</span><span>　　　　　lockService.recordFailure(req.username());</span></div>
+            <div class="diff-row add"><span class="ln"></span><span class="ln">96</span><span class="mk">+</span><span>　　　　　throw new BizException(BAD_CREDENTIALS);</span></div>
+            <div class="diff-row add"><span class="ln"></span><span class="ln">97</span><span class="mk">+</span><span>　　　}</span></div>
+            <div class="diff-row add"><span class="ln"></span><span class="ln">98</span><span class="mk">+</span><span>　　　lockService.clear(req.username());</span></div>
+            <div class="diff-row ctx"><span class="ln">93</span><span class="ln">99</span><span class="mk"> </span><span>　　　return ResponseEntity.ok(buildResp(u));</span></div>
+            <div class="diff-row ctx"><span class="ln">94</span><span class="ln">100</span><span class="mk"> </span><span>　}</span></div>
+
+            <div class="diff-row hunk"><span class="ln">　</span><span class="ln">　</span><span class="mk">@@</span><span>　-128,0 +142,18 @@ helpers</span></div>
+            <div class="diff-row add"><span class="ln"></span><span class="ln">142</span><span class="mk">+</span><span>　private String clientIp() {</span></div>
+            <div class="diff-row add"><span class="ln"></span><span class="ln">143</span><span class="mk">+</span><span>　　　return Optional.ofNullable(request.getHeader("X-Forwarded-For"))</span></div>
+            <div class="diff-row add"><span class="ln"></span><span class="ln">144</span><span class="mk">+</span><span>　　　　　.map(s -&gt; s.split(",")[0].trim())</span></div>
+            <div class="diff-row add"><span class="ln"></span><span class="ln">145</span><span class="mk">+</span><span>　　　　　.orElse(request.getRemoteAddr());</span></div>
+            <div class="diff-row add"><span class="ln"></span><span class="ln">146</span><span class="mk">+</span><span>　}</span></div>
+          </div>
+
+          <!-- mini-map (representing diff density across the whole file) -->
+          <div class="border-l border-[color:var(--line-soft)] py-2 px-2.5 bg-[color:oklch(99%_0.005_90)] flex flex-col gap-1.5">
+            <div class="map-bar h-2" style="background: var(--add)"></div>
+            <div class="map-bar h-4" style="background: var(--del)"></div>
+            <div class="map-bar h-14" style="background: var(--add)"></div>
+            <div class="map-bar h-2" style="background: var(--line-soft)"></div>
+            <div class="map-bar h-3" style="background: var(--del)"></div>
+            <div class="map-bar h-10" style="background: var(--add)"></div>
+            <div class="map-bar h-2" style="background: var(--line-soft)"></div>
+            <div class="map-bar h-6" style="background: var(--add)"></div>
+            <div class="map-bar h-2" style="background: var(--line-soft)"></div>
+            <div class="map-bar h-2" style="background: var(--line-soft)"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inline test pairing -->
+      <div class="panel mt-4 p-4">
+        <div class="flex items-center justify-between mb-2">
+          <div class="section-h">配套测试 · 12 例 · 全部通过</div>
+          <span class="mono text-[10.5px] text-[color:var(--ink-mute)]">LoginServiceTest.java</span>
+        </div>
+        <div class="grid grid-cols-3 gap-2 text-[12px]">
+          <div class="flex items-center gap-2 p-2 rounded-md bg-[color:oklch(72%_0.16_150_/_.06)]"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--done)"></span>shouldRateLimitAfter10Hits</div>
+          <div class="flex items-center gap-2 p-2 rounded-md bg-[color:oklch(72%_0.16_150_/_.06)]"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--done)"></span>shouldLockAfter5Failures</div>
+          <div class="flex items-center gap-2 p-2 rounded-md bg-[color:oklch(72%_0.16_150_/_.06)]"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--done)"></span>shouldClearOnSuccess</div>
+          <div class="flex items-center gap-2 p-2 rounded-md bg-[color:oklch(72%_0.16_150_/_.06)]"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--done)"></span>shouldUsePasswordEncoder</div>
+          <div class="flex items-center gap-2 p-2 rounded-md bg-[color:oklch(72%_0.16_150_/_.06)]"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--done)"></span>shouldHandleConcurrentLogin</div>
+          <div class="flex items-center gap-2 p-2 rounded-md bg-[color:oklch(72%_0.16_150_/_.06)]"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--done)"></span>shouldUnlockAfter15min</div>
+          <div class="flex items-center gap-2 p-2 rounded-md bg-[color:oklch(72%_0.16_150_/_.06)] opacity-70"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--done)"></span>…6 个</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: AI insights & meta -->
+    <aside class="col-span-2 space-y-4">
+      <div class="panel p-4">
+        <div class="section-h mb-3">AI 解读</div>
+        <div class="space-y-2.5">
+          <div class="insight insight-add">
+            <div class="w-1 rounded-full" style="background: var(--add)"></div>
+            <div class="text-[12px] leading-snug">
+              <div class="font-medium mb-0.5">引入限流 + 锁定双控</div>
+              <div class="text-[color:var(--ink-soft)]">符合《登录限流规范 v3》</div>
+            </div>
+          </div>
+          <div class="insight insight-add">
+            <div class="w-1 rounded-full" style="background: var(--add)"></div>
+            <div class="text-[12px] leading-snug">
+              <div class="font-medium mb-0.5">改用 PasswordEncoder</div>
+              <div class="text-[color:var(--ink-soft)]">消除字符串比较风险</div>
+            </div>
+          </div>
+          <div class="insight insight-warn">
+            <div class="w-1 rounded-full" style="background: var(--mod)"></div>
+            <div class="text-[12px] leading-snug">
+              <div class="font-medium mb-0.5">限流键较窄</div>
+              <div class="text-[color:var(--ink-soft)]">建议补 IP 维度桶</div>
+            </div>
+          </div>
+          <div class="insight insight-info">
+            <div class="w-1 rounded-full" style="background: oklch(70% 0.16 290)"></div>
+            <div class="text-[12px] leading-snug">
+              <div class="font-medium mb-0.5">圈复杂度 8 → 14</div>
+              <div class="text-[color:var(--ink-soft)]">仍在阈值内 (&lt; 20)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel p-4">
+        <div class="section-h mb-3">影响</div>
+        <ul class="space-y-2 text-[12px]">
+          <li class="flex justify-between"><span>下游测试</span><span class="mono text-[color:var(--ink-mute)]">+ 12 例</span></li>
+          <li class="flex justify-between"><span>接口契约</span><span class="mono text-[color:var(--ink-mute)]">兼容</span></li>
+          <li class="flex justify-between"><span>性能预估</span><span class="mono" style="color: oklch(40% 0.13 150)">+ 6ms P95</span></li>
+          <li class="flex justify-between"><span>风险等级</span><span class="mono" style="color: oklch(46% 0.16 65)">中</span></li>
+        </ul>
+      </div>
+
+      <div class="panel p-4">
+        <div class="section-h mb-3">提交时序</div>
+        <ol class="space-y-1.5 text-[11.5px] text-[color:var(--ink-soft)]">
+          <li class="flex gap-2"><span class="mono text-[10px] text-[color:var(--ink-mute)] w-10">14:02</span>DEV 初稿</li>
+          <li class="flex gap-2"><span class="mono text-[10px] text-[color:var(--ink-mute)] w-10">14:04</span>SEC 质疑</li>
+          <li class="flex gap-2"><span class="mono text-[10px] text-[color:var(--ink-mute)] w-10">14:05</span>DEV r2 — 加锁定</li>
+          <li class="flex gap-2"><span class="mono text-[10px] text-[color:var(--ink-mute)] w-10">14:07</span>DEV r4 — 改 Encoder</li>
+          <li class="flex gap-2"><span class="mono text-[10px] text-[color:var(--ink-mute)] w-10">14:08</span>收敛 <span class="mono font-semibold text-[color:var(--ink)]">0.93</span></li>
+        </ol>
+      </div>
+    </aside>
+  </section>
+
+  </div>
+</main>
+
+<footer class="px-8 py-6 text-[10.5px] mono text-[color:var(--ink-mute)] flex items-center gap-3">
+  <span class="w-1.5 h-1.5 rounded-full" style="background: var(--add)"></span>
+  Prototype · artifact-diff.html · 节点产物 diff 详情
+</footer>
+
+</body>
+</html>
