@@ -117,6 +117,10 @@
     <span id="hdr-title" class="text-[12.5px] font-medium text-[var(--text-strong)]">加载中…</span>
     <div class="ml-auto flex items-center gap-3">
       <span id="hdr-status-chip" class="chip chip-idle">加载中</span>
+      <button id="btn-cancel-run" class="hidden" onclick="cancelRun()" style="display:none; align-items:center; gap:6px; padding:8px 14px; border-radius:8px; background:oklch(95% 0.04 25); border:1.5px solid oklch(80% 0.12 25); color:oklch(45% 0.18 25); font-size:12.5px; font-weight:500; cursor:pointer;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        中断
+      </button>
       <button onclick="loadRun()" class="text-[12px] text-[var(--text-muted)] hover:text-[var(--text-strong)]">↻ 刷新</button>
     </div>
   </div>
@@ -165,7 +169,7 @@
     </div>
 
     <!-- Right column: gate panel + output -->
-    <div class="col-span-7 space-y-5">
+    <div class="col-span-7 space-y-5" id="right-col">
 
       <!-- Gate approval panel (hidden by default) -->
       <div id="gate-panel" class="gate-panel hidden">
@@ -178,6 +182,12 @@
           <span class="chip chip-review">
             <span class="chip-dot" style="background:var(--review)"></span>等待审批
           </span>
+        </div>
+
+        <!-- Artifact preview inline -->
+        <div id="artifact-preview" class="hidden" style="margin:16px 0; padding:16px; background:oklch(97% 0.006 260); border-radius:12px; border:1px solid oklch(90% 0.01 260); max-height:280px; overflow-y:auto;">
+          <div class="caps" style="margin-bottom:10px; color:oklch(56% 0.015 260);">AI 产出文档 · 请审阅</div>
+          <div id="artifact-preview-content" style="font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.8; color:oklch(35% 0.02 260); white-space:pre-wrap; word-break:break-word;">加载中…</div>
         </div>
 
         <div id="gate-approve-area">
@@ -213,7 +223,45 @@
         </div>
       </div>
 
+      <!-- PR link card (hidden until completed with PR) -->
+      <div id="pr-card" class="hidden" style="background:linear-gradient(135deg, oklch(94% 0.04 150), oklch(96% 0.03 200)); border:1.5px solid oklch(82% 0.10 150); border-radius:16px; padding:20px 24px;">
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <div>
+            <div class="caps" style="color:oklch(40% 0.13 150); margin-bottom:6px;">GitHub Pull Request · 已创建</div>
+            <div style="font-size:15px; font-weight:600; color:oklch(22% 0.03 260);">代码变更已提交，等待 Code Review</div>
+          </div>
+          <a id="pr-link" href="#" target="_blank" style="display:inline-flex; align-items:center; gap:8px; padding:10px 18px; background:oklch(22% 0.03 260); color:white; border-radius:10px; font-size:13px; font-weight:500; text-decoration:none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>
+            在 GitHub 查看 PR →
+          </a>
+        </div>
+      </div>
+
     </div>
+
+    <!-- LLM 交互终端 -->
+    <div id="llm-terminal-section" class="col-span-12 hidden">
+      <div style="background:oklch(14% 0.02 260); border-radius:16px; border:1px solid oklch(25% 0.03 260); overflow:hidden;">
+        <div style="padding:14px 20px; border-bottom:1px solid oklch(22% 0.025 260); display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="display:flex; gap:6px;">
+              <span style="width:10px;height:10px;border-radius:50%;background:oklch(62% 0.21 25)"></span>
+              <span style="width:10px;height:10px;border-radius:50%;background:oklch(70% 0.15 65)"></span>
+              <span style="width:10px;height:10px;border-radius:50%;background:oklch(62% 0.13 150)"></span>
+            </div>
+            <span id="terminal-node-label" style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:oklch(65% 0.02 260);">claude-code · agent</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span id="terminal-event-count" style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:oklch(50% 0.02 260);">0 events</span>
+            <div id="terminal-status-dot" style="width:7px;height:7px;border-radius:50%;background:oklch(50% 0.02 260)"></div>
+          </div>
+        </div>
+        <div id="llm-terminal-output" style="height:340px; overflow-y:auto; padding:18px 20px; font-family:'JetBrains Mono',monospace; font-size:12.5px; line-height:1.7; color:oklch(82% 0.018 260);">
+          <div style="color:oklch(50% 0.02 260); font-style:italic;">等待 Agent 启动…</div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
 </main>
@@ -238,6 +286,9 @@ fetch('/api/prototype/me').then(function(r) {
 var currentGateNodeId = null;
 var currentRunStatus = null;
 var sseSource = null;
+var terminalLastSeq = 0;
+var terminalPollTimer = null;
+var terminalCurrentNodeId = null;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 var STAGE_NAMES = { 1: '需求富化', 2: '设计与拆解', 3: '编码+UT' };
@@ -382,6 +433,141 @@ function renderOutput(runStatus, nodes) {
   }
 }
 
+// ── LLM Terminal ─────────────────────────────────────────────────────────────
+function appendTerminalLine(kind, content) {
+  var el = document.getElementById('llm-terminal-output');
+  var line = document.createElement('div');
+  line.style.cssText = 'margin-bottom:2px; word-break:break-word;';
+
+  if (kind === 'text') {
+    line.innerHTML = '<span style="color:oklch(76% 0.12 220)">' + escHtml(content) + '</span>';
+  } else if (kind === 'tool_use') {
+    line.innerHTML = '<span style="color:oklch(72% 0.15 65)">[tool] </span><span style="color:oklch(80% 0.08 65)">' + escHtml(content) + '</span>';
+  } else if (kind === 'finish') {
+    line.innerHTML = '<span style="color:oklch(62% 0.13 150)">✓ ' + escHtml(content) + '</span>';
+  } else if (kind === 'error') {
+    line.innerHTML = '<span style="color:oklch(60% 0.21 25)">✗ ' + escHtml(content) + '</span>';
+  } else {
+    line.innerHTML = '<span style="color:oklch(55% 0.02 260)">[' + kind + '] ' + escHtml(content) + '</span>';
+  }
+
+  // Remove placeholder if first real line
+  var placeholder = el.querySelector('div[style*="font-style:italic"]');
+  if (placeholder) el.removeChild(placeholder);
+
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+
+  var countEl = document.getElementById('terminal-event-count');
+  var current = parseInt(countEl.textContent) || 0;
+  countEl.textContent = (current + 1) + ' events';
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function extractEventContent(event) {
+  var p = event.payload || {};
+  if (event.kind === 'text') return p.content || p.text || '';
+  if (event.kind === 'tool_use') return (p.name || 'tool') + '(' + JSON.stringify(p.input || {}).slice(0, 120) + ')';
+  if (event.kind === 'finish') return 'Agent 完成 · stop_reason=' + (p.stop_reason || 'end_turn');
+  if (event.kind === 'error') return p.message || p.error || 'error';
+  return JSON.stringify(p).slice(0, 160);
+}
+
+function startTerminalPoll(nodeId, nodeLabel) {
+  stopTerminalPoll();
+  terminalCurrentNodeId = nodeId;
+  terminalLastSeq = 0;
+
+  var termSection = document.getElementById('llm-terminal-section');
+  termSection.classList.remove('hidden');
+  termSection.style.display = '';
+
+  document.getElementById('terminal-node-label').textContent = nodeLabel || 'claude-code · agent';
+  document.getElementById('terminal-status-dot').style.background = 'oklch(62% 0.13 150)';
+  document.getElementById('terminal-status-dot').style.animation = 'pulse-stage 1.5s infinite';
+
+  // Clear output
+  document.getElementById('llm-terminal-output').innerHTML = '<div style="color:oklch(50% 0.02 260); font-style:italic;">Agent 启动中…</div>';
+  document.getElementById('terminal-event-count').textContent = '0 events';
+
+  function poll() {
+    var url = '/api/prototype/runs/' + runId + '/events?after=' + terminalLastSeq;
+    if (terminalCurrentNodeId) url += '&nodeId=' + terminalCurrentNodeId;
+
+    fetch(url)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var evts = data.events || [];
+        evts.forEach(function(e) {
+          appendTerminalLine(e.kind, extractEventContent(e));
+          var seq = typeof e.seq === 'string' ? parseInt(e.seq) : Number(e.seq);
+          if (seq > terminalLastSeq) terminalLastSeq = seq;
+        });
+      })
+      .catch(function() {});
+  }
+
+  poll();
+  terminalPollTimer = setInterval(poll, 2000);
+}
+
+function stopTerminalPoll() {
+  if (terminalPollTimer) {
+    clearInterval(terminalPollTimer);
+    terminalPollTimer = null;
+  }
+  document.getElementById('terminal-status-dot').style.animation = '';
+  document.getElementById('terminal-status-dot').style.background = 'oklch(50% 0.02 260)';
+}
+
+// ── Artifact Preview ──────────────────────────────────────────────────────────
+function loadArtifactPreview(runId) {
+  fetch('/api/prototype/runs/' + runId + '/artifacts')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var arts = data.artifacts || [];
+      // Get most recent non-placeholder artifact
+      var art = null;
+      for (var i = arts.length - 1; i >= 0; i--) {
+        if (!arts[i].metadata || !arts[i].metadata.placeholder) {
+          art = arts[i];
+          break;
+        }
+      }
+      if (!art || !art.blobSha256) return;
+
+      var preview = document.getElementById('artifact-preview');
+      var content = document.getElementById('artifact-preview-content');
+      preview.classList.remove('hidden');
+      content.textContent = '加载文档中…';
+
+      fetch('/api/prototype/artifacts/' + art.blobSha256 + '/content')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          content.textContent = d.content || '(内容为空)';
+        })
+        .catch(function() { content.textContent = '(文档加载失败)'; });
+    })
+    .catch(function() {});
+}
+
+// ── Cancel run ────────────────────────────────────────────────────────────────
+function cancelRun() {
+  if (!confirm('确认中断此运行？')) return;
+  fetch('/api/prototype/runs/' + runId + '/cancel', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) loadRun();
+    else alert('中断失败: ' + (data.error || '未知错误'));
+  });
+}
+
 // ── Load run data ─────────────────────────────────────────────────────────────
 function loadRun() {
   fetch('/api/prototype/runs/' + runId)
@@ -404,6 +590,33 @@ function loadRun() {
       renderStageBar(nodes, run.status);
       renderGatePanel(nodes, run.status);
       renderOutput(run.status, nodes);
+
+      // Show/hide cancel button
+      var cancelBtn = document.getElementById('btn-cancel-run');
+      var showCancel = run.status === 'running' || run.status === 'paused_at_gate';
+      cancelBtn.style.display = showCancel ? 'inline-flex' : 'none';
+
+      // Terminal: start polling for running nodes
+      var runningNode = null;
+      (nodes || []).forEach(function(n) { if (n.status === 'running' && n.kind === 'agent') runningNode = n; });
+      if (runningNode) {
+        if (runningNode.id !== terminalCurrentNodeId) {
+          startTerminalPoll(runningNode.id, runningNode.name || 'claude-code');
+        }
+      } else if (run.status === 'paused_at_gate') {
+        stopTerminalPoll();
+        // Load artifact preview when gate appears
+        loadArtifactPreview(runId);
+      } else if (run.status === 'completed' || run.status === 'failed' || run.status === 'cancelled') {
+        stopTerminalPoll();
+        // Show PR card if prUrl available
+        var prUrl = run.metadata && run.metadata.prUrl;
+        if (prUrl) {
+          var prCard = document.getElementById('pr-card');
+          prCard.classList.remove('hidden');
+          document.getElementById('pr-link').href = prUrl;
+        }
+      }
     })
     .catch(function(err) { console.warn('loadRun error:', err); });
 }
@@ -481,6 +694,10 @@ function startSSE() {
       var msg = JSON.parse(evt.data);
       if (msg.type === 'run_status' || msg.type === 'node_status' || msg.type === 'run_completed') {
         loadRun();
+      }
+      // Terminal live: if current node matches, just poll
+      if (msg.type === 'node_status' && msg.nodeId && msg.nodeId === terminalCurrentNodeId) {
+        // poll is already running; nothing extra needed
       }
     } catch(e) {}
   };
