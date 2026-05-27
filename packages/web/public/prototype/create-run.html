@@ -223,15 +223,15 @@
 
         <!-- source tabs -->
         <div class="flex items-center gap-2 mb-4">
-          <span class="chip selected"><span class="dot" style="background: var(--accent)"></span>JIRA 单</span>
-          <span class="chip">手写需求</span>
-          <span class="chip">PRD 文档</span>
-          <span class="chip">语音 / 录音</span>
-          <span class="chip">Issue / GitHub</span>
+          <span class="chip selected" data-source="jira"><span class="dot" style="background: var(--accent)"></span>JIRA 单</span>
+          <span class="chip" data-source="manual">手写需求</span>
+          <span class="chip" data-source="prd">PRD 文档</span>
+          <span class="chip" data-source="voice">语音 / 录音</span>
+          <span class="chip" data-source="github">Issue / GitHub</span>
         </div>
 
         <!-- Jira -->
-        <div class="grid grid-cols-2 gap-4 mb-4">
+        <div id="jira-fields" class="grid grid-cols-2 gap-4 mb-4">
           <div>
             <div class="field-l">JIRA Key</div>
             <input class="input mono mt-1.5" value="JIRA-3982" />
@@ -244,8 +244,21 @@
           </div>
         </div>
 
-        <!-- Auto-fetched preview -->
-        <div class="p-4 rounded-xl border border-[color:var(--line-soft)] bg-[color:oklch(98%_0.008_260)]">
+        <!-- Manual input section (shown when "手写需求" is selected) -->
+        <div id="manual-fields" style="display:none;" class="mb-4 space-y-4">
+          <div>
+            <div class="field-l">需求标题 <span style="color:var(--halt)">*</span></div>
+            <input id="manual-title" class="input mt-1.5" placeholder="例：登录接口加入限流与账户锁定" />
+          </div>
+          <div>
+            <div class="field-l">需求描述 <span style="color:var(--halt)">*</span></div>
+            <textarea id="manual-oneliner" class="ta mt-1.5" rows="5" placeholder="用一到三句话描述需求背景、目标与约束…" style="min-height:120px;"></textarea>
+            <div class="field-h">系统会将此段文字作为 REQ Agent 的原始输入，描述越清晰，产出质量越高</div>
+          </div>
+        </div>
+
+        <!-- Auto-fetched preview (shown when "JIRA 单" is selected) -->
+        <div id="jira-preview" class="p-4 rounded-xl border border-[color:var(--line-soft)] bg-[color:oklch(98%_0.008_260)]">
           <div class="flex items-center justify-between mb-2">
             <span class="pill mono">从 JIRA 拉取</span>
             <span class="text-[10.5px] text-[color:var(--ink-mute)] mono">已同步 · 12s 前</span>
@@ -470,9 +483,36 @@
     if (r.status === 401) window.location.href = '/login?callbackUrl=/prototype/create-run.html';
   });
 
+  // ─── Source tab switching ─────────────────────────────────────────────────
+  var sourceMode = 'jira';
+
+  document.querySelectorAll('.chip[data-source]').forEach(function(chip) {
+    chip.addEventListener('click', function() {
+      var mode = chip.getAttribute('data-source');
+      // Only JIRA and manual are wired; others are decoration for now
+      document.querySelectorAll('.chip[data-source]').forEach(function(c) { c.classList.remove('selected'); });
+      chip.classList.add('selected');
+      sourceMode = mode;
+      var isManual = mode === 'manual';
+      document.getElementById('jira-fields').style.display = isManual ? 'none' : '';
+      document.getElementById('jira-preview').style.display = isManual ? 'none' : '';
+      document.getElementById('manual-fields').style.display = isManual ? '' : 'none';
+      if (isManual) {
+        document.getElementById('manual-title').focus();
+      }
+    });
+  });
+
+  // ─── Launch ───────────────────────────────────────────────────────────────
   document.getElementById('launch-btn').addEventListener('click', function() {
-    var title = document.getElementById('req-title').value.trim();
-    var oneLiner = document.getElementById('req-oneliner').value.trim();
+    var title, oneLiner;
+    if (sourceMode === 'manual') {
+      title = document.getElementById('manual-title').value.trim();
+      oneLiner = document.getElementById('manual-oneliner').value.trim();
+    } else {
+      title = document.getElementById('req-title').value.trim();
+      oneLiner = document.getElementById('req-oneliner').value.trim();
+    }
     if (!title || !oneLiner) {
       document.getElementById('launch-status').textContent = '请填写标题和描述';
       document.getElementById('launch-status').style.color = 'var(--halt)';
