@@ -263,8 +263,8 @@
             <span class="pill mono">从 JIRA 拉取</span>
             <span class="text-[10.5px] text-[color:var(--ink-mute)] mono">已同步 · 12s 前</span>
           </div>
-          <input id="req-title" class="display text-[20px] leading-tight" style="width:100%;background:transparent;border:none;outline:none;border-bottom:1px solid var(--line);padding-bottom:4px;" value="登录接口加入限流与账户锁定" />
-          <textarea id="req-oneliner" class="text-[12.5px] text-[color:var(--ink-soft)] mt-2 leading-relaxed" style="width:100%;background:transparent;border:none;outline:none;resize:none;min-height:60px;font-family:inherit;" rows="3">为减少撞库 / 暴力破解,登录接口需要支持基于用户名 + IP 的限流(默认 10次/分),连续失败 5 次锁定 15 分钟。需要兼容现有 JWT 流,不改动接口契约。</textarea>
+          <input id="req-title" readonly class="display text-[20px] leading-tight" style="width:100%;background:transparent;border:none;outline:none;border-bottom:1px solid var(--line);padding-bottom:4px;cursor:default;" value="登录接口加入限流与账户锁定" />
+          <textarea id="req-oneliner" readonly class="text-[12.5px] text-[color:var(--ink-soft)] mt-2 leading-relaxed" style="width:100%;background:transparent;border:none;outline:none;resize:none;min-height:60px;font-family:inherit;cursor:default;" rows="3">为减少撞库 / 暴力破解,登录接口需要支持基于用户名 + IP 的限流(默认 10次/分),连续失败 5 次锁定 15 分钟。需要兼容现有 JWT 流,不改动接口契约。</textarea>
           <div class="flex flex-wrap gap-2 mt-3">
             <span class="pill">报告人 · 王工</span>
             <span class="pill">优先级 · 高</span>
