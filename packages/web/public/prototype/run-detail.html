@@ -244,15 +244,30 @@
 
       <!-- PR link card (hidden until completed with PR) -->
       <div id="pr-card" class="hidden" style="background:linear-gradient(135deg, oklch(94% 0.04 150), oklch(96% 0.03 200)); border:1.5px solid oklch(82% 0.10 150); border-radius:16px; padding:20px 24px;">
-        <div style="display:flex; align-items:center; justify-content:space-between;">
-          <div>
-            <div class="caps" style="color:oklch(40% 0.13 150); margin-bottom:6px;">GitHub Pull Request · 已创建</div>
-            <div style="font-size:15px; font-weight:600; color:oklch(22% 0.03 260);">代码变更已提交，等待 Code Review</div>
-          </div>
-          <a id="pr-link" href="#" target="_blank" style="display:inline-flex; align-items:center; gap:8px; padding:10px 18px; background:oklch(22% 0.03 260); color:white; border-radius:10px; font-size:13px; font-weight:500; text-decoration:none;">
+        <div style="margin-bottom:14px;">
+          <div class="caps" style="color:oklch(40% 0.13 150); margin-bottom:6px;">GitHub Pull Request · 已创建</div>
+          <div style="font-size:15px; font-weight:600; color:oklch(22% 0.03 260);">代码变更已提交，等待 Code Review</div>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <a id="pr-link" href="#" target="_blank" style="display:inline-flex; align-items:center; gap:8px; padding:9px 16px; background:oklch(22% 0.03 260); color:white; border-radius:10px; font-size:13px; font-weight:500; text-decoration:none;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>
-            在 GitHub 查看 PR →
+            在 GitHub 查看 PR
           </a>
+          <a id="pr-diff-link" href="#" target="_blank" style="display:inline-flex; align-items:center; gap:8px; padding:9px 16px; background:white; color:oklch(35% 0.10 150); border:1.5px solid oklch(72% 0.13 150); border-radius:10px; font-size:13px; font-weight:500; text-decoration:none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+            查看代码差异 (Files Changed)
+          </a>
+        </div>
+      </div>
+
+      <!-- Artifacts panel (shown when completed) -->
+      <div id="artifacts-panel" class="hidden card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div class="caps">AI 产出文档</div>
+          <span style="font-size:11px; color:var(--text-faint);">点击查看或下载</span>
+        </div>
+        <div id="artifacts-list">
+          <div class="text-[13px] text-[var(--text-muted)]">加载中…</div>
         </div>
       </div>
 
@@ -583,7 +598,7 @@ function renderOutput(runStatus, nodes) {
   (nodes || []).forEach(function(n) { if (n.status === 'running') runningNode = n; });
 
   if (runStatus === 'completed') {
-    el.innerHTML = '<div class="flex items-center gap-2 text-[14px] font-medium" style="color:var(--done)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>运行已完成</div><p class="text-[13px] text-[var(--text-muted)] mt-2">所有阶段均已成功完成。</p>';
+    el.innerHTML = '<div class="flex items-center gap-2 text-[14px] font-medium" style="color:var(--done)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>运行已完成</div><p class="text-[13px] text-[var(--text-muted)] mt-2">三个阶段均已成功完成。↓ 下方可查看 AI 产出文档及 PR 代码差异。</p>';
   } else if (runStatus === 'failed' || runStatus === 'cancelled') {
     el.innerHTML = '<div class="flex items-center gap-2 text-[14px] font-medium" style="color:var(--halt)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' + (runStatus === 'cancelled' ? '运行已取消' : '运行失败') + '</div>';
   } else if (runStatus === 'paused_at_gate') {
@@ -717,6 +732,120 @@ function loadArtifactPreview(runId) {
     .catch(function() {});
 }
 
+// ── All artifacts panel (completed state) ────────────────────────────────────
+var KIND_LABEL = {
+  requirement_ir: '需求 IR 文档',
+  design_ir: '设计 IR 文档',
+  impl_ir: '实现 IR 文档',
+};
+var KIND_FILENAME = {
+  requirement_ir: 'requirement_ir.md',
+  design_ir: 'design_ir.md',
+  impl_ir: 'impl_ir.md',
+};
+// Track expanded state per artifact blobSha256
+var expandedArtifacts = {};
+
+function loadAllArtifacts(runId) {
+  fetch('/api/prototype/runs/' + runId + '/artifacts')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var arts = data.artifacts || [];
+      // Filter: only completed artifacts with a sha, deduplicate by kind (keep latest)
+      var byKind = {};
+      arts.forEach(function(a) {
+        if (a.status === 'ready' && a.blobSha256 && !byKind[a.kind]) {
+          byKind[a.kind] = a;
+        }
+      });
+      // Also include any ready artifact regardless of kind
+      arts.forEach(function(a) {
+        if (a.status === 'ready' && a.blobSha256 && !byKind[a.kind]) {
+          byKind[a.kind] = a;
+        }
+      });
+
+      var panel = document.getElementById('artifacts-panel');
+      var list = document.getElementById('artifacts-list');
+      var keys = Object.keys(byKind);
+
+      if (keys.length === 0) {
+        list.innerHTML = '<div class="text-[13px] text-[var(--text-muted)]">暂无产出文档。</div>';
+        panel.classList.remove('hidden');
+        return;
+      }
+
+      var html = '';
+      keys.forEach(function(kind) {
+        var a = byKind[kind];
+        var label = KIND_LABEL[kind] || kind;
+        var filename = KIND_FILENAME[kind] || (kind + '.md');
+        html += '<div id="art-row-' + esc(a.blobSha256) + '" style="border:1px solid var(--border-soft); border-radius:12px; overflow:hidden; margin-bottom:10px;">';
+        html += '  <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:var(--bg-elev);">';
+        html += '    <div style="display:flex; align-items:center; gap:10px;">';
+        html += '      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="oklch(56% 0.015 260)" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+        html += '      <span style="font-size:13px; font-weight:500; color:var(--text-strong);">' + esc(label) + '</span>';
+        html += '    </div>';
+        html += '    <div style="display:flex; gap:8px;">';
+        html += '      <button onclick="toggleArtContent(\'' + esc(a.blobSha256) + '\',\'' + esc(a.kind) + '\')" style="display:inline-flex;align-items:center;gap:5px;padding:5px 11px;font-size:12px;font-weight:500;background:white;border:1px solid var(--border-mid);border-radius:8px;cursor:pointer;color:var(--text-body);">';
+        html += '        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> 查看';
+        html += '      </button>';
+        html += '      <button onclick="downloadArt(\'' + esc(a.blobSha256) + '\',\'' + esc(filename) + '\')" style="display:inline-flex;align-items:center;gap:5px;padding:5px 11px;font-size:12px;font-weight:500;background:white;border:1px solid var(--border-mid);border-radius:8px;cursor:pointer;color:var(--text-body);">';
+        html += '        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> 下载';
+        html += '      </button>';
+        html += '    </div>';
+        html += '  </div>';
+        html += '  <div id="art-content-' + esc(a.blobSha256) + '" style="display:none; padding:14px 16px; background:var(--bg-base); border-top:1px solid var(--border-soft); max-height:320px; overflow-y:auto;">';
+        html += '    <div style="font-family:\'JetBrains Mono\',monospace; font-size:11.5px; line-height:1.75; color:oklch(35% 0.02 260); white-space:pre-wrap; word-break:break-word;">加载中…</div>';
+        html += '  </div>';
+        html += '</div>';
+      });
+
+      list.innerHTML = html;
+      panel.classList.remove('hidden');
+    })
+    .catch(function() {});
+}
+
+function toggleArtContent(sha, kind) {
+  var box = document.getElementById('art-content-' + sha);
+  if (!box) return;
+  if (box.style.display !== 'none') {
+    box.style.display = 'none';
+    return;
+  }
+  box.style.display = 'block';
+  if (expandedArtifacts[sha]) return; // already loaded
+  expandedArtifacts[sha] = true;
+  fetch('/api/prototype/artifacts/' + sha + '/content')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var pre = box.querySelector('div');
+      if (pre) pre.textContent = d.content || '(内容为空)';
+    })
+    .catch(function() {
+      var pre = box.querySelector('div');
+      if (pre) pre.textContent = '(加载失败)';
+    });
+}
+
+function downloadArt(sha, filename) {
+  fetch('/api/prototype/artifacts/' + sha + '/content')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var blob = new Blob([d.content || ''], { type: 'text/markdown;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    })
+    .catch(function() { alert('下载失败'); });
+}
+
 // ── Cancel run ────────────────────────────────────────────────────────────────
 function cancelRun() {
   if (!confirm('确认中断此运行？')) return;
@@ -778,7 +907,10 @@ function loadRun() {
           var prCard = document.getElementById('pr-card');
           prCard.classList.remove('hidden');
           document.getElementById('pr-link').href = prUrl;
+          document.getElementById('pr-diff-link').href = prUrl + '/files';
         }
+        // Always load artifacts panel on terminal states
+        loadAllArtifacts(runId);
       }
     })
     .catch(function(err) { console.warn('loadRun error:', err); });
