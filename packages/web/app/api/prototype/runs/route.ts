@@ -18,7 +18,15 @@ export async function GET() {
 
   const db = getDb()
   const runRows = await db
-    .select()
+    .select({
+      id: runs.id,
+      title: runs.title,
+      oneLiner: runs.oneLiner,
+      status: runs.status,
+      createdAt: runs.createdAt,
+      startedAt: runs.startedAt,
+      finishedAt: runs.finishedAt,
+    })
     .from(runs)
     .where(eq(runs.tenantId, session.user.tenantId))
     .orderBy(desc(runs.createdAt))
