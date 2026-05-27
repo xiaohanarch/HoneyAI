@@ -58,10 +58,17 @@ importers:
         version: 2.1.8(@types/node@22.10.0)(jsdom@26.1.0)(lightningcss@1.29.2)
 
   packages/adapter-claude:
+    dependencies:
+      '@honeyai/core':
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       typescript:
         specifier: 5.7.2
         version: 5.7.2
+      vitest:
+        specifier: 2.1.8
+        version: 2.1.8(@types/node@22.15.0)(jsdom@26.1.0)(lightningcss@1.29.2)
 
   packages/adapter-opencode:
     devDependencies:
