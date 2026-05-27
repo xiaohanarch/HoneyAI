@@ -11,20 +11,26 @@ export class ClaudeCodeAdapter implements RuntimeAdapter {
     const args = [
       '--output-format',
       'stream-json',
+      '--verbose',
       '--model',
       'claude-sonnet-4-6',
       '--system-prompt',
       systemPrompt,
-      '--message',
+      '-p',
       irInput,
     ]
     if (sessionId) {
       args.push('--resume', sessionId)
     }
 
-    const proc = spawn('claude', args, {
-      env: { ...process.env, ANTHROPIC_API_KEY: anthropicKey },
-    })
+    // Only set ANTHROPIC_API_KEY when non-empty; if empty, remove it so the
+    // claude CLI falls back to its own OAuth auth (Claude Code subscription).
+    const spawnEnv = { ...process.env, ANTHROPIC_API_KEY: anthropicKey }
+    if (!anthropicKey) delete spawnEnv['ANTHROPIC_API_KEY']
+
+    console.log('[claude-adapter] spawning claude, kind=%s, args=%s', kind, args.join(' '))
+    const proc = spawn('claude', args, { env: spawnEnv, stdio: ['ignore', 'pipe', 'pipe'] })
+    proc.on('spawn', () => console.log('[claude-adapter] process spawned, pid=%d', proc.pid))
 
     // Buffer for partial lines
     let buffer = ''
@@ -38,6 +44,16 @@ export class ClaudeCodeAdapter implements RuntimeAdapter {
       queue.push(event)
       resolveWaiter?.()
       resolveWaiter = null
+      // Once Claude signals done (finish or error), don't wait for the process to
+      // naturally exit — Stop hooks (e.g. pnpm build) can take minutes.
+      if (event.kind === 'finish' || event.kind === 'error') {
+        console.log(
+          '[claude-adapter] terminal event received, kind=%s, killing process',
+          event.kind,
+        )
+        done = true
+        if (!proc.killed) proc.kill()
+      }
     }
 
     function waitForData(): Promise<void> {
@@ -45,6 +61,10 @@ export class ClaudeCodeAdapter implements RuntimeAdapter {
         resolveWaiter = resolve
       })
     }
+
+    proc.stderr.on('data', (chunk: Buffer) => {
+      console.error('[claude-adapter stderr]', chunk.toString())
+    })
 
     proc.stdout.on('data', (chunk: Buffer) => {
       buffer += chunk.toString()
@@ -62,6 +82,20 @@ export class ClaudeCodeAdapter implements RuntimeAdapter {
           // skip unparseable lines
         }
       }
+      // Also attempt to parse any remaining buffer that arrived without a trailing \n
+      // (the final result JSON from claude CLI often comes without a newline)
+      const trimmedBuffer = buffer.trim()
+      if (trimmedBuffer) {
+        try {
+          const parsed = JSON.parse(trimmedBuffer) as Record<string, unknown>
+          for (const event of mapToStreamingEvents(parsed)) {
+            enqueue(event)
+          }
+          buffer = ''
+        } catch {
+          // Incomplete JSON — keep buffering
+        }
+      }
     })
 
     proc.on('close', (code: number | null) => {
@@ -77,7 +111,7 @@ export class ClaudeCodeAdapter implements RuntimeAdapter {
         }
         buffer = ''
       }
-      if (code !== 0 && code !== null) {
+      if (code !== 0 && code !== null && !done) {
         enqueue({
           ts: new Date().toISOString(),
           kind: 'error',

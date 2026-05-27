@@ -205,6 +205,6 @@ export async function submitStep4(
   if (!slug) return { ok: false, code: 'INTERNAL_ERROR' }
 
   revalidatePath('/welcome', 'layout')
-  revalidatePath(`/t/${slug}`, 'layout')
-  redirect(`/t/${slug}`)
+  revalidatePath(`/t/${slug}/runs`, 'layout')
+  redirect(`/t/${slug}/runs`)
 }

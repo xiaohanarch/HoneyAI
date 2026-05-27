@@ -185,8 +185,6 @@ async function runDesignStage(
         payload,
       })
 
-      await pgNotify(db, `run:${runId}`, { type: 'node_event', event })
-
       seq++
     }
   } catch (err) {
@@ -238,6 +236,15 @@ async function runDesignStage(
     status: 'success',
     retryCount: 0,
   })
+  await pgNotify(db, `run:${runId}`, {
+    type: 'node_status',
+    nodeId,
+    nodeName: 'design',
+    nodeKind: 'agent',
+    nodeStage: 2,
+    status: 'success',
+    ts: Date.now(),
+  })
 
   // INSERT stage2 gate node
   const gateNodeId = uuidv7()
@@ -256,8 +263,21 @@ async function runDesignStage(
   // pauseRunAtGate — INSERT gates row + UPDATE run status='paused_at_gate'
   await pauseRunAtGate(db, runId, gateNodeId)
 
-  // pg_notify gate_opened
-  await pgNotify(db, `run:${runId}`, { type: 'gate_opened', nodeId: gateNodeId })
+  // pg_notify node_status + run_status
+  await pgNotify(db, `run:${runId}`, {
+    type: 'node_status',
+    nodeId: gateNodeId,
+    nodeName: 'stage2.gate',
+    nodeKind: 'gate',
+    nodeStage: 2,
+    status: 'pending',
+    ts: Date.now(),
+  })
+  await pgNotify(db, `run:${runId}`, {
+    type: 'run_status',
+    status: 'paused_at_gate',
+    ts: Date.now(),
+  })
 }
 
 // ─── implement stage ──────────────────────────────────────────────────────────
@@ -339,8 +359,6 @@ async function runImplementStage(
         kind: event.kind,
         payload,
       })
-
-      await pgNotify(db, `run:${runId}`, { type: 'node_event', event })
 
       seq++
     }

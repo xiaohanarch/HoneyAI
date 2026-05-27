@@ -22,8 +22,7 @@ export default function LoginForm() {
       if (result?.error) {
         setError(zh.login.errorInvalid)
       } else {
-        // Redirect to root on success; middleware / tenant routing handles the rest
-        window.location.href = '/'
+        window.location.href = '/welcome'
       }
     })
   }

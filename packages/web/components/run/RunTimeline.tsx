@@ -4,10 +4,14 @@ import { useRunStore } from '@/lib/runs/store'
 import { NodeStatusIcon } from '@/components/run/NodeStatusIcon'
 import { cn } from '@/lib/utils'
 
+import type { NodeState } from '@/lib/runs/store'
+
 type Props = { runId: string }
 
+const EMPTY_NODES: NodeState[] = []
+
 export function RunTimeline({ runId }: Props) {
-  const nodes = useRunStore((s) => s.runs[runId]?.nodes ?? [])
+  const nodes = useRunStore((s) => s.runs[runId]?.nodes ?? EMPTY_NODES)
 
   return (
     <ol className="flex flex-col gap-2 p-4">

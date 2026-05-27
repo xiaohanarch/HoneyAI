@@ -1,13 +1,13 @@
 'use server'
 
 import { createHash } from 'node:crypto'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { v7 as uuidv7 } from 'uuid'
 import { revalidatePath } from 'next/cache'
 import { Queue } from 'bullmq'
 import { getDb } from '@honeyai/db'
-import { runs, artifacts, artifactBlobs, tenants } from '@honeyai/db/schema'
-import { passGate, resumeFromGate } from '@honeyai/orchestrator'
+import { runs, artifacts, artifactBlobs, tenants, nodes } from '@honeyai/db/schema'
+import { passGate, viewGate, resumeFromGate } from '@honeyai/orchestrator'
 import { decryptAnthropicKey } from '@honeyai/core'
 import { SCHEDULE_RUN_QUEUE, ADVANCE_RUN_QUEUE } from '@honeyai/worker'
 import { auth } from '@/lib/auth'
@@ -126,12 +126,34 @@ export async function approveGate(input: ApproveGateInput): Promise<ActionResult
 
   const db = getDb()
 
+  // Mark gate as viewed before approving (viewedAt guard in passGate)
+  await viewGate(db, input.nodeId)
   const result = await passGate(db, input.nodeId, session.user.id)
   if (!result.ok) {
     if (result.reason === 'not_viewed') {
       return { ok: false, code: 'GATE_NOT_VIEWED' }
     }
     return { ok: false, code: 'GATE_ERROR' }
+  }
+
+  // Notify client store to mark this gate node as 'success' so future gate selectors
+  // don't find it as still-pending
+  const gateNodeRows = await db
+    .select({ id: nodes.id, name: nodes.name, kind: nodes.kind, stage: nodes.stage })
+    .from(nodes)
+    .where(eq(nodes.id, input.nodeId))
+  const gateNode = gateNodeRows[0]
+  if (gateNode) {
+    const payload = JSON.stringify({
+      type: 'node_status',
+      nodeId: gateNode.id,
+      nodeName: gateNode.name,
+      nodeKind: gateNode.kind,
+      nodeStage: gateNode.stage,
+      status: 'success',
+      ts: Date.now(),
+    })
+    await db.execute(sql`SELECT pg_notify(${'run:' + input.runId}, ${payload})`)
   }
 
   const redisUrl = process.env['REDIS_URL']

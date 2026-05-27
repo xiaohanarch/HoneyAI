@@ -30,7 +30,7 @@ export function RunDetailClient({ runId, tenantSlug, initialStatus, initialNodes
 
   // Find the active gate node (kind=gate, status=running)
   const gateNode = useRunStore((s) =>
-    s.runs[runId]?.nodes.find((n) => n.kind === 'gate' && n.status === 'running'),
+    s.runs[runId]?.nodes.find((n) => n.kind === 'gate' && n.status === 'pending'),
   )
 
   return (

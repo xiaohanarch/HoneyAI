@@ -20,7 +20,7 @@
     "db:check": "pnpm --filter @honeyai/db drizzle-kit check",
     "db:seed": "pnpm --filter @honeyai/db db:seed",
     "prepare": "husky",
-    "dev:worker": "tsx packages/worker/src/start.ts"
+    "dev:worker": "tsx --env-file=.env packages/worker/src/start.ts"
   },
   "devDependencies": {
     "@commitlint/cli": "19.6.0",

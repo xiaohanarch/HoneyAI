@@ -100,15 +100,14 @@ export async function handleScheduleRun(deps: ScheduleRunDeps, job: ScheduleRunJ
         payload,
       })
 
-      // pg_notify node_event
-      await pgNotify(db, `run:${runId}`, { type: 'node_event', event })
-
       seq++
     }
   } catch (err) {
     await handleFailure(db, err, runId, nodeId, 'agent', 0)
     throw err
   }
+
+  console.log('[schedule-run] generator done, allEvents count=%d', allEvents.length)
 
   // 6. On finish: INSERT artifact_blobs + artifacts, UPDATE node status='success'
   // IR content comes from the last 'text' event (finish event has no content field)
@@ -144,12 +143,22 @@ export async function handleScheduleRun(deps: ScheduleRunDeps, job: ScheduleRunJ
     })
   }
 
+  console.log('[schedule-run] irContent found=%s, persisting node success', irContent !== undefined)
   // UPDATE enrich node status='success'
   await persistNode(db, nodeId, {
     id: nodeId,
     kind: 'agent',
     status: 'success',
     retryCount: 0,
+  })
+  await pgNotify(db, `run:${runId}`, {
+    type: 'node_status',
+    nodeId,
+    nodeName: 'enrich',
+    nodeKind: 'agent',
+    nodeStage: 1,
+    status: 'success',
+    ts: Date.now(),
   })
 
   // 7. INSERT gate node (stage=1, ordinal=2, kind='gate', status='pending')
@@ -169,6 +178,20 @@ export async function handleScheduleRun(deps: ScheduleRunDeps, job: ScheduleRunJ
   // 8. pauseRunAtGate — INSERT gates row + UPDATE run status='paused_at_gate'
   await pauseRunAtGate(db, runId, gateNodeId)
 
-  // 9. pg_notify gate_opened
-  await pgNotify(db, `run:${runId}`, { type: 'gate_opened', nodeId: gateNodeId })
+  // 9. pg_notify node_status for gate + run_status paused_at_gate
+  await pgNotify(db, `run:${runId}`, {
+    type: 'node_status',
+    nodeId: gateNodeId,
+    nodeName: 'stage1.gate',
+    nodeKind: 'gate',
+    nodeStage: 1,
+    status: 'pending',
+    ts: Date.now(),
+  })
+  await pgNotify(db, `run:${runId}`, {
+    type: 'run_status',
+    status: 'paused_at_gate',
+    ts: Date.now(),
+  })
+  console.log('[schedule-run] gate created and notified, gateNodeId=%s', gateNodeId)
 }

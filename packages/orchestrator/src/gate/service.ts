@@ -57,6 +57,7 @@ export async function passGate(db: AnyDb, nodeId: string, userId: string): Promi
     const nodeRows = await tx.select({ runId: nodes.runId }).from(nodes).where(eq(nodes.id, nodeId))
     const node = nodeRows[0]
     if (!node) throw new Error(`passGate: node not found for nodeId=${nodeId}`)
+    await tx.update(nodes).set({ status: 'success' }).where(eq(nodes.id, nodeId))
     await tx.update(runs).set({ status: 'running' }).where(eq(runs.id, node.runId))
   })
 
