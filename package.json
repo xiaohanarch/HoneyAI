@@ -19,7 +19,8 @@
     "db:generate": "pnpm --filter @honeyai/db drizzle-kit generate",
     "db:check": "pnpm --filter @honeyai/db drizzle-kit check",
     "db:seed": "pnpm --filter @honeyai/db db:seed",
-    "prepare": "husky"
+    "prepare": "husky",
+    "dev:worker": "tsx packages/worker/src/start.ts"
   },
   "devDependencies": {
     "@commitlint/cli": "19.6.0",

@@ -14,6 +14,10 @@
   "dependencies": {
     "@honeyai/core": "workspace:*",
     "@honeyai/db": "workspace:*",
+    "@honeyai/orchestrator": "workspace:*",
+    "@honeyai/worker": "workspace:*",
+    "bullmq": "^5.28.0",
+    "pg": "8.13.1",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-label": "^2.1.8",
@@ -32,6 +36,7 @@
   },
   "devDependencies": {
     "@auth/core": "0.37.2",
+    "@types/pg": "8.11.10",
     "@tailwindcss/postcss": "4.1.6",
     "@testcontainers/postgresql": "10.16.0",
     "@testing-library/jest-dom": "6.6.3",
