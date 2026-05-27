@@ -7,7 +7,7 @@ export default async function WelcomeIndexPage() {
   if (!session?.user?.tenantId) redirect('/login')
 
   const r = await getTenantBootstrap(session.user.tenantId)
-  if (r?.bootstrap?.completedAt) redirect(`/t/${r.slug}`)
+  if (r?.bootstrap?.completedAt) redirect('/prototype/index.html')
 
   // Resume from earliest unfinished step
   const b = r?.bootstrap
