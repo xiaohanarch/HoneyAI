@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: honeyai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: web
+          image: ghcr.io/xiaohanarch/honeyai-web:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: NEXTAUTH_URL
+              value: 'http://8.130.95.169'
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: honeyai-pg-app
+                  key: uri
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: honeyai-secrets
+                  key: redis_url
+            - name: NEXTAUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: honeyai-secrets
+                  key: nextauth_secret
+            - name: GITHUB_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: honeyai-secrets
+                  key: github_app_id
+            - name: GITHUB_APP_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: honeyai-secrets
+                  key: github_app_private_key
+            - name: GITHUB_APP_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: honeyai-secrets
+                  key: github_app_webhook_secret
+            - name: KEK_BASE64
+              valueFrom:
+                secretKeyRef:
+                  name: honeyai-secrets
+                  key: kek_base64
+          resources:
+            requests:
+              cpu: '500m'
+              memory: 512Mi
+            limits:
+              cpu: '1'
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: honeyai
+spec:
+  selector:
+    app: web
+  ports:
+    - port: 3000
+      targetPort: 3000

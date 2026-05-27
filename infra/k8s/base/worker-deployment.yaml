@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: honeyai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+        - name: worker
+          image: ghcr.io/xiaohanarch/honeyai-worker:latest
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: honeyai-pg-app
+                  key: uri
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: honeyai-secrets
+                  key: redis_url
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: honeyai-secrets
+                  key: anthropic_api_key
+            - name: GITHUB_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: honeyai-secrets
+                  key: github_app_id
+            - name: GITHUB_APP_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: honeyai-secrets
+                  key: github_app_private_key
+            - name: KEK_BASE64
+              valueFrom:
+                secretKeyRef:
+                  name: honeyai-secrets
+                  key: kek_base64
+            # Set by kustomize patch in deploy workflow (sandbox image digest)
+            - name: SANDBOX_IMAGE_REPO
+              value: ghcr.io/xiaohanarch/honeyai-sandbox
+            - name: SANDBOX_IMAGE_DIGEST
+              value: ''
+          resources:
+            requests:
+              cpu: '500m'
+              memory: 512Mi
+            limits:
+              cpu: '2'
+              memory: 2Gi

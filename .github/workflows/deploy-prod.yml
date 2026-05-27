@@ -1,0 +1,107 @@
+name: Deploy Prod
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # ── Build & push images（GitHub hosted runner，有 Docker + buildx）──────────
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      web-digest: ${{ steps.web.outputs.digest }}
+      worker-digest: ${{ steps.worker.outputs.digest }}
+      sandbox-digest: ${{ steps.sandbox.outputs.digest }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push web
+        id: web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/Dockerfile.web
+          tags: ghcr.io/xiaohanarch/honeyai-web:latest,ghcr.io/xiaohanarch/honeyai-web:${{ github.sha }}
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push worker
+        id: worker
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/Dockerfile.worker
+          tags: ghcr.io/xiaohanarch/honeyai-worker:latest,ghcr.io/xiaohanarch/honeyai-worker:${{ github.sha }}
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push sandbox
+        id: sandbox
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/Dockerfile.sandbox
+          tags: ghcr.io/xiaohanarch/honeyai-sandbox:latest,ghcr.io/xiaohanarch/honeyai-sandbox:${{ github.sha }}
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── Deploy（self-hosted runner on ECS，有 kubeconfig）──────────────────────
+  deploy:
+    needs: build
+    runs-on: [self-hosted, linux, x64, ecs]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+          sudo chown $USER ~/.kube/config
+
+      - name: Run drizzle migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          # Delete old job if exists, reapply with latest image
+          kubectl -n honeyai delete job drizzle-migrate --ignore-not-found
+          kubectl -n honeyai apply -f infra/k8s/base/jobs/migrate.yaml
+          kubectl -n honeyai wait --for=condition=Complete job/drizzle-migrate --timeout=300s
+
+      - name: Deploy web
+        run: |
+          kubectl -n honeyai set image deployment/web \
+            web=ghcr.io/xiaohanarch/honeyai-web@${{ needs.build.outputs.web-digest }}
+          kubectl -n honeyai rollout status deploy/web --timeout=300s
+
+      - name: Deploy worker
+        run: |
+          kubectl -n honeyai set image deployment/worker \
+            worker=ghcr.io/xiaohanarch/honeyai-worker@${{ needs.build.outputs.worker-digest }}
+          # Patch SANDBOX_IMAGE_DIGEST env
+          kubectl -n honeyai patch deployment worker --type=json \
+            -p='[{"op":"replace","path":"/spec/template/spec/containers/0/env/-","value":{"name":"SANDBOX_IMAGE_DIGEST","value":"${{ needs.build.outputs.sandbox-digest }}"}}]'
+          kubectl -n honeyai rollout status deploy/worker --timeout=300s
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          kubectl -n honeyai rollout undo deploy/web  || true
+          kubectl -n honeyai rollout undo deploy/worker || true

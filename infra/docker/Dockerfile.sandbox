@@ -1,0 +1,17 @@
+# Sandbox image: long-running pod that serves as the isolated code-execution
+# environment. Phase 2+ worker will kubectl exec into this pod to run
+# Claude Code sessions. For now kept minimal.
+FROM node:22-alpine
+
+RUN npm install -g @anthropic-ai/claude-code
+
+RUN apk add --no-cache git bash curl
+
+# Create non-root user for safer code execution
+RUN addgroup -S sandbox && adduser -S sandbox -G sandbox
+USER sandbox
+
+WORKDIR /workspace
+
+# Keep pod alive for kubectl exec
+CMD ["sleep", "infinity"]

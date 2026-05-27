@@ -1,0 +1,28 @@
+# Run DB seed (system assets, pricing book). One-shot on first deploy.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-seed
+  namespace: honeyai
+spec:
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: seed
+          image: ghcr.io/xiaohanarch/honeyai-worker:latest
+          command: ['pnpm', 'db:seed']
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: honeyai-pg-app
+                  key: uri
+          resources:
+            requests:
+              cpu: '200m'
+              memory: 256Mi
+            limits:
+              cpu: '500m'
+              memory: 512Mi

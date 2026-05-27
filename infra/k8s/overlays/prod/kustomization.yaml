@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+# Image tags are patched by deploy-prod.yml using digest references.
+# The kustomize edit set image commands in the workflow update images here.
+images:
+  - name: ghcr.io/xiaohanarch/honeyai-web
+    newName: ghcr.io/xiaohanarch/honeyai-web
+    newTag: latest
+  - name: ghcr.io/xiaohanarch/honeyai-worker
+    newName: ghcr.io/xiaohanarch/honeyai-worker
+    newTag: latest
