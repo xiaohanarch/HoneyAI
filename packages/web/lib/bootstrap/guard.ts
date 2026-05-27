@@ -12,5 +12,5 @@ export async function requireBootstrapComplete(tenantId: string): Promise<void> 
 
 export async function requireBootstrapIncomplete(tenantId: string): Promise<void> {
   const r = await getTenantBootstrap(tenantId)
-  if (r?.bootstrap?.completedAt) redirect(`/t/${r.slug}`)
+  if (r?.bootstrap?.completedAt) redirect('/prototype/index.html')
 }
