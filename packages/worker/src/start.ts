@@ -95,9 +95,10 @@ const advanceWorker = new Worker<AdvanceRunJob>(
         adapter: claudeAdapter,
         anthropicKey: ANTHROPIC_API_KEY,
         createPR: async (params) => {
+          const fallbackUrl = `https://github.com/${params.owner}/${params.repo}/compare/${params.headBranch}`
           if (!githubConfigured) {
-            console.warn('[worker] GitHub App not configured — skipping createPR')
-            return { prNumber: 0, prUrl: '', branchName: params.headBranch, sha: '' }
+            console.warn('[worker] GitHub App not configured — returning compare URL as fallback')
+            return { prNumber: 0, prUrl: fallbackUrl, branchName: params.headBranch, sha: '' }
           }
           try {
             return await resolveAndCreatePR(db, params)
@@ -106,7 +107,7 @@ const advanceWorker = new Worker<AdvanceRunJob>(
               '[worker] createPR failed (non-fatal for E2E):',
               err instanceof Error ? err.message : err,
             )
-            return { prNumber: 0, prUrl: '', branchName: params.headBranch, sha: '' }
+            return { prNumber: 0, prUrl: fallbackUrl, branchName: params.headBranch, sha: '' }
           }
         },
         getArtifactContent: (blobSha256) => getArtifactContent(db, blobSha256),
