@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { getDb } from '@honeyai/db'
-import { artifactBlobs } from '@honeyai/db/schema'
+import { artifacts, events, runs } from '@honeyai/db/schema'
 import { auth } from '@/lib/auth'
 
 const SHA256_RE = /^[0-9a-f]{64}$/
@@ -21,23 +21,50 @@ export async function GET(
   }
 
   const db = getDb()
-  const blobRows = await db
+
+  // Find artifact by sha256, verify tenant ownership
+  const artifactRows = await db
     .select({
-      sha256: artifactBlobs.sha256,
-      ossKey: artifactBlobs.ossKey,
+      id: artifacts.id,
+      nodeId: artifacts.nodeId,
+      runId: artifacts.runId,
+      kind: artifacts.kind,
+      tenantId: artifacts.tenantId,
     })
-    .from(artifactBlobs)
-    .where(eq(artifactBlobs.sha256, sha))
+    .from(artifacts)
+    .where(eq(artifacts.blobSha256, sha))
     .limit(1)
 
-  const blob = blobRows[0]
-  if (!blob) {
+  const artifact = artifactRows[0]
+  if (!artifact || artifact.tenantId !== session.user.tenantId) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  return NextResponse.json({
-    sha: blob.sha256,
-    ossKey: blob.ossKey,
-    content: '(artifact content from ' + blob.ossKey + ')',
-  })
+  let content: string
+
+  if (!artifact.nodeId) {
+    // User-submitted artifact — content is the run's oneLiner
+    const runRows = await db
+      .select({ oneLiner: runs.oneLiner })
+      .from(runs)
+      .where(eq(runs.id, artifact.runId))
+      .limit(1)
+    content = runRows[0]?.oneLiner ?? ''
+  } else {
+    // Agent-produced artifact — reconstruct from text events
+    const eventRows = await db
+      .select({ payload: events.payload })
+      .from(events)
+      .where(and(eq(events.nodeId, artifact.nodeId), eq(events.kind, 'text')))
+      .orderBy(events.seq)
+
+    content = eventRows
+      .map((e) => {
+        const p = e.payload as Record<string, unknown>
+        return typeof p['content'] === 'string' ? p['content'] : ''
+      })
+      .join('')
+  }
+
+  return NextResponse.json({ sha, content })
 }
