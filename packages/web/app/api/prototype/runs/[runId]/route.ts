@@ -23,7 +23,7 @@ export async function GET(
   const db = getDb()
   const [runRows, nodeRows] = await Promise.all([
     db.select().from(runs).where(eq(runs.id, runId)).limit(1),
-    db.select().from(nodes).where(eq(nodes.runId, runId)),
+    db.select({ id: nodes.id, name: nodes.name, kind: nodes.kind, status: nodes.status, stage: nodes.stage, ordinal: nodes.ordinal, config: nodes.config }).from(nodes).where(eq(nodes.runId, runId)),
   ])
 
   const run = runRows[0]
@@ -50,6 +50,11 @@ export async function GET(
     }
   }
 
+  // Extract prUrl from the implement node's config (stored by worker after createPR)
+  const implementNode = nodeRows.find((n) => n.stage === 3 && n.kind === 'agent')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const prUrl = (implementNode?.config as any)?.prUrl ?? null
+
   return NextResponse.json({
     run: {
       id: run.id,
@@ -57,6 +62,7 @@ export async function GET(
       oneLiner: run.oneLiner,
       status: run.status,
       createdAt: run.createdAt,
+      metadata: prUrl ? { prUrl } : null,
     },
     nodes: nodeRows.map((n) => ({
       id: n.id,
