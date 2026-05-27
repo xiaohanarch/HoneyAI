@@ -1,5 +1,6 @@
 import { v7 as uuidv7 } from 'uuid'
 import type { RunState, NodeState, ArtifactSnapshot, NodeKind, ArtifactKind } from '../types.js'
+import type { GateState } from '../gate/types.js'
 
 /**
  * makeRun — 创建 RunState fixture。
@@ -25,6 +26,19 @@ export function makeNode(overrides?: Partial<NodeState> & { kind?: NodeKind }): 
     kind: 'agent',
     status: 'pending',
     retryCount: 0,
+    ...overrides,
+  }
+}
+
+/**
+ * makeGateOpened — 创建 GateState fixture（status='opened'）。
+ * 对应 spec 05 §10.3 Gate 初始状态。
+ */
+export function makeGateOpened(overrides?: Partial<GateState>): GateState {
+  return {
+    nodeId: uuidv7(),
+    status: 'opened',
+    openedAt: new Date(),
     ...overrides,
   }
 }
