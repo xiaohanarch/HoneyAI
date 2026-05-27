@@ -14,6 +14,7 @@
   "dependencies": {
     "@honeyai/core": "workspace:*",
     "@honeyai/db": "workspace:*",
+    "@honeyai/orchestrator": "workspace:*",
     "@honeyai/worker": "workspace:*",
     "bullmq": "^5.28.0",
     "pg": "8.13.1",

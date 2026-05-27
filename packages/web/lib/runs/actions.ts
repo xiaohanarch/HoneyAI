@@ -1,10 +1,15 @@
 'use server'
 
+import { createHash } from 'node:crypto'
 import { eq } from 'drizzle-orm'
 import { v7 as uuidv7 } from 'uuid'
 import { revalidatePath } from 'next/cache'
+import { Queue } from 'bullmq'
 import { getDb } from '@honeyai/db'
-import { gates } from '@honeyai/db/schema'
+import { runs, artifacts, artifactBlobs, tenants } from '@honeyai/db/schema'
+import { passGate, resumeFromGate } from '@honeyai/orchestrator'
+import { decryptAnthropicKey } from '@honeyai/core'
+import { SCHEDULE_RUN_QUEUE, ADVANCE_RUN_QUEUE } from '@honeyai/worker'
 import { auth } from '@/lib/auth'
 
 // ── Result types ────────────────────────────────────────────────────────────
@@ -15,9 +20,6 @@ type CreateRunResult = CreateRunOk | ErrorResult
 type ActionResult = { ok: true } | ErrorResult
 
 // ── createRun ────────────────────────────────────────────────────────────────
-// Phase 2.4.4 MOCK MODE: does not write real DB rows.
-// Returns a fake runId so the UI can navigate to the detail page.
-// TODO: replace with real insert once Orchestrator is ready (Phase 3).
 
 export type CreateRunInput = { title: string; oneLiner: string }
 
@@ -25,8 +27,70 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
   const session = await auth()
   if (!session?.user?.tenantId) return { ok: false, code: 'UNAUTHENTICATED' }
 
-  // Mock: generate a deterministic-looking runId, no DB write
+  const db = getDb()
+
+  // SELECT tenant to validate defaultRepoId and anthropicKeyCiphertext
+  const tenantRows = await db.select().from(tenants).where(eq(tenants.id, session.user.tenantId))
+  const tenant = tenantRows[0]
+
+  if (!tenant?.defaultRepoId) {
+    return { ok: false, code: 'NO_DEFAULT_REPO' }
+  }
+
+  const ciphertext = tenant.settings?.bootstrap?.anthropicKeyCiphertext
+  if (!ciphertext) {
+    return { ok: false, code: 'NO_ANTHROPIC_KEY' }
+  }
+
+  // Validate the key decodes (non-empty)
+  const plainKey = decryptAnthropicKey(ciphertext)
+  if (!plainKey) {
+    return { ok: false, code: 'NO_ANTHROPIC_KEY' }
+  }
+
   const runId = uuidv7()
+  const tenantId = session.user.tenantId
+
+  // Insert the run row
+  await db.insert(runs).values({
+    id: runId,
+    status: 'created',
+    tenantId,
+    repositoryId: tenant.defaultRepoId,
+    createdByUserId: session.user.id,
+    title: input.title,
+    oneLiner: input.oneLiner,
+  })
+
+  // Insert placeholder artifactBlobs row (CAS dedup via onConflictDoNothing)
+  const sha256 = createHash('sha256').update(input.oneLiner).digest('hex')
+  const byteSize = BigInt(Buffer.from(input.oneLiner).length)
+  const ossKey = `placeholder/${runId}/requirement_ir.md`
+
+  await db.insert(artifactBlobs).values({ sha256, byteSize, ossKey }).onConflictDoNothing()
+
+  // Insert placeholder artifacts row
+  await db.insert(artifacts).values({
+    id: uuidv7(),
+    tenantId,
+    runId,
+    nodeId: null,
+    attempt: 0,
+    kind: 'requirement_ir',
+    status: 'ok',
+    blobSha256: sha256,
+    metadata: { placeholder: true },
+    authorKind: 'user',
+    pinned: false,
+  })
+
+  // Enqueue scheduleRun job
+  const queue = new Queue(SCHEDULE_RUN_QUEUE, {
+    connection: { url: process.env['REDIS_URL'] },
+  })
+  await queue.add('scheduleRun', { runId, tenantId })
+  await queue.close()
+
   revalidatePath(`/t/${session.user.tenantSlug}/runs`)
   return { ok: true, runId }
 }
@@ -40,18 +104,30 @@ export async function approveGate(input: ApproveGateInput): Promise<ActionResult
   if (!session?.user?.tenantId) return { ok: false, code: 'UNAUTHENTICATED' }
 
   const db = getDb()
-  await db
-    .update(gates)
-    .set({ passedAt: new Date(), passedByUserId: session.user.id })
-    .where(eq(gates.nodeId, input.nodeId))
+
+  const result = await passGate(db, input.nodeId, session.user.id)
+  if (!result.ok) {
+    if (result.reason === 'not_viewed') {
+      return { ok: false, code: 'GATE_NOT_VIEWED' }
+    }
+    return { ok: false, code: 'GATE_ERROR' }
+  }
+
+  const queue = new Queue(ADVANCE_RUN_QUEUE, {
+    connection: { url: process.env['REDIS_URL'] },
+  })
+  await queue.add('advanceRun', {
+    runId: input.runId,
+    tenantId: session.user.tenantId,
+    completedNodeId: input.nodeId,
+  })
+  await queue.close()
 
   revalidatePath(`/t/${session.user.tenantSlug}/runs/${input.runId}`)
   return { ok: true }
 }
 
 // ── rejectGate ───────────────────────────────────────────────────────────────
-// Rejection: mark gate as "not passed" by clearing passedAt.
-// Phase 2.4.4: run status reset is handled by Orchestrator (not yet wired).
 
 export type RejectGateInput = { runId: string; nodeId: string; reason: string }
 
@@ -60,11 +136,7 @@ export async function rejectGate(input: RejectGateInput): Promise<ActionResult> 
   if (!session?.user?.tenantId) return { ok: false, code: 'UNAUTHENTICATED' }
 
   const db = getDb()
-  // Store rejection by setting passedAt to null and clearing passedByUserId
-  await db
-    .update(gates)
-    .set({ passedAt: null, passedByUserId: null })
-    .where(eq(gates.nodeId, input.nodeId))
+  await resumeFromGate(db, input.runId, input.nodeId, session.user.id, 'reject')
 
   revalidatePath(`/t/${session.user.tenantSlug}/runs/${input.runId}`)
   return { ok: true }

@@ -221,6 +221,9 @@ importers:
       '@honeyai/db':
         specifier: workspace:*
         version: link:../db
+      '@honeyai/orchestrator':
+        specifier: workspace:*
+        version: link:../orchestrator
       '@honeyai/worker':
         specifier: workspace:*
         version: link:../worker
