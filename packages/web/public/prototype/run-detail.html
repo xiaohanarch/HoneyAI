@@ -154,25 +154,25 @@
       <span class="text-[9.5px] tracking-[.18em] uppercase font-semibold" style="color:var(--text-muted)">执行流 · Execution</span>
       <div class="flex-1 h-px bg-[var(--border-soft)]"></div>
     </div>
-    <div id="rail-exec" class="grid grid-cols-3 gap-0 relative mb-1">
-      <div class="text-[12px] text-[var(--text-muted)] col-span-3 py-2">加载中…</div>
+    <div id="rail-exec" class="grid grid-cols-4 gap-0 relative mb-1">
+      <div class="text-[12px] text-[var(--text-muted)] col-span-4 py-2">加载中…</div>
     </div>
     <!-- Connector 1→2 -->
-    <div id="rail-conn-1" class="grid grid-cols-3 gap-0 py-1"></div>
+    <div id="rail-conn-1" class="grid grid-cols-4 gap-0 py-1"></div>
     <!-- Rail 2 -->
     <div class="flex items-center gap-2 mb-3 mt-1">
       <span class="text-[9.5px] tracking-[.18em] uppercase font-semibold" style="color:var(--run)">AI 产出 · Artifacts</span>
       <div class="flex-1 h-px" style="background:linear-gradient(90deg, var(--run) 0%, transparent 100%); opacity:.25"></div>
     </div>
-    <div id="rail-artifacts" class="grid grid-cols-3 gap-0 relative mb-1"></div>
+    <div id="rail-artifacts" class="grid grid-cols-4 gap-0 relative mb-1"></div>
     <!-- Connector 2→3 -->
-    <div id="rail-conn-2" class="grid grid-cols-3 gap-0 py-1"></div>
+    <div id="rail-conn-2" class="grid grid-cols-4 gap-0 py-1"></div>
     <!-- Rail 3 -->
     <div class="flex items-center gap-2 mb-3 mt-1">
       <span class="text-[9.5px] tracking-[.18em] uppercase font-semibold" style="color:var(--review)">评审门 · Review Gates</span>
       <div class="flex-1 h-px" style="background:var(--review-soft)"></div>
     </div>
-    <div id="rail-gates" class="grid grid-cols-3 gap-0 relative"></div>
+    <div id="rail-gates" class="grid grid-cols-4 gap-0 relative"></div>
   </section>
 
   <div class="grid grid-cols-12 gap-6">
@@ -358,14 +358,16 @@ function renderTimeline(nodes) {
 
 // ── Three-rail pipeline render ────────────────────────────────────────────────
 var EXEC_STAGES = [
-  { stage: 1, num: '01', name: '需求富化',   desc: '原始诉求 → 语义化富化' },
-  { stage: 2, num: '02', name: '设计与拆解', desc: '需求 IR → 架构与拆解' },
-  { stage: 3, num: '03', name: '编码 + UT',  desc: '设计 IR → 代码实现' },
+  { stage: 1, num: '01', name: '需求富化',    desc: '原始诉求 → 语义化富化' },
+  { stage: 2, num: '02', name: '设计与拆解',  desc: '需求 IR → 架构与拆解' },
+  { stage: 3, num: '03', name: '编码 + UT',   desc: '设计 IR → 代码实现' },
+  { stage: 4, num: '04', name: 'SIT 集成测试', desc: '功能回归 · 集成验证', placeholder: true },
 ];
 var ART_INFO = [
   { stage: 1, label: 'requirement_ir', desc: '需求 IR 文档' },
   { stage: 2, label: 'design_ir',      desc: '设计 IR 文档' },
   { stage: 3, label: 'impl_ir',        desc: '实现 IR 文档' },
+  { stage: 4, label: 'test_report',    desc: 'SIT 测试报告', placeholder: true },
 ];
 
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -382,9 +384,9 @@ function renderThreeRail(nodes, runStatus, prUrl) {
   var execHtml = '';
   EXEC_STAGES.forEach(function(info, i) {
     var n = agentByStage[info.stage];
-    var st = n ? n.status : 'idle';
-    if (isCompleted) st = 'success';
-    var isLast = i === 2;
+    var st = info.placeholder ? 'idle' : (n ? n.status : 'idle');
+    if (!info.placeholder && isCompleted) st = 'success';
+    var isLast = i === 3;
 
     var circStyle, statusLabel, statusColor, connBg;
     if (st === 'success') {
@@ -395,6 +397,10 @@ function renderThreeRail(nodes, runStatus, prUrl) {
       circStyle = 'background:var(--run);border:2px solid var(--run);color:white;';
       statusLabel = info.num + ' · RUNNING'; statusColor = 'var(--run)';
       connBg = 'background:repeating-linear-gradient(90deg,var(--border-mid) 0 4px,transparent 4px 8px)';
+    } else if (info.placeholder) {
+      circStyle = 'background:white;border:2px dashed var(--border-soft);color:var(--text-faint);opacity:.55;';
+      statusLabel = info.num + ' · GATED'; statusColor = 'var(--text-faint)';
+      connBg = 'background:var(--border-soft)';
     } else {
       circStyle = 'background:white;border:2px dashed var(--border-mid);color:var(--text-faint);';
       statusLabel = info.num + ' · PENDING'; statusColor = 'var(--text-faint)';
@@ -406,7 +412,7 @@ function renderThreeRail(nodes, runStatus, prUrl) {
           ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56" stroke-linecap="round"/></svg>'
           : info.num);
 
-    execHtml += '<div class="relative' + (isLast ? '' : ' pr-6') + '">';
+    execHtml += '<div class="relative' + (isLast ? '' : ' pr-6') + '"' + (info.placeholder ? ' style="opacity:.5"' : '') + '>';
     if (!isLast) execHtml += '<div class="absolute top-[13px] left-[26px] right-0 h-[2px]" style="' + connBg + '"></div>';
     execHtml += '<div class="relative flex items-start gap-2.5">';
     execHtml += '<div class="w-[26px] h-[26px] rounded-full flex-shrink-0 z-10 flex items-center justify-center text-[11px] font-semibold font-mono" style="' + circStyle + '">' + icon + '</div>';
@@ -436,10 +442,10 @@ function renderThreeRail(nodes, runStatus, prUrl) {
   // ── Rail 2: Artifacts ──────────────────────────────────────────────────────
   var artHtml = '';
   ART_INFO.forEach(function(info, i) {
-    var n = agentByStage[info.stage];
-    var done = n && (n.status === 'success' || isCompleted);
-    var running = n && n.status === 'running' && !isCompleted;
-    var isLast = i === 2;
+    var n = info.placeholder ? null : agentByStage[info.stage];
+    var done = !info.placeholder && n && (n.status === 'success' || isCompleted);
+    var running = !info.placeholder && n && n.status === 'running' && !isCompleted;
+    var isLast = i === 3;
 
     var border, iconCol, connStyle, statusLabel;
     if (done) {
@@ -487,16 +493,21 @@ function renderThreeRail(nodes, runStatus, prUrl) {
     { stage: 1, name: '评审门 · Stage 1', desc: '需求富化阶段人工评审', isPR: false },
     { stage: 2, name: '评审门 · Stage 2', desc: '设计与拆解阶段人工评审', isPR: false },
     { stage: 3, name: 'Pull Request',      desc: '编码完成 · 代码已提交', isPR: true },
+    { stage: 4, name: 'SIT 结果',          desc: '测试通过 · 待实现', placeholder: true },
   ];
   var gatesHtml = '';
   GATE_DEF.forEach(function(info, i) {
-    var isLast = i === 2;
+    var isLast = i === 3;
     var gateNode = gateByStage[info.stage];
     var agentNode = agentByStage[info.stage];
     var agentDone = agentNode && (agentNode.status === 'success' || isCompleted);
 
-    var border, iconCol, statusLabel, connStyle, circleHtml, extraHtml = '';
-    if (info.isPR) {
+    var border, iconCol, statusLabel, connStyle, circleHtml, extraHtml = '', wrapOpacity = '';
+    if (info.placeholder) {
+      border = 'var(--border-soft)'; iconCol = 'var(--text-faint)'; statusLabel = 'GATED · 待实现';
+      circleHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2 2"/></svg>';
+      wrapOpacity = 'opacity:.45;';
+    } else if (info.isPR) {
       if (prUrl) {
         border = 'var(--done-soft)'; iconCol = 'var(--done)'; statusLabel = 'PR · 已创建';
         circleHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>';
@@ -522,9 +533,9 @@ function renderThreeRail(nodes, runStatus, prUrl) {
       }
     }
 
-    gatesHtml += '<div class="relative' + (isLast ? '' : ' pr-6') + '">';
+    gatesHtml += '<div class="relative' + (isLast ? '' : ' pr-6') + '" style="' + wrapOpacity + '">';
     if (!isLast && connStyle) gatesHtml += '<div class="absolute top-[13px] left-[26px] right-0 h-[2px]" style="' + connStyle + '"></div>';
-    gatesHtml += '<div class="relative rounded-xl border p-2.5 bg-white" style="border-color:' + border + '">';
+    gatesHtml += '<div class="relative rounded-xl border p-2.5 bg-white" style="border-color:' + border + (info.placeholder ? ';border-style:dashed' : '') + '">';
     gatesHtml += '<div class="flex items-start gap-2">';
     gatesHtml += '<div class="w-[26px] h-[26px] rounded-full border-2 flex-shrink-0 flex items-center justify-center" style="border-color:' + iconCol + ';color:' + iconCol + '">' + circleHtml + '</div>';
     gatesHtml += '<div class="min-w-0 flex-1">';
