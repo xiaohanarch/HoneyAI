@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { EventEmitter } from 'node:events'
 import { ClaudeCodeAdapter } from './claude-adapter.js'
-import type { ExecuteNodeParams } from '@honeyai/core'
+import type { ExecuteNodeParams, StreamingNodeEvent } from '@honeyai/core'
 
 // ─── Mock setup ─────────────────────────────────────────────────────────────
 
@@ -189,5 +189,28 @@ describe('ClaudeCodeAdapter', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const spawnOpts = mockSpawn.mock.calls[0]![2] as any
     expect(spawnOpts?.env?.ANTHROPIC_API_KEY).toBe('sk-test-key')
+  })
+
+  it('multi-block: all content blocks yielded', async () => {
+    const line = JSON.stringify({
+      type: 'assistant',
+      message: {
+        content: [
+          { type: 'thinking', thinking: 'Reasoning...' },
+          { type: 'text', text: 'Final answer' },
+        ],
+      },
+    })
+    mockSpawn.mockReturnValue(makeFakeProcess([line]))
+
+    const adapter = new ClaudeCodeAdapter()
+    const events: StreamingNodeEvent[] = []
+    for await (const e of adapter.executeNode(BASE_PARAMS)) {
+      events.push(e)
+    }
+
+    expect(events.some((e) => e.kind === 'thinking')).toBe(true)
+    expect(events.some((e) => e.kind === 'text')).toBe(true)
+    expect(events).toHaveLength(2)
   })
 })

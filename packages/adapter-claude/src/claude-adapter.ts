@@ -55,8 +55,9 @@ export class ClaudeCodeAdapter implements RuntimeAdapter {
         if (!trimmed) continue
         try {
           const parsed = JSON.parse(trimmed) as Record<string, unknown>
-          const event = mapToStreamingEvent(parsed)
-          if (event) enqueue(event)
+          for (const event of mapToStreamingEvents(parsed)) {
+            enqueue(event)
+          }
         } catch {
           // skip unparseable lines
         }
@@ -68,8 +69,9 @@ export class ClaudeCodeAdapter implements RuntimeAdapter {
       if (buffer.trim()) {
         try {
           const parsed = JSON.parse(buffer.trim()) as Record<string, unknown>
-          const event = mapToStreamingEvent(parsed)
-          if (event) enqueue(event)
+          for (const event of mapToStreamingEvents(parsed)) {
+            enqueue(event)
+          }
         } catch {
           // ignore
         }
@@ -98,60 +100,62 @@ export class ClaudeCodeAdapter implements RuntimeAdapter {
   }
 }
 
-function mapToStreamingEvent(parsed: Record<string, unknown>): StreamingNodeEvent | null {
+function mapToStreamingEvents(parsed: Record<string, unknown>): StreamingNodeEvent[] {
   const ts = new Date().toISOString()
+  const result: StreamingNodeEvent[] = []
 
   if (parsed['type'] === 'assistant') {
     const msg = parsed['message'] as Record<string, unknown> | undefined
     const contentArr = msg?.['content'] as Array<Record<string, unknown>> | undefined
-    if (!Array.isArray(contentArr)) return null
+    if (!Array.isArray(contentArr)) return result
 
     for (const item of contentArr) {
       if (item['type'] === 'thinking') {
-        return { ts, kind: 'thinking', content: String(item['thinking'] ?? '') }
-      }
-      if (item['type'] === 'tool_use') {
-        return {
+        result.push({ ts, kind: 'thinking', content: String(item['thinking'] ?? '') })
+      } else if (item['type'] === 'tool_use') {
+        result.push({
           ts,
           kind: 'tool_call',
           tool: String(item['name'] ?? ''),
           args: (item['input'] as Record<string, unknown>) ?? {},
-        }
-      }
-      if (item['type'] === 'text') {
-        return { ts, kind: 'text', content: String(item['text'] ?? '') }
+        })
+      } else if (item['type'] === 'text') {
+        result.push({ ts, kind: 'text', content: String(item['text'] ?? '') })
       }
     }
-    return null
+    return result
   }
 
   if (parsed['type'] === 'tool') {
     const content = String(parsed['content'] ?? '')
-    return {
+    result.push({
       ts,
       kind: 'tool_result',
       tool: String(parsed['tool_name'] ?? ''),
       outputLen: content.length,
-    }
+    })
+    return result
   }
 
   if (parsed['type'] === 'result') {
     if (parsed['subtype'] === 'success') {
       const usage = parsed['usage'] as Record<string, unknown> | undefined
-      return {
+      result.push({
         ts,
         kind: 'finish',
         reason: 'end_turn',
         inputTokens: Number(usage?.['input_tokens'] ?? 0),
         outputTokens: Number(usage?.['output_tokens'] ?? 0),
-      }
+      })
+    } else {
+      result.push({
+        ts,
+        kind: 'error',
+        content: `result subtype: ${String(parsed['subtype'] ?? 'unknown')}`,
+      })
     }
-    return {
-      ts,
-      kind: 'error',
-      content: `result subtype: ${String(parsed['subtype'] ?? 'unknown')}`,
-    }
+    return result
   }
 
-  return null
+  return result
 }
