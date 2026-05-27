@@ -164,10 +164,22 @@ importers:
       '@honeyai/core':
         specifier: workspace:*
         version: link:../core
+      '@honeyai/db':
+        specifier: workspace:*
+        version: link:../db
+      drizzle-orm:
+        specifier: 0.36.4
+        version: 0.36.4(@types/pg@8.11.10)(@types/react@19.1.0)(pg@8.13.1)(react@19.1.0)
       uuid:
         specifier: 11.0.3
         version: 11.0.3
     devDependencies:
+      '@types/pg':
+        specifier: 8.11.10
+        version: 8.11.10
+      pg:
+        specifier: 8.13.1
+        version: 8.13.1
       typescript:
         specifier: 5.7.2
         version: 5.7.2
@@ -6312,7 +6324,7 @@ snapshots:
 
   '@types/pg@8.11.10':
     dependencies:
-      '@types/node': 22.10.0
+      '@types/node': 22.15.0
       pg-protocol: 1.14.0
       pg-types: 4.1.0
 
