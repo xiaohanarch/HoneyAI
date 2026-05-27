@@ -96,7 +96,7 @@ describe('SSE stream route — pg LISTEN', () => {
   })
 
   it('AC-02-23: GET returns 401 when unauthenticated', async () => {
-    vi.mocked(auth).mockResolvedValueOnce(null)
+    vi.mocked(auth).mockResolvedValueOnce(null as never)
     const req = new Request('http://localhost/api/runs/11111111-1111-1111-1111-111111111111/stream')
     const res = await GET(req as NextRequest, {
       params: Promise.resolve({ id: '11111111-1111-1111-1111-111111111111' }),

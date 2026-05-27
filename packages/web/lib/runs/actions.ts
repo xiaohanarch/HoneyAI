@@ -156,7 +156,7 @@ export async function approveGate(input: ApproveGateInput): Promise<ActionResult
 
 // ── rejectGate ───────────────────────────────────────────────────────────────
 
-export type RejectGateInput = { runId: string; nodeId: string }
+export type RejectGateInput = { runId: string; nodeId: string; reason?: string }
 
 export async function rejectGate(input: RejectGateInput): Promise<ActionResult> {
   const session = await auth()
