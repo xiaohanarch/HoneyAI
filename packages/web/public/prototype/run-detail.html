@@ -103,6 +103,96 @@
   .chip-review { background: var(--review-soft); color: oklch(40% 0.18 290); border-color: oklch(85% 0.08 290); }
   .chip-halt { background: var(--halt-soft); color: var(--halt); border-color: oklch(85% 0.08 25); }
   .chip-idle { background: oklch(97% 0.005 260); color: var(--text-muted); border-color: var(--border-soft); }
+
+  /* IR Chain section */
+  .ir-chain-row { display: flex; align-items: center; gap: 0; overflow-x: auto; padding-bottom: 4px; }
+  .ir-chain-node {
+    flex-shrink: 0;
+    width: 180px;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-soft);
+    border-radius: 14px;
+    padding: 14px 14px 12px;
+    cursor: default;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    position: relative;
+  }
+  .ir-chain-node.has-content { cursor: pointer; }
+  .ir-chain-node.has-content:hover { border-color: var(--border-mid); box-shadow: var(--shadow-md); }
+  .ir-chain-node.active {
+    border-color: oklch(58% 0.18 250);
+    box-shadow: 0 0 0 3px oklch(58% 0.18 250 / 0.10), var(--shadow-md);
+  }
+  .ir-chain-node.pending-node { opacity: 0.55; }
+  .ir-chain-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    background: oklch(93% 0.03 250);
+    color: oklch(42% 0.18 250);
+    margin-bottom: 8px;
+  }
+  .ir-chain-badge.done { background: var(--done-soft); color: oklch(38% 0.13 150); }
+  .ir-chain-badge.raw { background: oklch(94% 0.03 65); color: oklch(44% 0.15 65); }
+  .ir-chain-title { font-size: 12.5px; font-weight: 600; color: var(--text-strong); margin-bottom: 4px; }
+  .ir-chain-meta { font-size: 11px; color: var(--text-muted); }
+  .ir-chain-expand-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 10px;
+    padding: 4px 9px;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 500;
+    background: oklch(96% 0.01 260);
+    border: 1px solid var(--border-soft);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+  .ir-chain-expand-btn:hover { background: oklch(92% 0.02 250); color: var(--text-strong); }
+  .ir-chain-arrow {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    color: var(--text-faint);
+    font-size: 18px;
+    line-height: 1;
+    user-select: none;
+  }
+  .ir-chain-content-panel {
+    margin-top: 16px;
+    background: oklch(13% 0.02 260);
+    border-radius: 12px;
+    border: 1px solid oklch(24% 0.025 260);
+    overflow: hidden;
+  }
+  .ir-chain-content-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid oklch(22% 0.025 260);
+  }
+  .ir-chain-content-body {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 14px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.75;
+    color: oklch(82% 0.018 260);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
 </style>
 </head>
 <body class="bg-atmosphere grain min-h-screen">
@@ -296,6 +386,71 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- ─── SECTION 1: Skills 使用明细 (P0a) ──────────────────────────────────── -->
+  <div id="skills-section" style="display:none; margin-top:24px;">
+    <div class="card p-6 mb-6">
+      <div class="caps mb-4">Skills 使用明细</div>
+      <div id="skills-grid" class="grid grid-cols-3 gap-4">
+        <div class="text-[13px] text-[var(--text-muted)]">加载中…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 2: 需求富化对比 (P0b) ────────────────────────────────────── -->
+  <div id="req-compare-section" style="display:none; margin-top:24px;">
+    <div class="card mb-6" style="overflow:hidden;">
+      <div id="req-compare-header" onclick="toggleReqCompare()" style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; cursor:pointer; user-select:none; border-bottom:1px solid var(--border-soft);">
+        <div class="caps">需求富化对比</div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:11px; color:var(--text-faint);">点击展开</span>
+          <svg id="req-compare-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2" style="transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div id="req-compare-body" style="display:none; padding:0;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0;">
+          <div style="padding:20px 24px; border-right:1px solid var(--border-soft);">
+            <div class="caps" style="margin-bottom:12px;">原始需求输入</div>
+            <div id="req-original" style="font-family:'JetBrains Mono',monospace; font-size:12.5px; line-height:1.75; color:oklch(38% 0.02 260); background:oklch(98% 0.004 85); border-radius:10px; padding:14px 16px; max-height:320px; overflow-y:auto; white-space:pre-wrap; word-break:break-word;">—</div>
+          </div>
+          <div style="padding:20px 24px;">
+            <div class="caps" style="margin-bottom:12px;">富化后 requirement_ir</div>
+            <div id="req-enriched" style="font-family:'JetBrains Mono',monospace; font-size:12.5px; line-height:1.75; color:oklch(35% 0.02 260); background:oklch(14% 0.02 260); color:oklch(82% 0.018 260); border-radius:10px; padding:14px 16px; max-height:320px; overflow-y:auto; white-space:pre-wrap; word-break:break-word;">加载中…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 3: 成本明细 (P1a) ────────────────────────────────────────── -->
+  <div id="cost-section" style="display:none; margin-top:24px;">
+    <div class="card p-6 mb-6">
+      <div class="caps mb-4">成本明细</div>
+      <div id="cost-table">
+        <div class="text-[13px] text-[var(--text-muted)]">加载中…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 4: IR 文档演化链 ──────────────────────────────────────────── -->
+  <div id="ir-chain-section" style="display:none; margin-top:24px;">
+    <div class="card p-6 mb-6">
+      <div style="margin-bottom:18px;">
+        <div class="caps mb-1">IR 文档演化链</div>
+        <div style="font-size:12px; color:var(--text-muted);">需求如何从一句话演化成可执行代码</div>
+      </div>
+      <div id="ir-chain-nodes" class="ir-chain-row">
+        <div class="text-[13px] text-[var(--text-muted)]">加载中…</div>
+      </div>
+      <div id="ir-chain-content-panel" class="ir-chain-content-panel" style="display:none;">
+        <div class="ir-chain-content-header">
+          <span id="ir-chain-content-title" style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:oklch(65% 0.02 260);">—</span>
+          <button onclick="closeIRChainPanel()" style="background:none;border:none;cursor:pointer;color:oklch(50% 0.02 260);font-size:13px;line-height:1;padding:2px 4px;">✕</button>
+        </div>
+        <div id="ir-chain-content-body" class="ir-chain-content-body">加载中…</div>
+      </div>
+    </div>
   </div>
 
 </main>
@@ -846,6 +1001,355 @@ function downloadArt(sha, filename) {
     .catch(function() { alert('下载失败'); });
 }
 
+// ── Skills 使用明细 (P0a) ────────────────────────────────────────────────────
+var DEFAULT_SKILLS = [
+  { id: 'requirement-enrichment', name: '需求富化', stage: 1, category: 'requirement', desc: '将模糊需求转化为结构化规格' },
+  { id: 'context-extractor', name: '上下文提取', stage: 1, category: 'requirement', desc: '从 JIRA/Git 历史提取项目上下文' },
+  { id: 'acceptance-criteria', name: 'AC 生成', stage: 1, category: 'requirement', desc: '自动生成验收标准' },
+  { id: 'api-design', name: 'API 设计', stage: 2, category: 'architecture', desc: '生成 REST API 规范' },
+  { id: 'db-schema-design', name: '数据库设计', stage: 2, category: 'architecture', desc: '生成 ER 图与数据表结构' },
+  { id: 'task-breakdown', name: '任务拆解', stage: 2, category: 'architecture', desc: '将设计拆解为编码任务' },
+  { id: 'code-generation', name: '代码生成', stage: 3, category: 'coding', desc: '根据设计 IR 生成完整代码' },
+  { id: 'unit-test-writer', name: 'UT 编写', stage: 3, category: 'testing', desc: 'TDD 模式生成单元测试' },
+  { id: 'pr-description', name: 'PR 描述', stage: 3, category: 'docs', desc: '自动生成 PR 标题与描述' },
+  { id: 'code-review-prep', name: '代码自审', stage: 3, category: 'quality', desc: '提交前自动 lint 与安全检查' },
+];
+
+var SKILL_CAT_STYLE = {
+  requirement:  { dot: 'oklch(55% 0.20 250)', bg: 'oklch(94% 0.05 250)', border: 'oklch(82% 0.10 250)', text: 'oklch(35% 0.20 250)' },
+  architecture: { dot: 'oklch(58% 0.18 295)', bg: 'oklch(94% 0.04 295)', border: 'oklch(82% 0.09 295)', text: 'oklch(35% 0.18 295)' },
+  coding:       { dot: 'oklch(55% 0.15 150)', bg: 'oklch(94% 0.05 150)', border: 'oklch(82% 0.10 150)', text: 'oklch(35% 0.15 150)' },
+  testing:      { dot: 'oklch(62% 0.17 55)',  bg: 'oklch(95% 0.05 65)',  border: 'oklch(84% 0.10 65)',  text: 'oklch(40% 0.17 55)'  },
+  quality:      { dot: 'oklch(55% 0.20 25)',  bg: 'oklch(95% 0.04 25)',  border: 'oklch(84% 0.08 25)',  text: 'oklch(38% 0.20 25)'  },
+  docs:         { dot: 'oklch(55% 0.01 260)', bg: 'oklch(95% 0.005 260)',border: 'oklch(84% 0.01 260)', text: 'oklch(42% 0.01 260)' },
+};
+
+var STAGE_COL_NAMES = { 1: 'Stage 1 · 需求富化', 2: 'Stage 2 · 设计与拆解', 3: 'Stage 3 · 编码+UT' };
+
+function renderSkillsPanel(runStatus) {
+  var section = document.getElementById('skills-section');
+  var showStatuses = { running: true, paused_at_gate: true, completed: true };
+  if (!showStatuses[runStatus]) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = '';
+
+  var stored = null;
+  try { stored = JSON.parse(localStorage.getItem('honeyai_skills') || 'null'); } catch(e) {}
+  var skills = (stored && Array.isArray(stored) && stored.length > 0) ? stored : DEFAULT_SKILLS;
+
+  var byStage = { 1: [], 2: [], 3: [] };
+  skills.forEach(function(s) {
+    if (byStage[s.stage]) byStage[s.stage].push(s);
+  });
+
+  var html = '';
+  [1, 2, 3].forEach(function(stageNum) {
+    html += '<div style="border:1px solid var(--border-soft); border-radius:14px; padding:16px 18px; background:var(--bg-card);">';
+    html += '<div class="caps" style="margin-bottom:12px;">' + esc(STAGE_COL_NAMES[stageNum]) + '</div>';
+    html += '<div style="display:flex; flex-wrap:wrap; gap:6px;">';
+    byStage[stageNum].forEach(function(skill) {
+      var cat = skill.category || 'docs';
+      var style = SKILL_CAT_STYLE[cat] || SKILL_CAT_STYLE.docs;
+      html += '<span title="' + esc(skill.desc) + '" style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:500;background:' + style.bg + ';border:1px solid ' + style.border + ';color:' + style.text + ';">';
+      html += '<span style="width:6px;height:6px;border-radius:50%;background:' + style.dot + ';flex-shrink:0;"></span>';
+      html += esc(skill.name);
+      html += '</span>';
+    });
+    if (byStage[stageNum].length === 0) {
+      html += '<span style="font-size:12px; color:var(--text-faint);">暂无 Skills</span>';
+    }
+    html += '</div></div>';
+  });
+
+  // Stage 4 placeholder (always grayed)
+  html += '<div style="border:1px dashed var(--border-soft); border-radius:14px; padding:16px 18px; background:var(--bg-card); opacity:.45;">';
+  html += '<div class="caps" style="margin-bottom:12px;">Stage 4 · SIT 集成测试</div>';
+  html += '<div style="display:flex; flex-wrap:wrap; gap:6px;">';
+  html += '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:500;background:oklch(95% 0.005 260);border:1px solid var(--border-soft);color:var(--text-faint);">';
+  html += '<span style="width:6px;height:6px;border-radius:50%;background:var(--text-faint);flex-shrink:0;"></span>待实现</span>';
+  html += '</div></div>';
+
+  // Wrap the 3 active + 1 placeholder in a 4-col grid
+  document.getElementById('skills-grid').style.gridTemplateColumns = 'repeat(4, 1fr)';
+  document.getElementById('skills-grid').innerHTML = html;
+}
+
+// ── 需求富化对比 (P0b) ───────────────────────────────────────────────────────
+var reqCompareExpanded = false;
+
+function toggleReqCompare() {
+  var body = document.getElementById('req-compare-body');
+  var chevron = document.getElementById('req-compare-chevron');
+  var hint = document.querySelector('#req-compare-header span[style*="font-size:11px"]');
+  reqCompareExpanded = !reqCompareExpanded;
+  body.style.display = reqCompareExpanded ? '' : 'none';
+  chevron.style.transform = reqCompareExpanded ? 'rotate(180deg)' : '';
+  if (hint) hint.textContent = reqCompareExpanded ? '点击收起' : '点击展开';
+}
+
+function renderReqCompare(runId, oneLiner) {
+  var section = document.getElementById('req-compare-section');
+  section.style.display = '';
+
+  var origEl = document.getElementById('req-original');
+  origEl.textContent = oneLiner || '（未填写）';
+
+  var enrichEl = document.getElementById('req-enriched');
+  enrichEl.textContent = '加载中…';
+
+  // Fetch requirement_ir artifact
+  fetch('/api/prototype/runs/' + runId + '/artifacts')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var arts = data.artifacts || [];
+      var reqArt = null;
+      for (var i = 0; i < arts.length; i++) {
+        if (arts[i].kind === 'requirement_ir' && arts[i].status === 'ready' && arts[i].blobSha256) {
+          reqArt = arts[i];
+        }
+      }
+      if (!reqArt) {
+        enrichEl.textContent = '（暂无富化文档）';
+        return;
+      }
+      return fetch('/api/prototype/artifacts/' + reqArt.blobSha256 + '/content')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          enrichEl.textContent = d.content || '（内容为空）';
+        });
+    })
+    .catch(function() { enrichEl.textContent = '（加载失败）'; });
+}
+
+// ── 成本明细 (P1a) ───────────────────────────────────────────────────────────
+function fmtTokens(n) {
+  if (!n && n !== 0) return '—';
+  return n >= 1000 ? Math.round(n / 1000) + 'k' : String(n);
+}
+function fmtCost(usd) {
+  if (!usd && usd !== 0) return '—';
+  return '$' + Number(usd).toFixed(2);
+}
+function fmtDuration(ms) {
+  if (!ms && ms !== 0) return '—';
+  var secs = Math.round(ms / 1000);
+  if (secs < 60) return secs + 's';
+  var m = Math.floor(secs / 60);
+  var s = secs % 60;
+  return m + 'm ' + s + 's';
+}
+
+function renderCostPanel(runId) {
+  var section = document.getElementById('cost-section');
+  section.style.display = '';
+  var tableEl = document.getElementById('cost-table');
+  tableEl.innerHTML = '<div class="text-[13px] text-[var(--text-muted)]">加载中…</div>';
+
+  fetch('/api/prototype/runs/' + runId + '/cost')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var stages = data.stages || [];
+      var total = data.total || {};
+
+      var colStyle = 'padding:10px 16px; font-size:13px;';
+      var headStyle = 'padding:8px 16px; font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; font-weight:500; color:var(--text-muted);';
+      var html = '<div style="border:1px solid var(--border-soft); border-radius:12px; overflow:hidden;">';
+
+      // Header row
+      html += '<div style="display:grid; grid-template-columns:2fr 1.2fr 1.2fr 1.2fr; background:var(--bg-elev); border-bottom:1px solid var(--border-soft);">';
+      html += '<div style="' + headStyle + '">阶段</div>';
+      html += '<div style="' + headStyle + '">Token 用量</div>';
+      html += '<div style="' + headStyle + '">费用 (USD)</div>';
+      html += '<div style="' + headStyle + '">耗时</div>';
+      html += '</div>';
+
+      stages.forEach(function(s, i) {
+        var rowBg = i % 2 === 0 ? 'background:var(--bg-card)' : 'background:var(--bg-elev)';
+        html += '<div style="display:grid; grid-template-columns:2fr 1.2fr 1.2fr 1.2fr; ' + rowBg + '; border-bottom:1px solid var(--border-soft);">';
+        html += '<div style="' + colStyle + ' font-weight:500; color:var(--text-strong);">' + esc(s.stageName || ('Stage ' + s.stage)) + '</div>';
+        html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtTokens(s.tokens) + '</div>';
+        html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtCost(s.costUsd) + '</div>';
+        html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtDuration(s.durationMs) + '</div>';
+        html += '</div>';
+      });
+
+      // Grand total row
+      html += '<div style="display:grid; grid-template-columns:2fr 1.2fr 1.2fr 1.2fr; background:oklch(95% 0.008 260); border-top:2px solid var(--border-mid);">';
+      html += '<div style="' + colStyle + ' font-weight:700; color:var(--text-strong);">总计</div>';
+      html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtTokens(total.tokens) + '</div>';
+      html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtCost(total.costUsd) + '</div>';
+      html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtDuration(total.durationMs) + '</div>';
+      html += '</div>';
+
+      html += '</div>';
+      tableEl.innerHTML = html;
+    })
+    .catch(function() {
+      tableEl.innerHTML = '<div class="text-[13px] text-[var(--text-muted)]">成本数据加载失败</div>';
+    });
+}
+
+// ── IR 文档演化链 ─────────────────────────────────────────────────────────────
+var irChainActiveKind = null;
+var irChainLoadedContent = {};
+
+var IR_CHAIN_NODES = [
+  { key: 'raw_input',      label: '原始输入',  stageNum: '0', lineHint: '5行',   badgeClass: 'raw'  },
+  { key: 'requirement_ir', label: '需求 IR',   stageNum: '1', lineHint: '50行',  badgeClass: ''     },
+  { key: 'design_ir',      label: '设计 IR',   stageNum: '2', lineHint: '200行', badgeClass: ''     },
+  { key: 'impl_ir',        label: '实现 IR',   stageNum: '3', lineHint: '代码PR', badgeClass: ''    },
+];
+
+function renderIRChain(runId, oneLiner) {
+  var section = document.getElementById('ir-chain-section');
+  section.style.display = '';
+
+  fetch('/api/prototype/runs/' + runId + '/artifacts')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var arts = data.artifacts || [];
+      var byKind = {};
+      arts.forEach(function(a) {
+        if (a.status === 'ready' && a.blobSha256) {
+          if (!byKind[a.kind]) byKind[a.kind] = a;
+        }
+      });
+
+      var html = '';
+      IR_CHAIN_NODES.forEach(function(nodeDef, i) {
+        var isRaw = nodeDef.key === 'raw_input';
+        var art = isRaw ? null : byKind[nodeDef.key];
+        var hasContent = isRaw ? true : (art && art.blobSha256);
+        var isDone = isRaw ? true : !!hasContent;
+        var isPending = !isDone;
+
+        var badgeCls = nodeDef.badgeClass;
+        if (!badgeCls) badgeCls = isDone ? 'done' : '';
+
+        html += '<div';
+        html += ' class="ir-chain-node' + (hasContent ? ' has-content' : '') + (isPending ? ' pending-node' : '') + '"';
+        html += ' id="ir-node-' + nodeDef.key + '"';
+        if (isRaw) {
+          html += ' data-kind="raw_input"';
+        } else if (art) {
+          html += ' data-sha="' + esc(art.blobSha256) + '" data-kind="' + esc(nodeDef.key) + '"';
+        } else {
+          html += ' data-kind="' + esc(nodeDef.key) + '"';
+        }
+        if (hasContent) {
+          html += ' onclick="expandIRChainNode(this)"';
+        }
+        html += '>';
+
+        html += '<div class="ir-chain-badge ' + badgeCls + '">' + esc(nodeDef.stageNum) + '</div>';
+        html += '<div class="ir-chain-title">' + esc(nodeDef.label) + '</div>';
+
+        if (isRaw) {
+          var preview = (oneLiner || '').slice(0, 40) + ((oneLiner || '').length > 40 ? '…' : '');
+          html += '<div class="ir-chain-meta">' + esc(preview || '（无输入）') + '</div>';
+        } else if (isDone) {
+          html += '<div class="ir-chain-meta" style="color:var(--done);">已产出 · ' + esc(nodeDef.lineHint) + '</div>';
+        } else {
+          html += '<div class="ir-chain-meta">待产出</div>';
+        }
+
+        if (hasContent) {
+          html += '<button class="ir-chain-expand-btn" onclick="event.stopPropagation(); expandIRChainNode(document.getElementById(\'ir-node-' + nodeDef.key + '\'))">';
+          html += '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+          html += '展开</button>';
+        }
+
+        html += '</div>';
+
+        if (i < IR_CHAIN_NODES.length - 1) {
+          html += '<div class="ir-chain-arrow">→</div>';
+        }
+      });
+
+      document.getElementById('ir-chain-nodes').innerHTML = html;
+    })
+    .catch(function() {
+      document.getElementById('ir-chain-nodes').innerHTML = '<div style="font-size:13px; color:var(--text-muted);">演化链加载失败</div>';
+    });
+}
+
+function expandIRChainNode(nodeEl) {
+  if (!nodeEl) return;
+  var kind = nodeEl.getAttribute('data-kind');
+  var sha = nodeEl.getAttribute('data-sha');
+  var panel = document.getElementById('ir-chain-content-panel');
+  var titleEl = document.getElementById('ir-chain-content-title');
+  var bodyEl = document.getElementById('ir-chain-content-body');
+
+  // Remove active class from all nodes, set on clicked
+  var allNodes = document.querySelectorAll('.ir-chain-node');
+  for (var i = 0; i < allNodes.length; i++) {
+    allNodes[i].classList.remove('active');
+  }
+
+  // If same node is clicked again, toggle off
+  if (irChainActiveKind === kind) {
+    irChainActiveKind = null;
+    panel.style.display = 'none';
+    return;
+  }
+
+  irChainActiveKind = kind;
+  nodeEl.classList.add('active');
+  panel.style.display = '';
+
+  var nodeDef = null;
+  for (var j = 0; j < IR_CHAIN_NODES.length; j++) {
+    if (IR_CHAIN_NODES[j].key === kind) { nodeDef = IR_CHAIN_NODES[j]; break; }
+  }
+  titleEl.textContent = nodeDef ? nodeDef.label : kind;
+  bodyEl.textContent = '加载中…';
+
+  if (kind === 'raw_input') {
+    // Read from run data already displayed on page
+    var oneLinerEl = document.getElementById('run-oneliner');
+    bodyEl.textContent = oneLinerEl ? (oneLinerEl.textContent || '（无原始输入）') : '（无原始输入）';
+    return;
+  }
+
+  if (!sha) {
+    bodyEl.textContent = '（此文档尚未产出）';
+    return;
+  }
+
+  if (irChainLoadedContent[sha]) {
+    bodyEl.textContent = irChainLoadedContent[sha];
+    return;
+  }
+
+  fetch('/api/prototype/artifacts/' + sha + '/content')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var content = d.content || '（内容为空）';
+      irChainLoadedContent[sha] = content;
+      if (irChainActiveKind === kind) {
+        bodyEl.textContent = content;
+      }
+    })
+    .catch(function() {
+      if (irChainActiveKind === kind) {
+        bodyEl.textContent = '（文档加载失败）';
+      }
+    });
+}
+
+function closeIRChainPanel() {
+  irChainActiveKind = null;
+  var panel = document.getElementById('ir-chain-content-panel');
+  if (panel) panel.style.display = 'none';
+  var allNodes = document.querySelectorAll('.ir-chain-node');
+  for (var i = 0; i < allNodes.length; i++) {
+    allNodes[i].classList.remove('active');
+  }
+}
+
 // ── Cancel run ────────────────────────────────────────────────────────────────
 function cancelRun() {
   if (!confirm('确认中断此运行？')) return;
@@ -883,6 +1387,14 @@ function loadRun() {
       renderThreeRail(nodes, run.status, prUrl);
       renderGatePanel(nodes, run.status);
       renderOutput(run.status, nodes);
+
+      // New sections
+      renderSkillsPanel(run.status);
+      if (run.status === 'completed') {
+        renderReqCompare(runId, run.oneLiner);
+        renderCostPanel(runId);
+        renderIRChain(runId, run.oneLiner);
+      }
 
       // Show/hide cancel button
       var cancelBtn = document.getElementById('btn-cancel-run');

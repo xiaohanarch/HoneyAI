@@ -26,6 +26,7 @@ export async function GET() {
       createdAt: runs.createdAt,
       startedAt: runs.startedAt,
       finishedAt: runs.finishedAt,
+      totalCostMicroUsd: runs.totalCostMicroUsd,
     })
     .from(runs)
     .where(eq(runs.tenantId, session.user.tenantId))

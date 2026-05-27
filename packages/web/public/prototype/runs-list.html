@@ -461,6 +461,30 @@
     return Math.floor(diff/86400) + '天前';
   }
 
+  // ── Helpers for cost / duration ──────────────────────────────────────────────
+  function fmtCostUsd(microUsd) {
+    if (!microUsd || microUsd <= 0) return '—';
+    var usd = Number(microUsd) / 1e6;
+    if (usd < 0.01) return '<$0.01';
+    return '$' + usd.toFixed(2);
+  }
+  function fmtDurationMs(startedAt, finishedAt) {
+    if (!startedAt || !finishedAt) return '—';
+    var ms = new Date(finishedAt).getTime() - new Date(startedAt).getTime();
+    if (ms < 0) return '—';
+    var s = Math.floor(ms / 1000);
+    if (s < 60) return s + 's';
+    var m = Math.floor(s / 60);
+    return m + 'm ' + (s % 60) + 's';
+  }
+  // Estimate token count from cost (rough: ~$0.000015/token at claude-3 pricing)
+  function estimateTokens(microUsd) {
+    if (!microUsd || microUsd <= 0) return '—';
+    var tokens = Math.round(Number(microUsd) / 15);
+    if (tokens < 1000) return tokens + '';
+    return (tokens / 1000).toFixed(1) + 'k';
+  }
+
   // ── Fetch + render real runs ─────────────────────────────────────────────────
   fetch('/api/prototype/runs').then(function(r) { return r.json(); }).then(function(data) {
     var container = document.getElementById('real-runs-container');
@@ -469,14 +493,17 @@
     var html = '';
     data.runs.forEach(function(run, idx) {
       var num = '#' + String(10000 + idx + 1);
+      var dur = fmtDurationMs(run.startedAt, run.finishedAt);
+      var cost = fmtCostUsd(run.totalCostMicroUsd);
+      var tokens = estimateTokens(run.totalCostMicroUsd);
       html += '<div class="run-row real-run-row" data-run-id="' + run.id + '" style="cursor:pointer">';
       html += '<div class="mono font-medium text-[14px]">' + num + '</div>';
       html += '<div><div class="font-medium text-[14px] leading-tight">' + (run.title||'(无标题)') + '</div>';
       html += '<div class="row-meta"><span class="mono">' + (run.id||'').slice(0,8) + '</span></div></div>';
       html += '<div>' + stageProgress(run.nodes) + '<div class="row-meta mono">需求 · 设计 · 编码</div></div>';
-      html += '<div class="mono text-[13px]">—</div>';
-      html += '<div class="mono text-[13px]">—</div>';
-      html += '<div class="mono text-[13px]">—</div>';
+      html += '<div class="mono text-[13px]">' + dur + '</div>';
+      html += '<div class="mono text-[13px]">' + tokens + '</div>';
+      html += '<div class="mono text-[13px]" style="' + (cost !== '—' ? 'color:oklch(40% 0.13 150)' : '') + '">' + cost + '</div>';
       html += '<div class="mono text-[12.5px] text-[color:var(--ink-soft)]">' + timeAgo(run.createdAt) + '</div>';
       html += '<div class="text-right">' + statusPill(run.status) + '</div>';
       html += '</div>';

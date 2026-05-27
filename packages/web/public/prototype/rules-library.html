@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>军规库 · DevPipeline</title>
+  <title>Skills 库 · DevPipeline</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,30 +34,29 @@
       --idle-soft: oklch(96% 0.005 260);
       --halt: oklch(60% 0.21 25);
 
-      /* rule categories */
-      --r-code: oklch(58% 0.14 150);
-      --r-sec:  oklch(60% 0.20 25);
-      --r-perf: oklch(70% 0.16 70);
-      --r-arch: oklch(58% 0.16 250);
-      --r-ui:   oklch(58% 0.18 290);
-      --r-dsn:  oklch(60% 0.10 200);
-      --r-data: oklch(60% 0.16 180);
-      --r-test: oklch(56% 0.17 270);
+      --s1-color: oklch(58% 0.14 245);
+      --s1-soft:  oklch(93% 0.04 245);
+      --s2-color: oklch(58% 0.18 280);
+      --s2-soft:  oklch(93% 0.04 280);
+      --s3-color: oklch(62% 0.13 150);
+      --s3-soft:  oklch(93% 0.04 150);
 
       --shadow-sm: 0 1px 2px oklch(20% 0.02 260 / 0.04);
       --shadow-md: 0 2px 6px oklch(20% 0.02 260 / 0.04), 0 1px 2px oklch(20% 0.02 260 / 0.06);
+      --shadow-lg: 0 12px 28px oklch(20% 0.02 260 / 0.07), 0 2px 6px oklch(20% 0.02 260 / 0.04);
     }
 
-    * { -webkit-font-smoothing: antialiased; }
+    * { -webkit-font-smoothing: antialiased; box-sizing: border-box; }
     html, body { font-family: 'Inter', system-ui, sans-serif; }
-    body { background: var(--bg-base); color: var(--text-body); }
+    body { background: var(--bg-base); color: var(--text-body); font-feature-settings: 'cv02','cv03','cv04','cv11'; }
     .font-display { font-family: 'Instrument Serif','Songti SC',serif; letter-spacing: -0.01em; }
     .font-mono    { font-family: 'JetBrains Mono', monospace; }
 
     .bg-atmosphere {
       background:
-        radial-gradient(900px 460px at 8% -8%, oklch(94% 0.06 25 / 0.45), transparent 60%),
-        radial-gradient(700px 340px at 105% 0%, oklch(94% 0.05 150 / 0.40), transparent 60%),
+        radial-gradient(900px 460px at 8% -8%,  oklch(93% 0.05 245 / 0.45), transparent 60%),
+        radial-gradient(700px 340px at 105% 0%,  oklch(93% 0.04 280 / 0.35), transparent 60%),
+        radial-gradient(600px 360px at 50% 110%, oklch(94% 0.05 150 / 0.30), transparent 60%),
         var(--bg-base);
     }
     .grain::before {
@@ -74,12 +73,11 @@
     }
 
     .chip {
-      display: inline-flex; align-items: center; gap: 6px;
+      display: inline-flex; align-items: center; gap: 5px;
       padding: 3px 9px; border-radius: 999px;
       font-size: 11px; font-weight: 500;
       border: 1px solid transparent;
     }
-    .chip-dot { width: 6px; height: 6px; border-radius: 999px; }
 
     .caps {
       font-size: 10.5px; letter-spacing: .14em;
@@ -97,6 +95,7 @@
     }
     .btn:hover { background: var(--bg-elev); color: var(--text-strong); }
     .btn-primary { background: var(--text-strong); color: white; border-color: var(--text-strong); }
+    .btn-primary:hover { background: oklch(28% 0.06 265); color: white; }
 
     /* sidebar nav */
     .side-item {
@@ -106,53 +105,80 @@
       transition: all .15s;
     }
     .side-item:hover { background: var(--bg-elev); color: var(--text-strong); }
-    .side-item.active {
-      background: var(--text-strong); color: white;
+    .side-item.active { background: var(--text-strong); color: white; }
+    .side-item .swatch { width: 8px; height: 8px; border-radius: 3px; }
+    .side-item .count { margin-left: auto; font-size: 10.5px; font-family: 'JetBrains Mono', monospace; opacity: .65; }
+
+    .skill-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow .2s, border-color .2s;
+      display: flex; flex-direction: column; gap: 10px;
     }
-    .side-item .swatch {
-      width: 8px; height: 8px; border-radius: 3px;
-    }
-    .side-item .count {
-      margin-left: auto; font-size: 10.5px;
-      font-family: 'JetBrains Mono', monospace;
-      opacity: .65;
+    .skill-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--border-mid);
     }
 
-    .rule-row {
-      display: grid;
-      grid-template-columns: 36px 1fr 100px 100px 90px 90px 32px;
-      gap: 12px; align-items: center;
-      padding: 12px 14px;
-      border-bottom: 1px solid var(--border-soft);
-      transition: background .15s;
+    .skill-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 11px; font-weight: 700;
+      letter-spacing: -.01em;
+      flex-shrink: 0;
+      box-shadow: inset 0 -4px 8px rgba(0,0,0,.18);
     }
-    .rule-row:hover { background: var(--bg-elev); }
-    .rule-row:last-child { border-bottom: 0; }
 
-    .sev-pill {
+    .stage-badge {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px; border-radius: 999px;
+      font-size: 10.5px; font-weight: 600;
+    }
+
+    .source-badge {
       display: inline-flex; align-items: center; gap: 4px;
       padding: 2px 7px; border-radius: 4px;
-      font-size: 10.5px; font-weight: 600;
-      letter-spacing: .04em; text-transform: uppercase;
+      font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .04em;
     }
-    .sev-block { background: oklch(67% 0.20 25 / .12); color: oklch(45% 0.18 25); }
-    .sev-warn  { background: oklch(80% 0.16 65 / .14); color: oklch(46% 0.16 65); }
-    .sev-info  { background: oklch(70% 0.16 290 / .12); color: oklch(40% 0.16 290); }
+    .source-builtin { background: oklch(93% 0.03 260); color: oklch(44% 0.02 260); }
+    .source-custom  { background: oklch(93% 0.05 290); color: oklch(40% 0.14 290); }
 
-    .swatch-pin {
-      width: 36px; height: 36px; border-radius: 9px;
+    .toast {
+      position: fixed; bottom: 28px; right: 28px;
+      background: var(--text-strong); color: white;
+      padding: 12px 20px; border-radius: 12px;
+      font-size: 13px; font-weight: 500;
+      box-shadow: var(--shadow-lg);
+      display: flex; align-items: center; gap: 10px;
+      transform: translateY(0); opacity: 1;
+      transition: opacity .25s, transform .25s;
+      z-index: 9999;
+    }
+    .toast.hidden { opacity: 0; transform: translateY(8px); pointer-events: none; }
+
+    /* Import modal */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: oklch(15% 0.018 260 / 0.55);
+      backdrop-filter: blur(4px);
+      z-index: 500;
       display: flex; align-items: center; justify-content: center;
-      color: white; font-weight: 700; font-size: 11px;
-      letter-spacing: -.02em;
-      box-shadow: inset 0 -6px 12px rgba(0,0,0,.18);
+      padding: 24px;
     }
-
-    .mini-bar {
-      height: 5px; border-radius: 999px; background: var(--border-soft);
-      overflow: hidden; position: relative;
-    }
-    .mini-bar > div {
-      height: 100%; border-radius: 999px;
+    .modal-overlay.hidden { display: none; }
+    .modal-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: 20px;
+      box-shadow: var(--shadow-lg);
+      padding: 28px;
+      width: 100%;
+      max-width: 520px;
     }
 
     ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -177,20 +203,20 @@
           <a href="index.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">运行中</a>
           <a href="runs-list.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">历史</a>
           <a href="agent-detail.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">Agents</a>
-          <a href="rules-library.html" class="px-3 py-1.5 rounded-md bg-[var(--bg-elev)] text-[var(--text-strong)] font-medium">军规库</a>
+          <a href="rules-library.html" class="px-3 py-1.5 rounded-md bg-[var(--bg-elev)] text-[var(--text-strong)] font-medium">Skills 库</a>
           <a href="knowledge-graph.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">知识图谱</a>
           <a href="operations.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">AI 资产</a>
           <a href="people-ops.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">人员运营</a>
         </nav>
       </div>
       <div class="flex items-center gap-2">
-        <button class="btn">
+        <button class="btn" onclick="openSearchModal()">
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="17" y2="17"/></svg>
-          搜索规则
+          搜索 Skills
         </button>
-        <button class="btn btn-primary">
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          新增规则
+        <button class="btn btn-primary" onclick="openImportModal()">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          导入 Skills
         </button>
       </div>
     </div>
@@ -201,19 +227,22 @@
     <!-- ==================== HEADER ==================== -->
     <section class="mb-7 flex items-end justify-between">
       <div>
-        <div class="caps mb-2">Rule Library · 军规库</div>
+        <div class="caps mb-2">Skills Library · Skills 库</div>
         <h1 class="font-display text-[42px] leading-none text-[var(--text-strong)]">
-          AI 军规 <span class="italic font-light text-[var(--text-muted)]">— 让 Agent 守规矩</span>
+          Skills 库 <span class="italic font-light text-[var(--text-muted)]">— Agent 能力积木</span>
         </h1>
         <div class="text-[13px] text-[var(--text-muted)] mt-2 max-w-[720px]">
-          全部 Agent 在执行 / 审查 / 评测各阶段必须遵守的硬规则。规则结构化存储 · 可被人评意见改写 · 自动注入到对应 Agent / Skill 的 prompt 与校验链。
+          每个 Skill 封装一段可复用的 Agent 能力，注入到对应 Stage 的提示词链。内置 9 个覆盖全流程，团队可自定义扩展。
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <span class="chip" style="background:var(--done-soft); color:var(--done)"><span class="chip-dot" style="background:var(--done)"></span>本周达标率 <span class="font-mono ml-1">96.2%</span></span>
-        <button class="btn">
+        <span class="chip" style="background:var(--done-soft); color:var(--done)">
+          <span style="width:6px;height:6px;border-radius:999px;background:var(--done);display:inline-block;"></span>
+          本月调用率 <span class="font-mono ml-1" id="kpi-call-rate">98.1%</span>
+        </span>
+        <button class="btn" onclick="exportSkillsJSON()">
           <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          导出 YAML
+          导出 JSON
         </button>
       </div>
     </section>
@@ -221,593 +250,403 @@
     <!-- ==================== KPI ROW ==================== -->
     <section class="grid grid-cols-12 gap-4 mb-7">
       <div class="col-span-3 card p-5">
-        <div class="caps mb-2">规则总数</div>
+        <div class="caps mb-2">Skills 总数</div>
         <div class="flex items-baseline gap-2">
-          <span class="font-display text-[40px] text-[var(--text-strong)] leading-none">238</span>
-          <span class="text-[11px]" style="color:var(--done)">+12 / 7d</span>
+          <span class="font-display text-[40px] text-[var(--text-strong)] leading-none" id="kpi-total">9</span>
+          <span class="text-[11px] text-[var(--text-muted)]" id="kpi-total-sub">内置</span>
         </div>
-        <div class="text-[11px] text-[var(--text-muted)] mt-2">8 个类别 · 涵盖 12 Agent</div>
+        <div class="text-[11px] text-[var(--text-muted)] mt-2" id="kpi-total-desc">覆盖 3 个 Stage · 全流程自动化</div>
       </div>
       <div class="col-span-3 card p-5">
-        <div class="caps mb-2" style="color:var(--halt)">阻断类</div>
+        <div class="caps mb-2" style="color:var(--s1-color)">Stage 1 · 需求分析</div>
         <div class="flex items-baseline gap-2">
-          <span class="font-display text-[40px] text-[var(--text-strong)] leading-none">62</span>
-          <span class="text-[11px] text-[var(--text-muted)]">必须通过</span>
+          <span class="font-display text-[40px] text-[var(--text-strong)] leading-none">3</span>
+          <span class="text-[11px] text-[var(--text-muted)]">个 Skills</span>
         </div>
-        <div class="text-[11px] text-[var(--text-muted)] mt-2">触发即 nogo · 不可豁免</div>
+        <div class="text-[11px] text-[var(--text-muted)] mt-2">需求富化 · 上下文提取 · AC 生成</div>
       </div>
       <div class="col-span-3 card p-5">
-        <div class="caps mb-2" style="color:var(--run)">告警类</div>
+        <div class="caps mb-2" style="color:var(--s2-color)">Stage 2 · 设计拆解</div>
         <div class="flex items-baseline gap-2">
-          <span class="font-display text-[40px] text-[var(--text-strong)] leading-none">118</span>
-          <span class="text-[11px] text-[var(--text-muted)]">需人评</span>
+          <span class="font-display text-[40px] text-[var(--text-strong)] leading-none">3</span>
+          <span class="text-[11px] text-[var(--text-muted)]">个 Skills</span>
         </div>
-        <div class="text-[11px] text-[var(--text-muted)] mt-2">人评可放行 · 记录豁免理由</div>
+        <div class="text-[11px] text-[var(--text-muted)] mt-2">API 设计 · 数据库设计 · 任务拆解</div>
       </div>
       <div class="col-span-3 card p-5">
-        <div class="caps mb-2" style="color:var(--review)">本周采纳人评</div>
+        <div class="caps mb-2" style="color:var(--s3-color)">Stage 3 · 编码+UT</div>
         <div class="flex items-baseline gap-2">
-          <span class="font-display text-[40px] text-[var(--text-strong)] leading-none">+9</span>
-          <span class="text-[11px]" style="color:var(--done)">新规则</span>
+          <span class="font-display text-[40px] text-[var(--text-strong)] leading-none" id="kpi-s3">3</span>
+          <span class="text-[11px] text-[var(--text-muted)]" id="kpi-s3-sub">个 Skills</span>
         </div>
-        <div class="text-[11px] text-[var(--text-muted)] mt-2">由人评意见沉淀而来</div>
+        <div class="text-[11px] text-[var(--text-muted)] mt-2">代码生成 · UT 编写 · 代码自审</div>
       </div>
     </section>
 
-    <!-- ==================== MAIN: CATEGORY SIDEBAR + RULES TABLE ==================== -->
+    <!-- ==================== MAIN: SIDEBAR + SKILLS GRID ==================== -->
     <section class="grid grid-cols-12 gap-5 mb-7">
 
-      <!-- Sidebar: categories -->
+      <!-- Sidebar -->
       <aside class="col-span-3 card p-4 self-start sticky top-[88px]">
-        <div class="caps mb-3 px-2">规则类别</div>
-        <div class="space-y-1">
-          <div class="side-item active">
-            <span class="swatch" style="background: white; box-shadow:inset 0 0 0 2px rgba(255,255,255,.6)"></span>
+        <div class="caps mb-3 px-2">按阶段</div>
+        <div class="space-y-1" id="sidebar-nav">
+          <div class="side-item active" data-filter="all" onclick="filterSkills('all', this)">
+            <span class="swatch" style="background: white; box-shadow:inset 0 0 0 2px rgba(180,180,200,.5)"></span>
             <span>全部</span>
-            <span class="count">238</span>
+            <span class="count" id="filter-count-all">9</span>
           </div>
-          <div class="side-item">
-            <span class="swatch" style="background: var(--r-code)"></span>
-            <span>代码军规</span>
-            <span class="count">64</span>
+          <div class="side-item" data-filter="1" onclick="filterSkills('1', this)">
+            <span class="swatch" style="background: var(--s1-color)"></span>
+            <span>Stage 1 · 需求富化</span>
+            <span class="count">3</span>
           </div>
-          <div class="side-item">
-            <span class="swatch" style="background: var(--r-sec)"></span>
-            <span>安全军规</span>
-            <span class="count">48</span>
+          <div class="side-item" data-filter="2" onclick="filterSkills('2', this)">
+            <span class="swatch" style="background: var(--s2-color)"></span>
+            <span>Stage 2 · 设计拆解</span>
+            <span class="count">3</span>
           </div>
-          <div class="side-item">
-            <span class="swatch" style="background: var(--r-perf)"></span>
-            <span>性能军规</span>
-            <span class="count">31</span>
+          <div class="side-item" data-filter="3" onclick="filterSkills('3', this)">
+            <span class="swatch" style="background: var(--s3-color)"></span>
+            <span>Stage 3 · 编码+UT</span>
+            <span class="count" id="filter-count-3">3</span>
           </div>
-          <div class="side-item">
-            <span class="swatch" style="background: var(--r-arch)"></span>
-            <span>架构军规</span>
-            <span class="count">27</span>
-          </div>
-          <div class="side-item">
-            <span class="swatch" style="background: var(--r-dsn)"></span>
-            <span>设计军规</span>
-            <span class="count">22</span>
-          </div>
-          <div class="side-item">
-            <span class="swatch" style="background: var(--r-ui)"></span>
-            <span>UI / 交互军规</span>
-            <span class="count">18</span>
-          </div>
-          <div class="side-item">
-            <span class="swatch" style="background: var(--r-data)"></span>
-            <span>数据 / API 军规</span>
-            <span class="count">16</span>
-          </div>
-          <div class="side-item">
-            <span class="swatch" style="background: var(--r-test)"></span>
-            <span>测试军规</span>
-            <span class="count">12</span>
+          <div class="side-item" data-filter="custom" onclick="filterSkills('custom', this)">
+            <span class="swatch" style="background: var(--review)"></span>
+            <span>自定义 Skills</span>
+            <span class="count" id="filter-count-custom">0</span>
           </div>
         </div>
 
         <div class="my-4 h-px bg-[var(--border-soft)]"></div>
 
-        <div class="caps mb-2 px-2">严重级</div>
-        <div class="space-y-1 mb-3">
-          <label class="flex items-center gap-2 px-2 py-1 text-[12px] cursor-pointer hover:text-[var(--text-strong)]">
-            <input type="checkbox" checked>
-            <span class="sev-pill sev-block">BLOCK</span>
-            <span class="ml-auto font-mono text-[10.5px] text-[var(--text-muted)]">62</span>
-          </label>
-          <label class="flex items-center gap-2 px-2 py-1 text-[12px] cursor-pointer hover:text-[var(--text-strong)]">
-            <input type="checkbox" checked>
-            <span class="sev-pill sev-warn">WARN</span>
-            <span class="ml-auto font-mono text-[10.5px] text-[var(--text-muted)]">118</span>
-          </label>
-          <label class="flex items-center gap-2 px-2 py-1 text-[12px] cursor-pointer hover:text-[var(--text-strong)]">
-            <input type="checkbox" checked>
-            <span class="sev-pill sev-info">INFO</span>
-            <span class="ml-auto font-mono text-[10.5px] text-[var(--text-muted)]">58</span>
-          </label>
-        </div>
-
-        <div class="my-4 h-px bg-[var(--border-soft)]"></div>
-
-        <div class="caps mb-2 px-2">来源</div>
-        <div class="space-y-1 text-[12px]">
-          <label class="flex items-center gap-2 px-2 py-1 cursor-pointer hover:text-[var(--text-strong)]">
-            <input type="checkbox" checked> <span>团队约定</span>
-            <span class="ml-auto font-mono text-[10.5px] text-[var(--text-muted)]">142</span>
-          </label>
-          <label class="flex items-center gap-2 px-2 py-1 cursor-pointer hover:text-[var(--text-strong)]">
-            <input type="checkbox" checked> <span>人评沉淀</span>
-            <span class="ml-auto font-mono text-[10.5px] text-[var(--text-muted)]">61</span>
-          </label>
-          <label class="flex items-center gap-2 px-2 py-1 cursor-pointer hover:text-[var(--text-strong)]">
-            <input type="checkbox" checked> <span>合规导入</span>
-            <span class="ml-auto font-mono text-[10.5px] text-[var(--text-muted)]">35</span>
-          </label>
+        <div class="caps mb-2 px-2">快速操作</div>
+        <div class="space-y-1">
+          <button onclick="openImportModal()" class="side-item w-full text-left" style="color: var(--text-body);">
+            <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span>导入自定义 Skill</span>
+          </button>
+          <a href="setup.html" class="side-item block">
+            <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 0-14.14 0M4.93 19.07a10 10 0 0 0 14.14 0"/></svg>
+            <span>回到系统设置</span>
+          </a>
         </div>
       </aside>
 
-      <!-- Rules list -->
-      <div class="col-span-9 card overflow-hidden">
-
+      <!-- Skills grid -->
+      <div class="col-span-9">
         <!-- Toolbar -->
-        <div class="flex items-center justify-between px-5 py-4 border-b border-[var(--border-soft)]">
+        <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-2">
-            <div class="caps">全部规则 · 238</div>
-            <span class="text-[11.5px] text-[var(--text-muted)]">按命中频次降序</span>
+            <div class="caps" id="grid-label">全部 Skills · 9</div>
           </div>
-          <div class="flex items-center gap-2">
-            <div class="relative">
-              <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-faint)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="17" y2="17"/></svg>
-              <input type="text" placeholder="搜索规则名 / 编号 / 关键字..." class="text-[12px] rounded-lg border bg-white pl-8 pr-3 py-1.5 w-[280px]" style="border-color:var(--border-mid)">
-            </div>
-            <select class="text-[12px] rounded-lg border bg-white px-3 py-1.5" style="border-color:var(--border-mid)">
-              <option>全部状态</option><option>启用</option><option>灰度</option><option>禁用</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Table header -->
-        <div class="rule-row" style="background: var(--bg-elev); padding: 9px 14px; border-bottom: 1px solid var(--border-soft);">
-          <div class="caps">类</div>
-          <div class="caps">规则</div>
-          <div class="caps">严重</div>
-          <div class="caps">命中 7d</div>
-          <div class="caps">达标率</div>
-          <div class="caps">来源</div>
-          <div></div>
-        </div>
-
-        <!-- Rules -->
-        <div>
-
-          <!-- 1. CODE -->
-          <div class="rule-row">
-            <div class="swatch-pin" style="background: var(--r-code)">代码</div>
-            <div class="min-w-0">
-              <div class="flex items-baseline gap-2">
-                <span class="font-mono text-[10.5px] text-[var(--text-faint)]">CODE-014</span>
-                <span class="text-[13px] font-medium text-[var(--text-strong)]">禁止裸 try-catch 吞错</span>
-              </div>
-              <div class="text-[11px] text-[var(--text-muted)] mt-0.5 truncate">所有 catch 块必须显式日志或重新抛出 · 触发 SEC-Agent + DEV-Agent</div>
-            </div>
-            <div><span class="sev-pill sev-block">BLOCK</span></div>
-            <div class="font-mono text-[12px] text-[var(--text-strong)]">428</div>
-            <div>
-              <div class="mini-bar"><div style="width:99%; background:var(--done)"></div></div>
-              <div class="text-[10px] font-mono text-[var(--text-muted)] mt-0.5">99.2%</div>
-            </div>
-            <div class="text-[10.5px] text-[var(--text-muted)]">团队约定</div>
-            <div><button class="btn !p-1.5"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></div>
-          </div>
-
-          <div class="rule-row">
-            <div class="swatch-pin" style="background: var(--r-sec)">安全</div>
-            <div class="min-w-0">
-              <div class="flex items-baseline gap-2">
-                <span class="font-mono text-[10.5px] text-[var(--text-faint)]">SEC-003</span>
-                <span class="text-[13px] font-medium text-[var(--text-strong)]">SQL 必须参数化 · 禁字符串拼接</span>
-              </div>
-              <div class="text-[11px] text-[var(--text-muted)] mt-0.5 truncate">检测点: ORM raw / JDBC · 命中即 nogo</div>
-            </div>
-            <div><span class="sev-pill sev-block">BLOCK</span></div>
-            <div class="font-mono text-[12px] text-[var(--text-strong)]">312</div>
-            <div>
-              <div class="mini-bar"><div style="width:100%; background:var(--done)"></div></div>
-              <div class="text-[10px] font-mono text-[var(--text-muted)] mt-0.5">100%</div>
-            </div>
-            <div class="text-[10.5px] text-[var(--text-muted)]">合规导入</div>
-            <div><button class="btn !p-1.5"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></div>
-          </div>
-
-          <div class="rule-row">
-            <div class="swatch-pin" style="background: var(--r-sec)">安全</div>
-            <div class="min-w-0">
-              <div class="flex items-baseline gap-2">
-                <span class="font-mono text-[10.5px] text-[var(--text-faint)]">SEC-019</span>
-                <span class="text-[13px] font-medium text-[var(--text-strong)]">SessionToken TTL 必须与 KG 鉴权一致</span>
-                <span class="chip text-[9.5px] !px-1.5 !py-0" style="background:var(--review-soft); color:var(--review)">人评沉淀 · 14:32</span>
-              </div>
-              <div class="text-[11px] text-[var(--text-muted)] mt-0.5 truncate">由 @陈工 评审意见沉淀 · 来源运行 #2451</div>
-            </div>
-            <div><span class="sev-pill sev-warn">WARN</span></div>
-            <div class="font-mono text-[12px] text-[var(--text-strong)]">38</div>
-            <div>
-              <div class="mini-bar"><div style="width:87%; background:var(--run)"></div></div>
-              <div class="text-[10px] font-mono text-[var(--text-muted)] mt-0.5">87.0%</div>
-            </div>
-            <div class="text-[10.5px] text-[var(--text-muted)]">人评沉淀</div>
-            <div><button class="btn !p-1.5"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></div>
-          </div>
-
-          <div class="rule-row">
-            <div class="swatch-pin" style="background: var(--r-perf)">性能</div>
-            <div class="min-w-0">
-              <div class="flex items-baseline gap-2">
-                <span class="font-mono text-[10.5px] text-[var(--text-faint)]">PRF-007</span>
-                <span class="text-[13px] font-medium text-[var(--text-strong)]">禁止循环内同步 IO · 强制 batch / async</span>
-              </div>
-              <div class="text-[11px] text-[var(--text-muted)] mt-0.5 truncate">检测点: forEach + await · 触发 PRF-Agent 重写</div>
-            </div>
-            <div><span class="sev-pill sev-warn">WARN</span></div>
-            <div class="font-mono text-[12px] text-[var(--text-strong)]">214</div>
-            <div>
-              <div class="mini-bar"><div style="width:92%; background:var(--done)"></div></div>
-              <div class="text-[10px] font-mono text-[var(--text-muted)] mt-0.5">92.4%</div>
-            </div>
-            <div class="text-[10.5px] text-[var(--text-muted)]">团队约定</div>
-            <div><button class="btn !p-1.5"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></div>
-          </div>
-
-          <div class="rule-row">
-            <div class="swatch-pin" style="background: var(--r-arch)">架构</div>
-            <div class="min-w-0">
-              <div class="flex items-baseline gap-2">
-                <span class="font-mono text-[10.5px] text-[var(--text-faint)]">ARC-005</span>
-                <span class="text-[13px] font-medium text-[var(--text-strong)]">Service 类单一职责 · 行数 ≤ 400</span>
-              </div>
-              <div class="text-[11px] text-[var(--text-muted)] mt-0.5 truncate">超阈触发拆分建议 · 由 ARCH-Reviewer 自动出方案</div>
-            </div>
-            <div><span class="sev-pill sev-warn">WARN</span></div>
-            <div class="font-mono text-[12px] text-[var(--text-strong)]">86</div>
-            <div>
-              <div class="mini-bar"><div style="width:78%; background:var(--run)"></div></div>
-              <div class="text-[10px] font-mono text-[var(--text-muted)] mt-0.5">78.1%</div>
-            </div>
-            <div class="text-[10.5px] text-[var(--text-muted)]">团队约定</div>
-            <div><button class="btn !p-1.5"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></div>
-          </div>
-
-          <div class="rule-row">
-            <div class="swatch-pin" style="background: var(--r-arch)">架构</div>
-            <div class="min-w-0">
-              <div class="flex items-baseline gap-2">
-                <span class="font-mono text-[10.5px] text-[var(--text-faint)]">ARC-011</span>
-                <span class="text-[13px] font-medium text-[var(--text-strong)]">Domain 层禁止直接依赖 HTTP / DB</span>
-              </div>
-              <div class="text-[11px] text-[var(--text-muted)] mt-0.5 truncate">六边形架构边界检查 · import 黑名单</div>
-            </div>
-            <div><span class="sev-pill sev-block">BLOCK</span></div>
-            <div class="font-mono text-[12px] text-[var(--text-strong)]">42</div>
-            <div>
-              <div class="mini-bar"><div style="width:98%; background:var(--done)"></div></div>
-              <div class="text-[10px] font-mono text-[var(--text-muted)] mt-0.5">97.6%</div>
-            </div>
-            <div class="text-[10.5px] text-[var(--text-muted)]">团队约定</div>
-            <div><button class="btn !p-1.5"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></div>
-          </div>
-
-          <div class="rule-row">
-            <div class="swatch-pin" style="background: var(--r-dsn)">设计</div>
-            <div class="min-w-0">
-              <div class="flex items-baseline gap-2">
-                <span class="font-mono text-[10.5px] text-[var(--text-faint)]">DSN-002</span>
-                <span class="text-[13px] font-medium text-[var(--text-strong)]">设计稿与实现像素差 ≤ 4px</span>
-              </div>
-              <div class="text-[11px] text-[var(--text-muted)] mt-0.5 truncate">视觉回归 · 由 UI-Reviewer 自动比对 Figma</div>
-            </div>
-            <div><span class="sev-pill sev-warn">WARN</span></div>
-            <div class="font-mono text-[12px] text-[var(--text-strong)]">128</div>
-            <div>
-              <div class="mini-bar"><div style="width:88%; background:var(--done)"></div></div>
-              <div class="text-[10px] font-mono text-[var(--text-muted)] mt-0.5">88.3%</div>
-            </div>
-            <div class="text-[10.5px] text-[var(--text-muted)]">团队约定</div>
-            <div><button class="btn !p-1.5"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></div>
-          </div>
-
-          <div class="rule-row">
-            <div class="swatch-pin" style="background: var(--r-dsn)">设计</div>
-            <div class="min-w-0">
-              <div class="flex items-baseline gap-2">
-                <span class="font-mono text-[10.5px] text-[var(--text-faint)]">DSN-006</span>
-                <span class="text-[13px] font-medium text-[var(--text-strong)]">必须使用 Design Token · 禁硬编码颜色</span>
-              </div>
-              <div class="text-[11px] text-[var(--text-muted)] mt-0.5 truncate">CSS 校验 #hex 与 rgb() · 仅允许 token 变量</div>
-            </div>
-            <div><span class="sev-pill sev-block">BLOCK</span></div>
-            <div class="font-mono text-[12px] text-[var(--text-strong)]">94</div>
-            <div>
-              <div class="mini-bar"><div style="width:96%; background:var(--done)"></div></div>
-              <div class="text-[10px] font-mono text-[var(--text-muted)] mt-0.5">96.4%</div>
-            </div>
-            <div class="text-[10.5px] text-[var(--text-muted)]">团队约定</div>
-            <div><button class="btn !p-1.5"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></div>
-          </div>
-
-          <div class="rule-row">
-            <div class="swatch-pin" style="background: var(--r-ui)">UI</div>
-            <div class="min-w-0">
-              <div class="flex items-baseline gap-2">
-                <span class="font-mono text-[10.5px] text-[var(--text-faint)]">UI-004</span>
-                <span class="text-[13px] font-medium text-[var(--text-strong)]">所有交互必须有 hover / focus / disabled 三态</span>
-              </div>
-              <div class="text-[11px] text-[var(--text-muted)] mt-0.5 truncate">键盘可达 + a11y 检查</div>
-            </div>
-            <div><span class="sev-pill sev-warn">WARN</span></div>
-            <div class="font-mono text-[12px] text-[var(--text-strong)]">71</div>
-            <div>
-              <div class="mini-bar"><div style="width:84%; background:var(--done)"></div></div>
-              <div class="text-[10px] font-mono text-[var(--text-muted)] mt-0.5">84.5%</div>
-            </div>
-            <div class="text-[10.5px] text-[var(--text-muted)]">团队约定</div>
-            <div><button class="btn !p-1.5"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></div>
-          </div>
-
-          <div class="rule-row">
-            <div class="swatch-pin" style="background: var(--r-ui)">UI</div>
-            <div class="min-w-0">
-              <div class="flex items-baseline gap-2">
-                <span class="font-mono text-[10.5px] text-[var(--text-faint)]">UI-009</span>
-                <span class="text-[13px] font-medium text-[var(--text-strong)]">文案禁用模糊词 · "可能"/"或许"/"一般"</span>
-              </div>
-              <div class="text-[11px] text-[var(--text-muted)] mt-0.5 truncate">产品文案规约 · 由 UI-Reviewer 扫描</div>
-            </div>
-            <div><span class="sev-pill sev-info">INFO</span></div>
-            <div class="font-mono text-[12px] text-[var(--text-strong)]">29</div>
-            <div>
-              <div class="mini-bar"><div style="width:91%; background:var(--done)"></div></div>
-              <div class="text-[10px] font-mono text-[var(--text-muted)] mt-0.5">91.0%</div>
-            </div>
-            <div class="text-[10.5px] text-[var(--text-muted)]">人评沉淀</div>
-            <div><button class="btn !p-1.5"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></div>
-          </div>
-
-          <div class="rule-row">
-            <div class="swatch-pin" style="background: var(--r-data)">数据</div>
-            <div class="min-w-0">
-              <div class="flex items-baseline gap-2">
-                <span class="font-mono text-[10.5px] text-[var(--text-faint)]">API-002</span>
-                <span class="text-[13px] font-medium text-[var(--text-strong)]">API 响应必须包裹 envelope · {code,data,msg}</span>
-              </div>
-              <div class="text-[11px] text-[var(--text-muted)] mt-0.5 truncate">契约一致性 · 由 contract-test 验证</div>
-            </div>
-            <div><span class="sev-pill sev-block">BLOCK</span></div>
-            <div class="font-mono text-[12px] text-[var(--text-strong)]">66</div>
-            <div>
-              <div class="mini-bar"><div style="width:99%; background:var(--done)"></div></div>
-              <div class="text-[10px] font-mono text-[var(--text-muted)] mt-0.5">98.5%</div>
-            </div>
-            <div class="text-[10.5px] text-[var(--text-muted)]">团队约定</div>
-            <div><button class="btn !p-1.5"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></div>
-          </div>
-
-          <div class="rule-row">
-            <div class="swatch-pin" style="background: var(--r-data)">数据</div>
-            <div class="min-w-0">
-              <div class="flex items-baseline gap-2">
-                <span class="font-mono text-[10.5px] text-[var(--text-faint)]">DAT-008</span>
-                <span class="text-[13px] font-medium text-[var(--text-strong)]">列表接口必须分页 · 禁全量返回</span>
-              </div>
-              <div class="text-[11px] text-[var(--text-muted)] mt-0.5 truncate">分页参数缺失即触发 PRF-Agent 重写</div>
-            </div>
-            <div><span class="sev-pill sev-warn">WARN</span></div>
-            <div class="font-mono text-[12px] text-[var(--text-strong)]">52</div>
-            <div>
-              <div class="mini-bar"><div style="width:89%; background:var(--done)"></div></div>
-              <div class="text-[10px] font-mono text-[var(--text-muted)] mt-0.5">89.0%</div>
-            </div>
-            <div class="text-[10.5px] text-[var(--text-muted)]">团队约定</div>
-            <div><button class="btn !p-1.5"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></div>
-          </div>
-
-          <div class="rule-row">
-            <div class="swatch-pin" style="background: var(--r-test)">测试</div>
-            <div class="min-w-0">
-              <div class="flex items-baseline gap-2">
-                <span class="font-mono text-[10.5px] text-[var(--text-faint)]">TST-003</span>
-                <span class="text-[13px] font-medium text-[var(--text-strong)]">单元测试覆盖率 ≥ 80%</span>
-              </div>
-              <div class="text-[11px] text-[var(--text-muted)] mt-0.5 truncate">行覆盖 + 分支覆盖 · 不达标 nogo</div>
-            </div>
-            <div><span class="sev-pill sev-block">BLOCK</span></div>
-            <div class="font-mono text-[12px] text-[var(--text-strong)]">144</div>
-            <div>
-              <div class="mini-bar"><div style="width:81%; background:var(--run)"></div></div>
-              <div class="text-[10px] font-mono text-[var(--text-muted)] mt-0.5">81.2%</div>
-            </div>
-            <div class="text-[10.5px] text-[var(--text-muted)]">团队约定</div>
-            <div><button class="btn !p-1.5"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></div>
-          </div>
-
-          <div class="rule-row">
-            <div class="swatch-pin" style="background: var(--r-test)">测试</div>
-            <div class="min-w-0">
-              <div class="flex items-baseline gap-2">
-                <span class="font-mono text-[10.5px] text-[var(--text-faint)]">TST-011</span>
-                <span class="text-[13px] font-medium text-[var(--text-strong)]">关键路径必须有 E2E · 登录 / 下单 / 支付</span>
-              </div>
-              <div class="text-[11px] text-[var(--text-muted)] mt-0.5 truncate">由 TEST-Agent 自动生成场景骨架</div>
-            </div>
-            <div><span class="sev-pill sev-block">BLOCK</span></div>
-            <div class="font-mono text-[12px] text-[var(--text-strong)]">22</div>
-            <div>
-              <div class="mini-bar"><div style="width:100%; background:var(--done)"></div></div>
-              <div class="text-[10px] font-mono text-[var(--text-muted)] mt-0.5">100%</div>
-            </div>
-            <div class="text-[10.5px] text-[var(--text-muted)]">团队约定</div>
-            <div><button class="btn !p-1.5"><svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button></div>
-          </div>
-
-          <!-- Footer row · pagination -->
-          <div class="px-5 py-3 flex items-center justify-between text-[11.5px] text-[var(--text-muted)]" style="background:var(--bg-elev)">
-            <span>显示 1 — 14 / 共 238 规则</span>
-            <div class="flex items-center gap-1.5">
-              <button class="btn !py-1 !px-2">←</button>
-              <span class="font-mono">1 / 17</span>
-              <button class="btn !py-1 !px-2">→</button>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </section>
-
-    <!-- ==================== RULE LIFECYCLE + DRIFT ==================== -->
-    <section class="grid grid-cols-12 gap-5 mb-7">
-
-      <!-- Sample rule detail (sticky preview pane) -->
-      <div class="col-span-7 card p-6">
-        <div class="flex items-start justify-between mb-4">
-          <div>
-            <div class="flex items-center gap-2 mb-1">
-              <span class="caps">规则详情 · 示例</span>
-              <span class="chip text-[10px]" style="background:var(--review-soft); color:var(--review)">人评沉淀</span>
-            </div>
-            <h2 class="font-display text-[26px] text-[var(--text-strong)] leading-tight">
-              SEC-019 <span class="italic font-light text-[var(--text-muted)]">— SessionToken TTL 与 KG 鉴权一致</span>
-            </h2>
-            <div class="text-[11.5px] text-[var(--text-muted)] mt-1">由运行 #2451 中 @陈工 的评审意见沉淀 · 2026-05-22</div>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="chip" style="background:var(--done-soft); color:var(--done)">已启用</span>
-            <button class="btn">编辑</button>
-            <button class="btn" style="color:var(--halt); border-color:rgba(244,63,94,.25)">禁用</button>
+          <div class="relative">
+            <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-faint)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="17" y2="17"/></svg>
+            <input
+              type="text"
+              id="search-input"
+              placeholder="搜索 Skill 名称或描述..."
+              oninput="onSearchInput(this.value)"
+              class="text-[12px] rounded-lg border bg-white pl-8 pr-3 py-1.5 w-[260px] focus:outline-none focus:border-[oklch(70%_0.18_290)]"
+              style="border-color:var(--border-mid)"
+            >
           </div>
         </div>
 
-        <div class="grid grid-cols-3 gap-3 mb-5">
-          <div class="rounded-lg p-3" style="background:var(--bg-elev); border:1px solid var(--border-soft)">
-            <div class="text-[10.5px] text-[var(--text-muted)]">触发 Agent</div>
-            <div class="text-[12.5px] font-medium text-[var(--text-strong)] mt-1">SEC-Reviewer · CODE-Reviewer</div>
-          </div>
-          <div class="rounded-lg p-3" style="background:var(--bg-elev); border:1px solid var(--border-soft)">
-            <div class="text-[10.5px] text-[var(--text-muted)]">挂接 Skill</div>
-            <div class="text-[12.5px] font-medium text-[var(--text-strong)] mt-1">session-ttl-consistency-check</div>
-          </div>
-          <div class="rounded-lg p-3" style="background:var(--bg-elev); border:1px solid var(--border-soft)">
-            <div class="text-[10.5px] text-[var(--text-muted)]">关联 KG 实体</div>
-            <div class="text-[12.5px] font-medium text-[var(--text-strong)] mt-1"><a href="knowledge-graph.html" class="hover:underline">鉴权 · SessionToken</a></div>
-          </div>
+        <!-- Grid -->
+        <div class="grid grid-cols-3 gap-4" id="skills-grid">
+          <!-- rendered by JS -->
         </div>
 
-        <div class="caps mb-2">检测描述</div>
-        <p class="text-[13px] text-[var(--text-body)] leading-relaxed mb-4">
-          SessionToken 的 TTL 必须与 KG 中"鉴权"实体声明的 TTL 一致 (当前 30m)。检测点位于代码生成与配置变更两处:
-          (1) 任何对 <span class="font-mono text-[12px]">SessionToken.expireIn</span> 的赋值都需与 KG 同步;
-          (2) Redis 缓存配置中的 <span class="font-mono text-[12px]">session:ttl</span> 必须匹配。检测到不一致时输出告警并提示同步路径。
-        </p>
-
-        <div class="caps mb-2">伪代码 · 检测器</div>
-        <pre class="text-[11.5px] font-mono text-[var(--text-strong)] rounded-lg p-3.5 mb-4" style="background:oklch(96.5% 0.005 90); border:1px solid var(--border-soft); overflow-x:auto"><span style="color:var(--review)">rule</span> SEC-019:
-  <span style="color:var(--text-muted)">on</span> code_change | config_change
-  <span style="color:var(--text-muted)">when</span> path matches "SessionToken|session:ttl"
-  <span style="color:var(--text-muted)">assert</span> value == kg.entity("鉴权").property("ttl")
-  <span style="color:var(--text-muted)">otherwise</span> emit WARN with hint(kg.path)</pre>
-
-        <div class="caps mb-2">本周命中</div>
-        <div class="flex items-center gap-1 mb-4" style="height:36px">
-          <div style="height:24%; width:6px; background:var(--border-mid); border-radius:2px"></div>
-          <div style="height:38%; width:6px; background:var(--border-mid); border-radius:2px"></div>
-          <div style="height:18%; width:6px; background:var(--border-mid); border-radius:2px"></div>
-          <div style="height:62%; width:6px; background:var(--run); border-radius:2px"></div>
-          <div style="height:85%; width:6px; background:var(--run); border-radius:2px"></div>
-          <div style="height:52%; width:6px; background:var(--run); border-radius:2px"></div>
-          <div style="height:96%; width:6px; background:var(--halt); border-radius:2px"></div>
-          <span class="text-[11px] text-[var(--text-muted)] ml-3">7d · 38 次 · 峰值今日 14:00</span>
-        </div>
-      </div>
-
-      <!-- Lifecycle timeline -->
-      <div class="col-span-5 space-y-5">
-
-        <div class="card p-5">
-          <div class="caps mb-3">规则生命周期</div>
-          <div class="relative pl-4">
-            <div class="absolute left-1 top-1 bottom-1 w-px" style="background:var(--border-mid)"></div>
-
-            <div class="relative pb-3">
-              <div class="absolute -left-3 top-1 w-2.5 h-2.5 rounded-full" style="background:var(--done)"></div>
-              <div class="text-[10.5px] font-mono text-[var(--text-faint)]">2026-05-22 14:32</div>
-              <div class="text-[12.5px] text-[var(--text-strong)] mt-0.5 font-medium">@陈工 评审意见沉淀</div>
-              <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">从 run #2451 评论生成草案 SEC-019.draft</div>
-            </div>
-
-            <div class="relative pb-3">
-              <div class="absolute -left-3 top-1 w-2.5 h-2.5 rounded-full" style="background:var(--done)"></div>
-              <div class="text-[10.5px] font-mono text-[var(--text-faint)]">14:40</div>
-              <div class="text-[12.5px] text-[var(--text-strong)] mt-0.5 font-medium">AI 一致性扫描 · 与既有 38 条 SEC 规则比对</div>
-              <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">无冲突 · 相似度最高 0.42</div>
-            </div>
-
-            <div class="relative pb-3">
-              <div class="absolute -left-3 top-1 w-2.5 h-2.5 rounded-full" style="background:var(--done)"></div>
-              <div class="text-[10.5px] font-mono text-[var(--text-faint)]">14:48</div>
-              <div class="text-[12.5px] text-[var(--text-strong)] mt-0.5 font-medium">@王工 批准 · 进入灰度</div>
-              <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">10% 流量启用 · 持续 24h</div>
-            </div>
-
-            <div class="relative pb-3">
-              <div class="absolute -left-3 top-1 w-2.5 h-2.5 rounded-full" style="background:var(--run)"></div>
-              <div class="text-[10.5px] font-mono text-[var(--text-faint)]">现在</div>
-              <div class="text-[12.5px] text-[var(--text-strong)] mt-0.5 font-medium">灰度运行 · 第 6h</div>
-              <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">38 次命中 · 0 误报 · 准备全量</div>
-            </div>
-
-            <div class="relative">
-              <div class="absolute -left-3 top-1 w-2.5 h-2.5 rounded-full border-2" style="background:white; border-color:var(--text-faint)"></div>
-              <div class="text-[10.5px] font-mono text-[var(--text-faint)]">预计 +18h</div>
-              <div class="text-[12.5px] text-[var(--text-muted)] mt-0.5 font-medium">全量启用</div>
-              <div class="text-[10.5px] text-[var(--text-faint)] mt-0.5">同步进 SEC-Reviewer prompt</div>
-            </div>
+        <!-- Empty state -->
+        <div id="empty-state" class="hidden col-span-3 py-16 text-center">
+          <div class="text-[var(--text-faint)] mb-2">
+            <svg class="w-10 h-10 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="17" y2="17"/></svg>
           </div>
+          <div class="text-[14px] font-medium text-[var(--text-muted)]">无匹配的 Skills</div>
+          <div class="text-[12px] text-[var(--text-faint)] mt-1">尝试修改搜索词或切换筛选条件</div>
         </div>
-
-        <div class="card p-5">
-          <div class="caps mb-3" style="color:var(--halt)">规则漂移 / 待回顾</div>
-          <div class="space-y-2.5">
-            <div class="rounded-lg p-2.5" style="border:1px solid oklch(67% 0.20 25 / .25); background:oklch(67% 0.20 25 / .04)">
-              <div class="flex items-baseline justify-between">
-                <span class="text-[12.5px] font-medium text-[var(--text-strong)]"><span class="font-mono text-[10.5px] text-[var(--text-faint)]">PRF-014</span> 缓存命中率阈值</span>
-                <span class="font-mono text-[10.5px]" style="color:var(--halt)">达标 62%</span>
-              </div>
-              <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">连续 2 周达标率 < 80% · 建议下调阈值或增强缓存策略</div>
-            </div>
-            <div class="rounded-lg p-2.5" style="border:1px solid oklch(80% 0.16 65 / .35); background:oklch(80% 0.16 65 / .05)">
-              <div class="flex items-baseline justify-between">
-                <span class="text-[12.5px] font-medium text-[var(--text-strong)]"><span class="font-mono text-[10.5px] text-[var(--text-faint)]">UI-007</span> 移动端字号下限</span>
-                <span class="font-mono text-[10.5px]" style="color:var(--run)">90d 0 命中</span>
-              </div>
-              <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">长期未触发 · 建议归档或合并到 UI-004</div>
-            </div>
-            <div class="rounded-lg p-2.5" style="border:1px solid var(--border-soft); background:var(--bg-elev)">
-              <div class="flex items-baseline justify-between">
-                <span class="text-[12.5px] font-medium text-[var(--text-strong)]"><span class="font-mono text-[10.5px] text-[var(--text-faint)]">SEC-002</span> 老旧加密算法黑名单</span>
-                <span class="font-mono text-[10.5px] text-[var(--text-muted)]">v2018 待升级</span>
-              </div>
-              <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">参考 NIST 2024 更新 · 推荐补充 5 项算法</div>
-            </div>
-          </div>
-        </div>
-
       </div>
     </section>
 
     <footer class="mt-10 mb-6 text-center text-[11px] text-[var(--text-faint)]">
-      DevPipeline · 军规库 · 238 规则 · prototype v0.2
+      DevPipeline · Skills 库 · prototype v0.3
     </footer>
   </main>
 
+  <!-- ==================== IMPORT MODAL ==================== -->
+  <div id="import-modal" class="modal-overlay hidden" onclick="closeImportModalIfBg(event)">
+    <div class="modal-box">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <div class="text-[16px] font-semibold text-[var(--text-strong)]">导入自定义 Skills</div>
+          <div class="text-[12px] text-[var(--text-muted)] mt-0.5">粘贴 JSON 数组，每项需包含 id、name、stage、description</div>
+        </div>
+        <button onclick="closeImportModal()" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[var(--bg-elev)] text-[var(--text-muted)] hover:text-[var(--text-strong)] transition-colors">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <textarea
+        id="modal-json-input"
+        rows="8"
+        class="w-full rounded-lg border p-3 text-[12px] font-mono text-[var(--text-strong)] resize-none focus:outline-none focus:border-[oklch(70%_0.18_290)] focus:shadow-[0_0_0_4px_oklch(70%_0.18_290_/_0.12)] transition-all mb-3"
+        style="border-color:var(--border-mid); background: var(--bg-elev);"
+        placeholder='[
+  {
+    "id": "my-api-standards",
+    "name": "我们的 API 规范",
+    "stage": 2,
+    "description": "公司内部 REST API 设计规范，统一响应格式、错误码规范、分页格式"
+  }
+]'
+      ></textarea>
+
+      <div class="rounded-lg px-3 py-2 text-[11.5px] mb-4" style="background: oklch(96% 0.007 260); border: 1px solid var(--border-soft); color: var(--text-muted);">
+        <span class="font-medium" style="color: var(--text-body)">格式提示：</span>
+        JSON 数组，每项必须包含
+        <span class="font-mono">id</span>（唯一标识）、
+        <span class="font-mono">name</span>（显示名称）、
+        <span class="font-mono">stage</span>（1/2/3）、
+        <span class="font-mono">description</span>（描述）
+      </div>
+
+      <div class="flex items-center gap-2 justify-end">
+        <button onclick="closeImportModal()" class="btn">取消</button>
+        <button onclick="importFromModal()" class="btn btn-primary">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          导入
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TOAST ==================== -->
+  <div id="toast" class="toast hidden">
+    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    <span id="toast-msg">操作成功</span>
+  </div>
+
+  <script>
+    // ── Data ──────────────────────────────────────────────────────────────────
+    var DEFAULT_SKILLS = [
+      { id: 'requirement-enrichment', name: '需求富化', abbr: 'RE', stage: 1, color: 'oklch(58% 0.14 245)', desc: '将模糊需求转化为结构化规格说明', calls: 127, rate: '98.4%' },
+      { id: 'context-extractor',      name: '上下文提取', abbr: 'CE', stage: 1, color: 'oklch(58% 0.16 220)', desc: '从 JIRA/Git 历史提取项目上下文', calls: 98,  rate: '96.9%' },
+      { id: 'acceptance-criteria',    name: 'AC 生成',   abbr: 'AC', stage: 1, color: 'oklch(58% 0.12 250)', desc: '自动生成验收标准清单', calls: 114, rate: '99.1%' },
+      { id: 'api-design',             name: 'API 设计',  abbr: 'AD', stage: 2, color: 'oklch(58% 0.13 200)', desc: '生成 REST API 规范与接口定义', calls: 89,  rate: '97.8%' },
+      { id: 'db-schema-design',       name: '数据库设计', abbr: 'DB', stage: 2, color: 'oklch(58% 0.16 190)', desc: '生成 ER 图与数据表结构设计', calls: 72,  rate: '95.8%' },
+      { id: 'task-breakdown',         name: '任务拆解',  abbr: 'TB', stage: 2, color: 'oklch(58% 0.18 280)', desc: '将设计拆解为可执行的编码任务', calls: 103, rate: '98.1%' },
+      { id: 'code-generation',        name: '代码生成',  abbr: 'CG', stage: 3, color: 'oklch(62% 0.13 150)', desc: '根据设计 IR 生成完整代码实现', calls: 211, rate: '97.2%' },
+      { id: 'unit-test-writer',       name: 'UT 编写',   abbr: 'UT', stage: 3, color: 'oklch(56% 0.17 270)', desc: 'TDD 模式生成完整单元测试套件', calls: 189, rate: '96.3%' },
+      { id: 'code-review-prep',       name: '代码自审',  abbr: 'CR', stage: 3, color: 'oklch(60% 0.20 25)',  desc: '提交前自动 lint 与安全漏洞检查', calls: 195, rate: '99.5%' },
+    ];
+
+    var STAGE_LABELS = { 1: 'Stage 1', 2: 'Stage 2', 3: 'Stage 3' };
+    var STAGE_COLORS = {
+      1: { bg: 'var(--s1-soft)', text: 'var(--s1-color)' },
+      2: { bg: 'var(--s2-soft)', text: 'var(--s2-color)' },
+      3: { bg: 'var(--s3-soft)', text: 'var(--s3-color)' },
+    };
+
+    var currentFilter = 'all';
+    var currentSearch = '';
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function showToast(msg, isError) {
+      var el = document.getElementById('toast');
+      var msgEl = document.getElementById('toast-msg');
+      msgEl.textContent = msg;
+      el.style.background = isError ? 'oklch(45% 0.18 25)' : 'oklch(22% 0.03 260)';
+      el.classList.remove('hidden');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(function() { el.classList.add('hidden'); }, 3000);
+    }
+
+    function loadCustomSkills() {
+      try {
+        var raw = localStorage.getItem('honeyai_skills_custom');
+        return raw ? JSON.parse(raw) : [];
+      } catch(e) { return []; }
+    }
+
+    function saveCustomSkills(arr) {
+      localStorage.setItem('honeyai_skills_custom', JSON.stringify(arr));
+    }
+
+    function getAllSkills() {
+      var customs = loadCustomSkills().map(function(s) {
+        return Object.assign({ abbr: (s.name || 'CU').slice(0, 2).toUpperCase(), color: 'oklch(58% 0.18 290)', calls: 0, rate: 'N/A', isCustom: true }, s);
+      });
+      return DEFAULT_SKILLS.concat(customs);
+    }
+
+    function skillMatchesFilter(s, filter) {
+      if (filter === 'all') return true;
+      if (filter === 'custom') return !!s.isCustom;
+      return String(s.stage) === filter;
+    }
+
+    function skillMatchesSearch(s, query) {
+      if (!query) return true;
+      var q = query.toLowerCase();
+      return (s.name || '').toLowerCase().includes(q) ||
+             (s.desc || s.description || '').toLowerCase().includes(q) ||
+             (s.id || '').toLowerCase().includes(q);
+    }
+
+    // ── Render ────────────────────────────────────────────────────────────────
+    function renderGrid() {
+      var all = getAllSkills();
+      var visible = all.filter(function(s) {
+        return skillMatchesFilter(s, currentFilter) && skillMatchesSearch(s, currentSearch);
+      });
+
+      var grid = document.getElementById('skills-grid');
+      var empty = document.getElementById('empty-state');
+      var label = document.getElementById('grid-label');
+
+      var filterLabel = currentFilter === 'all' ? '全部 Skills' :
+                        currentFilter === 'custom' ? '自定义 Skills' :
+                        'Stage ' + currentFilter + ' Skills';
+      label.textContent = filterLabel + ' · ' + visible.length;
+
+      if (visible.length === 0) {
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+
+      grid.innerHTML = visible.map(function(s) {
+        var sc = STAGE_COLORS[s.stage] || { bg: 'oklch(93% 0.03 290)', text: 'oklch(40% 0.14 290)' };
+        var desc = s.desc || s.description || '';
+        var isCustom = !!s.isCustom;
+        var callsText = s.calls > 0 ? ('本月调用 ' + s.calls + ' 次 · 成功率 ' + s.rate) : '暂无调用数据';
+        return '<div class="skill-card">' +
+          '<div class="flex items-start gap-3">' +
+            '<div class="skill-icon" style="background:' + s.color + ';">' + s.abbr + '</div>' +
+            '<div class="flex-1 min-w-0">' +
+              '<div class="flex items-center gap-1.5 flex-wrap mb-0.5">' +
+                '<span class="text-[14px] font-semibold text-[var(--text-strong)]">' + s.name + '</span>' +
+              '</div>' +
+              '<div class="flex items-center gap-1.5">' +
+                '<span class="stage-badge" style="background:' + sc.bg + '; color:' + sc.text + ';">' + STAGE_LABELS[s.stage] + '</span>' +
+                '<span class="source-badge ' + (isCustom ? 'source-custom' : 'source-builtin') + '">' + (isCustom ? '自定义' : '内置') + '</span>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<p class="text-[12.5px] text-[var(--text-muted)] leading-relaxed">' + desc + '</p>' +
+          '<div class="flex items-center justify-between pt-1 border-t border-[var(--border-soft)]">' +
+            '<span class="text-[11px] font-mono text-[var(--text-faint)]">' + callsText + '</span>' +
+            (isCustom ? '<button onclick="removeCustomSkill(\'' + (s.id || '') + '\')" class="text-[11px] text-[var(--text-faint)] hover:text-red-500 transition-colors px-1">移除</button>' : '') +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function updateCounters() {
+      var customs = loadCustomSkills();
+      var total = 9 + customs.length;
+      var s3extra = customs.filter(function(s) { return String(s.stage) === '3'; }).length;
+
+      document.getElementById('kpi-total').textContent = total;
+      if (customs.length > 0) {
+        document.getElementById('kpi-total-sub').textContent = '内置 + ' + customs.length + ' 自定义';
+        document.getElementById('kpi-total-desc').textContent = '覆盖 3 个 Stage · 含 ' + customs.length + ' 个团队 Skill';
+      } else {
+        document.getElementById('kpi-total-sub').textContent = '内置';
+        document.getElementById('kpi-total-desc').textContent = '覆盖 3 个 Stage · 全流程自动化';
+      }
+      document.getElementById('kpi-s3').textContent = 3 + s3extra;
+      if (s3extra > 0) document.getElementById('kpi-s3-sub').textContent = '个 Skills (+' + s3extra + ')';
+
+      document.getElementById('filter-count-all').textContent = total;
+      document.getElementById('filter-count-3').textContent = 3 + s3extra;
+      document.getElementById('filter-count-custom').textContent = customs.length;
+    }
+
+    // ── Filter & Search ───────────────────────────────────────────────────────
+    function filterSkills(filter, el) {
+      currentFilter = filter;
+      document.querySelectorAll('#sidebar-nav .side-item').forEach(function(item) {
+        item.classList.remove('active');
+      });
+      el.classList.add('active');
+      renderGrid();
+    }
+
+    function onSearchInput(val) {
+      currentSearch = val.trim();
+      renderGrid();
+    }
+
+    function openSearchModal() {
+      document.getElementById('search-input').focus();
+    }
+
+    // ── Import modal ──────────────────────────────────────────────────────────
+    function openImportModal() {
+      document.getElementById('import-modal').classList.remove('hidden');
+    }
+
+    function closeImportModal() {
+      document.getElementById('import-modal').classList.add('hidden');
+      document.getElementById('modal-json-input').value = '';
+    }
+
+    function closeImportModalIfBg(e) {
+      if (e.target === document.getElementById('import-modal')) closeImportModal();
+    }
+
+    function importFromModal() {
+      var raw = document.getElementById('modal-json-input').value.trim();
+      if (!raw) { showToast('请粘贴 JSON 内容', true); return; }
+      var parsed;
+      try { parsed = JSON.parse(raw); } catch(e) { showToast('JSON 格式错误：' + e.message, true); return; }
+      if (!Array.isArray(parsed)) { showToast('格式错误：顶层必须是 JSON 数组 [...]', true); return; }
+      var invalid = [];
+      parsed.forEach(function(item, i) {
+        if (!item.id || !item.name || !item.stage || !item.description) invalid.push(i + 1);
+      });
+      if (invalid.length > 0) { showToast('第 ' + invalid.join(', ') + ' 项缺少必填字段 (id/name/stage/description)', true); return; }
+
+      var existing = loadCustomSkills();
+      var added = 0;
+      parsed.forEach(function(item) {
+        var dup = existing.some(function(e) { return e.id === item.id; });
+        if (!dup) { existing.push(item); added++; }
+      });
+      saveCustomSkills(existing);
+      closeImportModal();
+      updateCounters();
+      renderGrid();
+      showToast(added > 0 ? ('已导入 ' + added + ' 个自定义 Skill') : '全部 Skill 已存在，无新增');
+    }
+
+    // ── Remove custom skill ───────────────────────────────────────────────────
+    function removeCustomSkill(id) {
+      var existing = loadCustomSkills().filter(function(s) { return s.id !== id; });
+      saveCustomSkills(existing);
+      updateCounters();
+      renderGrid();
+      showToast('已移除自定义 Skill');
+    }
+
+    // ── Export JSON ───────────────────────────────────────────────────────────
+    function exportSkillsJSON() {
+      var all = getAllSkills().map(function(s) {
+        return { id: s.id, name: s.name, stage: s.stage, description: s.desc || s.description || '', source: s.isCustom ? 'custom' : 'builtin' };
+      });
+      var blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'devpipeline-skills.json'; a.click();
+      URL.revokeObjectURL(url);
+      showToast('Skills 已导出为 JSON');
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    updateCounters();
+    renderGrid();
+  </script>
 </body>
 </html>

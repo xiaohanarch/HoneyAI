@@ -260,7 +260,7 @@
           <a href="index.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">运行中</a>
           <a href="runs-list.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">历史</a>
           <a href="agent-detail.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">Agents</a>
-          <a href="rules-library.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">军规库</a>
+          <a href="rules-library.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">Skills 库</a>
         </nav>
       </div>
       <div class="flex items-center gap-3">
@@ -405,72 +405,85 @@
           <div class="flex-1 min-w-0">
             <div class="flex items-center justify-between mb-1">
               <div>
-                <div class="text-[15px] font-semibold text-[var(--text-strong)]">技能库导入 (Skills)</div>
-                <div class="text-[12.5px] text-[var(--text-muted)] mt-0.5">团队军规和 Agent 技能通过 Git 仓库同步，每次提交自动更新</div>
+                <div class="text-[15px] font-semibold text-[var(--text-strong)]">Skills 配置</div>
+                <div class="text-[12.5px] text-[var(--text-muted)] mt-0.5">9 个内置 Skills 随系统启用；可额外导入团队自定义 Skills</div>
               </div>
-              <div id="step-3-badge" class="hidden flex items-center gap-1.5 text-[12px] font-medium" style="color: oklch(42% 0.12 150)">
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                已同步
-              </div>
-            </div>
-
-            <!-- Skills list -->
-            <div class="mt-4 grid grid-cols-2 gap-2" id="skills-list">
-              <div class="skill-item">
-                <div class="skill-icon" style="background: oklch(62% 0.16 245);">CR</div>
-                <div>
-                  <div class="text-[12.5px] font-medium text-[var(--text-strong)]">code-review</div>
-                  <div class="text-[10.5px] text-[var(--text-muted)]">代码审查规范</div>
-                </div>
-              </div>
-              <div class="skill-item">
-                <div class="skill-icon" style="background: oklch(60% 0.20 25);">SC</div>
-                <div>
-                  <div class="text-[12.5px] font-medium text-[var(--text-strong)]">security-check</div>
-                  <div class="text-[10.5px] text-[var(--text-muted)]">安全漏洞扫描</div>
-                </div>
-              </div>
-              <div class="skill-item">
-                <div class="skill-icon" style="background: oklch(58% 0.13 200);">AD</div>
-                <div>
-                  <div class="text-[12.5px] font-medium text-[var(--text-strong)]">api-design</div>
-                  <div class="text-[10.5px] text-[var(--text-muted)]">RESTful 接口设计</div>
-                </div>
-              </div>
-              <div class="skill-item">
-                <div class="skill-icon" style="background: oklch(56% 0.17 270);">UT</div>
-                <div>
-                  <div class="text-[12.5px] font-medium text-[var(--text-strong)]">unit-testing</div>
-                  <div class="text-[10.5px] text-[var(--text-muted)]">单元测试生成</div>
-                </div>
-              </div>
-              <div class="skill-item">
-                <div class="skill-icon" style="background: oklch(70% 0.16 70);">PF</div>
-                <div>
-                  <div class="text-[12.5px] font-medium text-[var(--text-strong)]">perf-analysis</div>
-                  <div class="text-[10.5px] text-[var(--text-muted)]">性能瓶颈分析</div>
-                </div>
-              </div>
-              <div class="skill-item">
-                <div class="skill-icon" style="background: oklch(60% 0.18 295);">RF</div>
-                <div>
-                  <div class="text-[12.5px] font-medium text-[var(--text-strong)]">refactor-guide</div>
-                  <div class="text-[10.5px] text-[var(--text-muted)]">重构建议规范</div>
+              <div class="flex items-center gap-3">
+                <a href="rules-library.html" class="text-[12px] font-medium hover:underline" style="color: oklch(50% 0.14 245)">查看 Skills 库 →</a>
+                <div id="step-3-badge" class="hidden flex items-center gap-1.5 text-[12px] font-medium" style="color: oklch(42% 0.12 150)">
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  已配置
                 </div>
               </div>
             </div>
 
-            <div class="mt-4 flex items-center gap-3">
-              <button class="btn btn-dark btn-sm" id="skills-sync-btn">
-                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
-                从仓库同步
+            <!-- Tab bar -->
+            <div class="mt-4 flex gap-0 border-b border-[var(--border-soft)] mb-0">
+              <button id="tab-default-btn" onclick="switchSkillsTab('default')" class="skills-tab-btn px-4 py-2 text-[12.5px] font-medium border-b-2 transition-all" style="border-color: oklch(50% 0.14 245); color: oklch(30% 0.06 260); margin-bottom: -1px;">
+                默认 Skills
+                <span class="ml-1.5 text-[10.5px] font-mono px-1.5 py-0.5 rounded-full" style="background: oklch(92% 0.04 245); color: oklch(40% 0.12 245);">9</span>
               </button>
-              <span id="skills-sync-result" class="text-[12.5px] hidden" style="color: oklch(42% 0.12 150)">
-                <svg class="w-4 h-4 inline mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                已同步 6 项技能
-              </span>
-              <span class="text-[11.5px] text-[var(--text-muted)]">最后同步：从未</span>
+              <button id="tab-import-btn" onclick="switchSkillsTab('import')" class="skills-tab-btn px-4 py-2 text-[12.5px] font-medium border-b-2 border-transparent transition-all" style="color: var(--text-muted); margin-bottom: -1px;">
+                导入自定义 Skills
+                <span id="custom-count-badge" class="ml-1.5 text-[10.5px] font-mono px-1.5 py-0.5 rounded-full hidden" style="background: oklch(92% 0.05 150); color: oklch(40% 0.12 150);">0</span>
+              </button>
             </div>
+
+            <!-- Tab: Default Skills -->
+            <div id="tab-default" class="mt-3">
+              <div class="grid grid-cols-2 gap-2" id="default-skills-grid">
+                <!-- rendered by JS -->
+              </div>
+              <div class="mt-3 text-[11.5px] text-[var(--text-muted)] flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 flex-shrink-0" style="color: oklch(62% 0.13 150)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                内置 Skills 始终启用，无需配置，自动注入对应 Stage 的 Agent 提示词
+              </div>
+            </div>
+
+            <!-- Tab: Import Custom Skills -->
+            <div id="tab-import" class="mt-3 hidden">
+              <div class="rounded-xl border border-[var(--border-soft)] overflow-hidden" style="background: var(--bg-elev);">
+                <div class="p-4">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="text-[12.5px] font-medium text-[var(--text-strong)]">粘贴 JSON 导入自定义 Skills</div>
+                    <span id="custom-skills-counter" class="text-[11px] font-mono text-[var(--text-muted)]">已载入 0 个自定义 Skill</span>
+                  </div>
+                  <textarea
+                    id="skills-json-input"
+                    rows="6"
+                    class="w-full rounded-lg border border-[var(--border-mid)] bg-white p-3 text-[12px] font-mono text-[var(--text-strong)] resize-none focus:outline-none focus:border-[oklch(70%_0.18_290)] focus:shadow-[0_0_0_4px_oklch(70%_0.18_290_/_0.12)] transition-all"
+                    placeholder='[
+  {
+    "id": "my-api-standards",
+    "name": "我们的 API 规范",
+    "stage": 2,
+    "description": "公司内部 REST API 设计规范"
+  }
+]'
+                  ></textarea>
+                  <div class="mt-2 rounded-lg px-3 py-2 text-[11.5px]" style="background: oklch(96% 0.007 260); border: 1px solid var(--border-soft); color: var(--text-muted);">
+                    <span class="font-medium" style="color: var(--text-body)">格式要求：</span>
+                    JSON 数组，每项包含 <span class="font-mono">id</span>、<span class="font-mono">name</span>、<span class="font-mono">stage</span>（1/2/3）、<span class="font-mono">description</span> 字段
+                  </div>
+                  <div class="mt-3 flex items-center gap-2">
+                    <button class="btn btn-dark btn-sm" id="import-skills-btn" onclick="importCustomSkills()">
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                      导入
+                    </button>
+                    <button class="btn btn-sm" id="clear-skills-btn" onclick="clearCustomSkills()" style="color: oklch(45% 0.18 25); border-color: oklch(75% 0.14 25 / 0.4);">
+                      清空自定义
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Loaded custom skills chips -->
+                <div id="custom-chips-wrap" class="hidden border-t border-[var(--border-soft)] px-4 py-3">
+                  <div class="text-[11px] text-[var(--text-muted)] mb-2 caps">已载入的自定义 Skills</div>
+                  <div id="custom-chips" class="flex flex-wrap gap-1.5"></div>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -718,29 +731,155 @@
       setStep2Pending();
     });
 
-    // ── Step 3: Sync Skills ───────────────────────────────────────────────────
-    document.getElementById('skills-sync-btn').addEventListener('click', function() {
-      var btn = document.getElementById('skills-sync-btn');
-      var resultEl = document.getElementById('skills-sync-result');
-      btn.disabled = true;
-      btn.innerHTML = '<svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg> 同步中…';
+    // ── Step 3: Skills Management ─────────────────────────────────────────────
 
-      setTimeout(function() {
-        btn.disabled = false;
-        btn.innerHTML = '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg> 从仓库同步';
-        resultEl.classList.remove('hidden');
-        state.skillsSynced = true;
-        // mark step 3
-        var card = document.getElementById('step-3');
-        card.classList.remove('step-pending');
-        card.classList.add('step-done');
-        var numEl = document.getElementById('step-3-num');
-        numEl.className = 'step-number done';
-        numEl.innerHTML = '<svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
-        document.getElementById('step-3-badge').classList.remove('hidden');
-        showToast('技能库同步完成，共 6 项');
-      }, 1000);
-    });
+    var DEFAULT_SKILLS = [
+      { id: 'requirement-enrichment', name: '需求富化', abbr: 'RE', stage: 1, color: 'oklch(58% 0.14 245)', desc: '将模糊需求转化为结构化规格说明' },
+      { id: 'context-extractor', name: '上下文提取', abbr: 'CE', stage: 1, color: 'oklch(58% 0.16 220)', desc: '从 JIRA/Git 历史提取项目上下文' },
+      { id: 'acceptance-criteria', name: 'AC 生成', abbr: 'AC', stage: 1, color: 'oklch(58% 0.12 250)', desc: '自动生成验收标准清单' },
+      { id: 'api-design', name: 'API 设计', abbr: 'AD', stage: 2, color: 'oklch(58% 0.13 200)', desc: '生成 REST API 规范与接口定义' },
+      { id: 'db-schema-design', name: '数据库设计', abbr: 'DB', stage: 2, color: 'oklch(58% 0.16 190)', desc: '生成 ER 图与数据表结构设计' },
+      { id: 'task-breakdown', name: '任务拆解', abbr: 'TB', stage: 2, color: 'oklch(58% 0.18 280)', desc: '将设计拆解为可执行的编码任务' },
+      { id: 'code-generation', name: '代码生成', abbr: 'CG', stage: 3, color: 'oklch(62% 0.13 150)', desc: '根据设计 IR 生成完整代码实现' },
+      { id: 'unit-test-writer', name: 'UT 编写', abbr: 'UT', stage: 3, color: 'oklch(56% 0.17 270)', desc: 'TDD 模式生成完整单元测试套件' },
+      { id: 'code-review-prep', name: '代码自审', abbr: 'CR', stage: 3, color: 'oklch(60% 0.20 25)', desc: '提交前自动 lint 与安全漏洞检查' },
+    ];
+
+    var STAGE_LABELS = { 1: 'Stage 1 · 需求', 2: 'Stage 2 · 设计', 3: 'Stage 3 · 编码' };
+    var STAGE_COLORS = {
+      1: { bg: 'oklch(93% 0.04 245)', text: 'oklch(38% 0.12 245)' },
+      2: { bg: 'oklch(93% 0.04 280)', text: 'oklch(38% 0.12 280)' },
+      3: { bg: 'oklch(93% 0.04 150)', text: 'oklch(38% 0.12 150)' },
+    };
+
+    function renderDefaultSkills() {
+      var grid = document.getElementById('default-skills-grid');
+      grid.innerHTML = DEFAULT_SKILLS.map(function(s) {
+        var sc = STAGE_COLORS[s.stage];
+        return '<div class="skill-item">' +
+          '<div class="skill-icon" style="background:' + s.color + ';">' + s.abbr + '</div>' +
+          '<div class="flex-1 min-w-0">' +
+            '<div class="flex items-center gap-1.5 flex-wrap">' +
+              '<div class="text-[12.5px] font-medium text-[var(--text-strong)]">' + s.name + '</div>' +
+              '<span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full" style="background:' + sc.bg + '; color:' + sc.text + ';">' + STAGE_LABELS[s.stage] + '</span>' +
+            '</div>' +
+            '<div class="text-[10.5px] text-[var(--text-muted)] truncate">' + s.desc + '</div>' +
+          '</div>' +
+          '<svg class="w-4 h-4 flex-shrink-0" style="color:oklch(62% 0.13 150)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 12l2 2 4-4"/><rect x="3" y="3" width="18" height="18" rx="3"/></svg>' +
+        '</div>';
+      }).join('');
+    }
+
+    function loadCustomSkillsFromStorage() {
+      try {
+        var raw = localStorage.getItem('honeyai_skills_custom');
+        return raw ? JSON.parse(raw) : [];
+      } catch(e) { return []; }
+    }
+
+    function renderCustomChips() {
+      var customs = loadCustomSkillsFromStorage();
+      var wrap = document.getElementById('custom-chips-wrap');
+      var chips = document.getElementById('custom-chips');
+      var counter = document.getElementById('custom-skills-counter');
+      var badge = document.getElementById('custom-count-badge');
+
+      counter.textContent = '已载入 ' + customs.length + ' 个自定义 Skill';
+      if (customs.length > 0) {
+        badge.textContent = customs.length;
+        badge.classList.remove('hidden');
+        wrap.classList.remove('hidden');
+        chips.innerHTML = customs.map(function(s, i) {
+          return '<span class="inline-flex items-center gap-1.5 text-[11.5px] font-medium px-2.5 py-1 rounded-full" style="background:oklch(93% 0.03 260); border:1px solid var(--border-mid); color:var(--text-body);">' +
+            s.name +
+            '<button onclick="removeCustomSkill(' + i + ')" class="hover:text-red-500 transition-colors" style="font-size:14px; line-height:1; margin-left:2px;">×</button>' +
+          '</span>';
+        }).join('');
+      } else {
+        badge.classList.add('hidden');
+        wrap.classList.add('hidden');
+      }
+    }
+
+    function removeCustomSkill(idx) {
+      var customs = loadCustomSkillsFromStorage();
+      customs.splice(idx, 1);
+      localStorage.setItem('honeyai_skills_custom', JSON.stringify(customs));
+      renderCustomChips();
+      updateStep3State();
+    }
+
+    function importCustomSkills() {
+      var raw = document.getElementById('skills-json-input').value.trim();
+      if (!raw) { showToast('请粘贴 JSON 内容', true); return; }
+      var parsed;
+      try { parsed = JSON.parse(raw); } catch(e) { showToast('JSON 格式错误：' + e.message, true); return; }
+      if (!Array.isArray(parsed)) { showToast('格式错误：顶层必须是 JSON 数组 [...]', true); return; }
+      var invalid = [];
+      parsed.forEach(function(item, i) {
+        if (!item.id || !item.name || !item.stage || !item.description) {
+          invalid.push(i + 1);
+        }
+      });
+      if (invalid.length > 0) { showToast('第 ' + invalid.join(', ') + ' 项缺少必填字段 (id/name/stage/description)', true); return; }
+
+      var existing = loadCustomSkillsFromStorage();
+      var added = 0;
+      parsed.forEach(function(item) {
+        var dup = existing.some(function(e) { return e.id === item.id; });
+        if (!dup) { existing.push(item); added++; }
+      });
+      localStorage.setItem('honeyai_skills_custom', JSON.stringify(existing));
+      document.getElementById('skills-json-input').value = '';
+      renderCustomChips();
+      updateStep3State();
+      showToast(added > 0 ? ('已导入 ' + added + ' 个自定义 Skill') : '全部 Skill 已存在，无新增');
+    }
+
+    function clearCustomSkills() {
+      localStorage.removeItem('honeyai_skills_custom');
+      renderCustomChips();
+      updateStep3State();
+      showToast('已清空自定义 Skills');
+    }
+
+    function updateStep3State() {
+      var customs = loadCustomSkillsFromStorage();
+      var card = document.getElementById('step-3');
+      var numEl = document.getElementById('step-3-num');
+      // Step 3 is always "done" because defaults are always active
+      card.classList.remove('step-pending');
+      card.classList.add('step-done');
+      numEl.className = 'step-number done';
+      numEl.innerHTML = '<svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+      var badge = document.getElementById('step-3-badge');
+      badge.classList.remove('hidden');
+      badge.querySelector('span') && (badge.querySelector('span').textContent = customs.length > 0 ? ('9 + ' + customs.length + ' 自定义') : '9 默认');
+    }
+
+    function switchSkillsTab(tab) {
+      var isDefault = tab === 'default';
+      document.getElementById('tab-default').classList.toggle('hidden', !isDefault);
+      document.getElementById('tab-import').classList.toggle('hidden', isDefault);
+      var defaultBtn = document.getElementById('tab-default-btn');
+      var importBtn = document.getElementById('tab-import-btn');
+      if (isDefault) {
+        defaultBtn.style.borderColor = 'oklch(50% 0.14 245)';
+        defaultBtn.style.color = 'oklch(30% 0.06 260)';
+        importBtn.style.borderColor = 'transparent';
+        importBtn.style.color = 'var(--text-muted)';
+      } else {
+        importBtn.style.borderColor = 'oklch(50% 0.14 245)';
+        importBtn.style.color = 'oklch(30% 0.06 260)';
+        defaultBtn.style.borderColor = 'transparent';
+        defaultBtn.style.color = 'var(--text-muted)';
+      }
+    }
+
+    // Initialize skills UI
+    renderDefaultSkills();
+    renderCustomChips();
+    updateStep3State();
   </script>
 </body>
 </html>
