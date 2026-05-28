@@ -64,6 +64,8 @@ spec:
                   name: honeyai-secrets
                   key: dev_auth_enabled
                   optional: true
+            - name: AUTH_TRUST_HOST
+              value: 'true'
           resources:
             requests:
               cpu: '500m'
