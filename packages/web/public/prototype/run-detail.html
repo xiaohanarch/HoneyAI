@@ -825,7 +825,7 @@ function renderThreeRail(nodes, runStatus, prUrl) {
     { stage: 1, name: '评审门 · Stage 1', desc: '需求富化阶段人工评审', isPR: false },
     { stage: 2, name: '评审门 · Stage 2', desc: '设计与拆解阶段人工评审', isPR: false },
     { stage: 3, name: 'Pull Request',      desc: '编码完成 · 代码已提交', isPR: true },
-    { stage: 4, name: 'SIT 结果',          desc: '测试通过 · 待实现', placeholder: true },
+    { stage: 4, name: 'SIT 结果',          desc: '测试通过 · V2 路线图', placeholder: true },
   ];
   var gatesHtml = '';
   GATE_DEF.forEach(function(info, i) {
@@ -836,7 +836,7 @@ function renderThreeRail(nodes, runStatus, prUrl) {
 
     var border, iconCol, statusLabel, connStyle, circleHtml, extraHtml = '', wrapOpacity = '';
     if (info.placeholder) {
-      border = 'var(--border-soft)'; iconCol = 'var(--text-faint)'; statusLabel = 'GATED · 待实现';
+      border = 'var(--border-soft)'; iconCol = 'var(--text-faint)'; statusLabel = 'GATED · V2';
       circleHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2 2"/></svg>';
       wrapOpacity = 'opacity:.45;';
     } else if (info.isPR) {
@@ -1379,7 +1379,7 @@ function renderSkillsPanel(runStatus) {
   html += '<div class="caps" style="margin-bottom:12px;">Stage 4 · SIT 集成测试</div>';
   html += '<div style="display:flex; flex-wrap:wrap; gap:6px;">';
   html += '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:500;background:oklch(95% 0.005 260);border:1px solid var(--border-soft);color:var(--text-faint);">';
-  html += '<span style="width:6px;height:6px;border-radius:50%;background:var(--text-faint);flex-shrink:0;"></span>待实现</span>';
+  html += '<span style="width:6px;height:6px;border-radius:50%;background:var(--text-faint);flex-shrink:0;"></span>V2 路线图</span>';
   html += '</div></div>';
 
   // Wrap the 3 active + 1 placeholder in a 4-col grid
