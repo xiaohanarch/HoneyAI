@@ -80,7 +80,7 @@ export async function GET(
     })
     .from(events)
     .leftJoin(nodes, eq(events.nodeId, nodes.id))
-    .where(and(eq(events.runId, runId), eq(events.kind, 'tool_use')))
+    .where(and(eq(events.runId, runId), eq(events.kind, 'tool_call')))
     .orderBy(events.seq)
     .limit(500)
 

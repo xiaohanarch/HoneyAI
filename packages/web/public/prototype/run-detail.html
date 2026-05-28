@@ -1006,7 +1006,7 @@ function appendTerminalLine(kind, content) {
     line.innerHTML = '<span style="color:oklch(76% 0.12 220)">' + escHtml(content) + '</span>';
   } else if (kind === 'thinking') {
     line.innerHTML = '<span style="color:oklch(60% 0.08 280);font-style:italic">[thinking] ' + escHtml(content.slice(0, 200)) + (content.length > 200 ? '…' : '') + '</span>';
-  } else if (kind === 'tool_use') {
+  } else if (kind === 'tool_use' || kind === 'tool_call') {
     line.innerHTML = '<span style="color:oklch(72% 0.15 65)">[tool] </span><span style="color:oklch(80% 0.08 65)">' + escHtml(content) + '</span>';
   } else if (kind === 'finish') {
     line.innerHTML = '<span style="color:oklch(62% 0.13 150)">✓ ' + escHtml(content) + '</span>';
@@ -1036,7 +1036,7 @@ function extractEventContent(event) {
   var p = event.payload || {};
   if (event.kind === 'text') return p.content || p.text || '';
   if (event.kind === 'thinking') return p.content || p.thinking || '';
-  if (event.kind === 'tool_use') return (p.name || 'tool') + '(' + JSON.stringify(p.input || {}).slice(0, 120) + ')';
+  if (event.kind === 'tool_use' || event.kind === 'tool_call') return (p.tool || p.name || 'tool') + '(' + JSON.stringify(p.args || p.input || {}).slice(0, 120) + ')';
   if (event.kind === 'finish') return 'Agent 完成 · stop_reason=' + (p.stop_reason || 'end_turn');
   if (event.kind === 'error') return p.message || p.error || 'error';
   return JSON.stringify(p).slice(0, 160);
