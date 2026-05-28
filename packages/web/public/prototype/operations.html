@@ -1244,7 +1244,7 @@
     // 1. Auth check
     fetch('/api/prototype/me').then(function(r) {
       if (r.status === 401) {
-        window.location.href = '/login?callbackUrl=' + encodeURIComponent('/prototype/operations.html');
+        // demo mode: skip redirect
       }
     });
 

@@ -480,7 +480,7 @@
 <script>
   // Auth check
   fetch('/api/prototype/me').then(function(r) {
-    if (r.status === 401) window.location.href = '/login?callbackUrl=/prototype/create-run.html';
+    if (r.status === 401) // demo mode: skip redirect
   });
 
   // ─── Source tab switching ─────────────────────────────────────────────────

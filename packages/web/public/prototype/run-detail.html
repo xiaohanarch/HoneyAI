@@ -624,7 +624,7 @@ if (!runId) window.location.href = 'runs-list.html';
 
 // ── Auth check ───────────────────────────────────────────────────────────────
 fetch('/api/prototype/me').then(function(r) {
-  if (r.status === 401) window.location.href = '/login?callbackUrl=/prototype/run-detail.html?runId=' + runId;
+  if (r.status === 401) // demo mode: skip redirect
 });
 
 // ── State ────────────────────────────────────────────────────────────────────

@@ -362,7 +362,7 @@
       var cb = runId
         ? '/prototype/artifact-diff.html?runId=' + runId
         : '/prototype/artifact-diff.html';
-      window.location.href = '/login?callbackUrl=' + encodeURIComponent(cb);
+      // demo mode: skip redirect
     }
   });
 

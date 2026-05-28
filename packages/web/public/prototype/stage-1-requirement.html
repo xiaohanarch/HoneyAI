@@ -774,7 +774,7 @@
   // 1. Auth check
   fetch('/api/prototype/me').then(function(r) {
     if (r.status === 401) {
-      window.location.href = '/login?callbackUrl=' + encodeURIComponent('/prototype/stage-1-requirement.html' + (runId ? '?runId=' + runId : ''));
+      // demo mode: skip redirect
     }
   });
 

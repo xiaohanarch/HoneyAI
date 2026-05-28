@@ -459,7 +459,7 @@
 <script>
   // ── Auth check ──────────────────────────────────────────────────────────────
   fetch('/api/prototype/me').then(function(r) {
-    if (r.status === 401) window.location.href = '/login?callbackUrl=/prototype/runs-list.html';
+    if (r.status === 401) // demo mode: skip redirect
   });
 
   // ── View toggle ──────────────────────────────────────────────────────────────
