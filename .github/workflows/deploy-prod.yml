@@ -73,8 +73,9 @@ jobs:
       - name: Set kubeconfig
         run: |
           mkdir -p ~/.kube
-          sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
-          sudo chown $USER ~/.kube/config
+          # k3s.yaml was copied to ubuntu's home during host bootstrap (01-host.sh / setup-runner.sh)
+          [ -f ~/.kube/config ] || cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+          kubectl get nodes
 
       - name: Run drizzle migrate
         env:
