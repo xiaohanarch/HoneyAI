@@ -71,10 +71,17 @@ importers:
         version: 2.1.8(@types/node@22.15.0)(jsdom@26.1.0)(lightningcss@1.29.2)
 
   packages/adapter-opencode:
+    dependencies:
+      '@honeyai/core':
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       typescript:
         specifier: 5.7.2
         version: 5.7.2
+      vitest:
+        specifier: 2.1.8
+        version: 2.1.8(@types/node@22.15.0)(jsdom@26.1.0)(lightningcss@1.29.2)
 
   packages/core:
     dependencies:
@@ -336,6 +343,9 @@ importers:
       '@honeyai/adapter-claude':
         specifier: workspace:*
         version: link:../adapter-claude
+      '@honeyai/adapter-opencode':
+        specifier: workspace:*
+        version: link:../adapter-opencode
       '@honeyai/core':
         specifier: workspace:*
         version: link:../core
@@ -366,6 +376,9 @@ importers:
       uuid:
         specifier: 11.0.3
         version: 11.0.3
+      zod:
+        specifier: 3.24.1
+        version: 3.24.1
     devDependencies:
       '@testcontainers/postgresql':
         specifier: 10.16.0

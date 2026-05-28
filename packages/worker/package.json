@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@honeyai/adapter-claude": "workspace:*",
+    "@honeyai/adapter-opencode": "workspace:*",
     "@honeyai/core": "workspace:*",
     "@honeyai/db": "workspace:*",
     "@honeyai/orchestrator": "workspace:*",
@@ -24,7 +25,8 @@
     "ioredis": "^5.4.1",
     "pg": "8.13.1",
     "pino": "^9.5.0",
-    "uuid": "11.0.3"
+    "uuid": "11.0.3",
+    "zod": "3.24.1"
   },
   "devDependencies": {
     "@testcontainers/postgresql": "10.16.0",
