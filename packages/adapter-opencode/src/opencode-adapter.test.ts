@@ -99,6 +99,15 @@ function makeStepStartEvent(sessionID = 'sess-1') {
   })
 }
 
+function makeReasoningEvent(text: string, sessionID = 'sess-1') {
+  return JSON.stringify({
+    type: 'reasoning',
+    timestamp: Date.now(),
+    sessionID,
+    part: { type: 'reasoning', text, time: { start: Date.now(), end: Date.now() } },
+  })
+}
+
 function makeErrorEvent(message: string, sessionID = 'sess-1') {
   return JSON.stringify({
     type: 'error',
@@ -206,6 +215,35 @@ describe('OpenCodeAdapter', () => {
     const error = events.find((e) => e.kind === 'error')
     expect(error).toBeDefined()
     expect(error!.content).toBe('something went wrong')
+  })
+
+  it('AC-07-09: reasoning event maps to StreamingNodeEvent{kind:thinking}', async () => {
+    const line = makeReasoningEvent('I need to think about this carefully...')
+    mockSpawn.mockReturnValue(makeFakeProcess([line]))
+
+    const adapter = new OpenCodeAdapter()
+    const events: StreamingNodeEvent[] = []
+    for await (const e of adapter.executeNode(BASE_PARAMS)) {
+      events.push(e)
+    }
+
+    const thinking = events.find((e) => e.kind === 'thinking')
+    expect(thinking).toBeDefined()
+    expect(thinking!.content).toBe('I need to think about this carefully...')
+  })
+
+  it('spawn args include --thinking flag', async () => {
+    mockSpawn.mockReturnValue(makeFakeProcess([]))
+    const adapter = new OpenCodeAdapter()
+
+    const gen = adapter.executeNode(BASE_PARAMS)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    for await (const _ of gen) {
+      /* drain */
+    }
+
+    const spawnArgs: string[] = mockSpawn.mock.calls[0]![1] as string[]
+    expect(spawnArgs).toContain('--thinking')
   })
 
   it('AC-07-07: sessionId provided → spawn args include --session <sessionId>', async () => {

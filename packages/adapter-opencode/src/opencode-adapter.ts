@@ -4,12 +4,14 @@ import type { RuntimeAdapter, ExecuteNodeParams, StreamingNodeEvent } from '@hon
 /**
  * OpenCodeAdapter — implements RuntimeAdapter using the opencode CLI.
  *
- * Spawns: opencode run --format json --model <model> [--session <id>] "<prompt>"
+ * Spawns: opencode run --format json --thinking --model <model> [--session <id>] "<prompt>"
  *
- * opencode event format differs from Claude Code; this adapter maps the 5 known
+ * opencode event format differs from Claude Code; this adapter maps all 6 known
  * opencode event types to StreamingNodeEvent:
  *   text       → { kind: 'text', content }
+ *   reasoning  → { kind: 'thinking', content }   (extended thinking / --thinking flag)
  *   tool_use   → { kind: 'tool_call', tool, args } + { kind: 'tool_result', tool, outputLen }
+ *                (tool_result only when state.status === 'completed')
  *   step_finish reason:stop   → { kind: 'finish', reason: 'end_turn', inputTokens, outputTokens }
  *   step_finish reason:tool-calls → skipped (intermediate step)
  *   step_start → skipped
@@ -29,7 +31,7 @@ export class OpenCodeAdapter implements RuntimeAdapter {
     const stageHint = `[Stage: ${kind}]\n\n`
     const prompt = stageHint + irInput
 
-    const args = ['run', '--format', 'json', '--model', this.model]
+    const args = ['run', '--format', 'json', '--thinking', '--model', this.model]
     if (sessionId) {
       args.push('--session', sessionId)
     }
@@ -190,6 +192,13 @@ function mapToStreamingEvents(parsed: Record<string, unknown>): StreamingNodeEve
       inputTokens: Number(tokens?.['input'] ?? 0),
       outputTokens: Number(tokens?.['output'] ?? 0),
     })
+    return result
+  }
+
+  if (type === 'reasoning') {
+    const part = parsed['part'] as Record<string, unknown> | undefined
+    const text = String(part?.['text'] ?? '')
+    result.push({ ts, kind: 'thinking', content: text })
     return result
   }
 
