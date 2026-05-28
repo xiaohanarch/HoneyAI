@@ -27,13 +27,14 @@ AI Agent 完成需求富化、架构设计与编码，人在关键 Gate 节点�
 
 与同类工具的核心差异：
 
-|            | HoneyAI                        | 其他 AI 编码工具      |
-| ---------- | ------------------------------ | --------------------- |
-| 输入门槛   | 一句话                         | 需要详细 Prompt / PRD |
-| 执行可见性 | IR 文档演化链 + Agent 工具轨迹 | 黑盒                  |
-| 人工介入点 | 强制 Gate 审查（Stage 间）     | 无 / 事后查看         |
-| 成本追踪   | 按 Stage 拆解，实时展示        | 月度汇总账单          |
-| 部署方式   | 自托管（单 ECS / k3s）         | SaaS                  |
+|            | HoneyAI                               | 其他 AI 编码工具      |
+| ---------- | ------------------------------------- | --------------------- |
+| 输入门槛   | 一句话                                | 需要详细 Prompt / PRD |
+| 执行可见性 | IR 文档演化链 + Agent 工具轨迹        | 黑盒                  |
+| 人工介入点 | 强制 Gate 审查（Stage 间）            | 无 / 事后查看         |
+| 成本追踪   | 按 Stage 拆解，实时展示               | 月度汇总账单          |
+| 部署方式   | 自托管（本地 Docker / 阿里云 ECS）    | SaaS                  |
+| LLM 引擎   | Claude Code CLI 或 opencode（可切换） | 单一绑定              |
 
 ---
 
@@ -58,14 +59,14 @@ AI Agent 完成需求富化、架构设计与编码，人在关键 Gate 节点�
          │              │  Orchestrator        │
          │              │  Run/Node FSM · Gate │
          │              └───────┬─────────────┘
-         │                      │ kubectl exec
+         │                      │ spawn / kubectl exec
          │              ┌───────▼─────────────┐
-         │              │  Sandbox Pod         │
-         │              │  Claude Code CLI     │
-         │              │  sandbox-runner CLI  │
+         │              │  LLM Runtime         │
+         │              │  opencode CLI        │
+         │              │  (或 Claude Code CLI)│
          │              └───┬─────────────┬───┘
          │                  │             │
-         │            GitHub API    Anthropic API
+         │            GitHub API    Anthropic / 百炼 API
          │
 ┌────────▼───────────────────┐
 │  Object Storage (OSS/MinIO)│
@@ -85,7 +86,9 @@ AI Agent 完成需求富化、架构设计与编码，人在关键 Gate 节点�
 - pnpm 9（`npm i -g pnpm@9`）
 - Docker Desktop（本地数据库）
 - GitHub App（[创建指引](docs/V1-SPEC/01-product.md)）
-- Anthropic API Key
+- **LLM API Key**（二选一）：
+  - Anthropic API Key（使用 Claude Code CLI）
+  - 阿里云百炼 API Key（使用 opencode + 百炼 DashScope 兼容接口）
 
 ### 1. 克隆与安装
 
@@ -115,11 +118,25 @@ pnpm --filter @honeyai/db seed:dev   # 写入开发用 fixture 数据
 
 ```bash
 cp .env.example packages/web/.env
-# 按注释填写：DATABASE_URL / REDIS_URL / ANTHROPIC_API_KEY /
+# 按注释填写：DATABASE_URL / REDIS_URL / ANTHROPIC_API_KEY（或 DASHSCOPE_API_KEY）/
 # GITHUB_APP_ID / GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET
 ```
 
-### 5. 启动开发服务器
+### 5. 配置 LLM 引擎
+
+编辑根目录 `honeyai.config.json`：
+
+```jsonc
+// 使用 Claude Code CLI（默认）
+{ "llm": { "engine": "claude", "model": "claude-sonnet-4-6" } }
+
+// 使用 opencode + 阿里云百炼
+{ "llm": { "engine": "opencode", "model": "bailian-token-plan/qwen3.6-plus" } }
+```
+
+opencode 引擎需在 `~/.config/opencode/config.json` 中配置 custom provider（详见 [部署 · 阿里云 ECS](#阿里云-ecs-生产部署) 一节）。
+
+### 6. 启动开发服务器
 
 ```bash
 pnpm dev
@@ -127,7 +144,7 @@ pnpm dev
 # Worker 在同一进程中热启动
 ```
 
-### 6. 登录
+### 7. 登录
 
 开发模式内置 fixture 账户（无需真实 GitHub OAuth）：
 
@@ -136,6 +153,8 @@ alice / dev-alice   ← 默认演示数据（25 条历史 Run）
 bob   / dev-bob
 carol / dev-carol
 ```
+
+> 生产部署时需将 `DEV_AUTH_ENABLED=true` 写入 Secret，否则内置账户不生效。
 
 ---
 
@@ -147,8 +166,8 @@ honeyai/
 │   ├── core/              # 共享类型 · zod schema · 错误类 · logger
 │   ├── db/                # Drizzle schema（30 表）· migration · withTenant
 │   ├── orchestrator/      # Run/Node FSM · Gate · 重试 · reconcile
-│   ├── adapter-claude/    # Claude Code CLI 适配器（V1 默认 Runtime）
-│   ├── adapter-opencode/  # opencode 适配器（预留，build-time 不上线）
+│   ├── adapter-claude/    # Claude Code CLI 适配器
+│   ├── adapter-opencode/  # opencode 适配器（通过 honeyai.config.json 切换）
 │   ├── github/            # GitHub App · OAuth · REST/GraphQL 客户端
 │   ├── web/               # Next.js 15 主应用 · UI · API Routes · SSE
 │   ├── worker/            # BullMQ Worker 进程
@@ -159,6 +178,7 @@ honeyai/
 │   ├── k8s/               # Kustomize manifests（base + overlays）
 │   ├── docker/            # Dockerfile.web / .worker / .sandbox
 │   └── bootstrap/         # 主机初始化脚本
+├── honeyai.config.json    # LLM 引擎 & 模型配置（engine / model）
 ├── docker-compose.yml     # 本地开发：PG + Redis + MinIO
 ├── turbo.json
 └── pnpm-workspace.yaml
@@ -168,22 +188,22 @@ honeyai/
 
 ## 技术栈
 
-| 层         | 选型                                          |
-| ---------- | --------------------------------------------- |
-| 语言       | TypeScript 5（`strict: true`）                |
-| 运行时     | Node.js 22 LTS                                |
-| Web 框架   | Next.js 15 App Router（RSC + Server Actions） |
-| ORM        | Drizzle + drizzle-kit                         |
-| 数据库     | PostgreSQL 17                                 |
-| 任务队列   | BullMQ / Redis 7                              |
-| AI Runtime | Claude Code CLI（Anthropic）                  |
-| 对象存储   | Aliyun OSS / MinIO（本地）                    |
-| 容器化     | k3s + kubectl exec 沙箱                       |
-| Monorepo   | Turborepo + pnpm workspaces                   |
-| 测试       | Vitest + @testcontainers/postgresql           |
-| 代码规范   | typescript-eslint · Prettier · commitlint     |
-| 日志       | pino + pino-pretty                            |
-| 环境变量   | @t3-oss/env-core + zod（启动时 fail-fast）    |
+| 层         | 选型                                                  |
+| ---------- | ----------------------------------------------------- |
+| 语言       | TypeScript 5（`strict: true`）                        |
+| 运行时     | Node.js 22 LTS                                        |
+| Web 框架   | Next.js 15 App Router（RSC + Server Actions）         |
+| ORM        | Drizzle + drizzle-kit                                 |
+| 数据库     | PostgreSQL 17                                         |
+| 任务队列   | BullMQ / Redis 7                                      |
+| AI Runtime | opencode CLI（百炼/Anthropic 兼容）或 Claude Code CLI |
+| 对象存储   | Aliyun OSS / MinIO（本地）                            |
+| 容器化     | k3s + 镜像仓库（ACR / GHCR）                          |
+| Monorepo   | Turborepo + pnpm workspaces                           |
+| 测试       | Vitest + @testcontainers/postgresql                   |
+| 代码规范   | typescript-eslint · Prettier · commitlint             |
+| 日志       | pino + pino-pretty                                    |
+| 环境变量   | @t3-oss/env-core + zod（启动时 fail-fast）            |
 
 ---
 
@@ -234,29 +254,107 @@ pnpm build                      # Turborepo 并行构建所有包
 Stage 1 — 需求富化（Enrich）
   输入：一句话需求
   产出：requirement_ir v1（含验收标准 · 技术约束 · 边界情况）
-  耗时：~3 分钟  成本：~$0.20
+  耗时：~3 分钟
 
   ⏸ Gate 1 — 人工审查 requirement_ir，确认 AI 理解正确再继续
 
 Stage 2 — 架构设计（Design）
   输入：requirement_ir v1
   产出：design_ir（模块依赖 · 接口定义 · 文件变更计划）
-  耗时：~5 分钟  成本：~$0.37
+  耗时：~5 分钟
 
   ⏸ Gate 2 — 人工审查 design_ir，确认技术方案再启动编码
 
 Stage 3 — 编码 + 单测（Code）
   输入：design_ir + impl_ir
   产出：代码变更 + 单测 + GitHub PR
-  耗时：~9 分钟  成本：~$0.75
+  耗时：~9 分钟
 
-总计：~17 分钟  $1.32  →  PR 就绪
+总计：~17 分钟  →  PR 就绪
 ```
 
 ### Gate 的价值
 
-用 $0.20 的 Stage 1 成本确认方向正确，再投入 $1.12 完成剩余工作。
-方向错误时随时中止，不浪费后续算力。
+用 Stage 1 的低成本确认方向正确，再投入后续阶段。方向错误时随时中止，不浪费后续算力。
+
+---
+
+## 部署
+
+### 本地 Docker Compose（开发 / 体验）
+
+```bash
+docker compose up -d          # 启动 PG + Redis + MinIO
+pnpm --filter @honeyai/db migrate
+pnpm dev
+```
+
+访问 `http://localhost:3001`，使用内置账户 `alice / dev-alice` 登录。
+
+### 阿里云 ECS 生产部署
+
+**推荐配置：** 4C8G ECS（ecs.c7.xlarge 或同等），华东1（杭州），Alibaba Cloud Linux 3。
+
+#### 1. 初始化主机（首次）
+
+```bash
+# ECS 上执行（root）
+bash infra/bootstrap/install-k3s.sh   # 安装 k3s + helm + kubectl
+bash infra/bootstrap/install-pg.sh    # CloudNativePG operator + PG 17 cluster
+```
+
+#### 2. 配置镜像仓库（ACR）
+
+在阿里云容器镜像服务（ACR）中创建命名空间，然后在 GitHub 仓库 Settings → Secrets 中添加：
+
+| Secret          | 说明                                |
+| --------------- | ----------------------------------- |
+| `ACR_REGISTRY`  | `registry.cn-hangzhou.aliyuncs.com` |
+| `ACR_NAMESPACE` | ACR 命名空间，如 `honeyai`          |
+| `ACR_USERNAME`  | 阿里云账号名                        |
+| `ACR_PASSWORD`  | Registry 登录密码                   |
+
+k3s 节点配置 ACR 拉取凭据（`/etc/rancher/k3s/registries.yaml`）：
+
+```yaml
+configs:
+  'registry.cn-hangzhou.aliyuncs.com':
+    auth:
+      username: '<ACR_USERNAME>'
+      password: '<ACR_PASSWORD>'
+```
+
+#### 3. 写入 k8s Secrets
+
+```bash
+# 参考 create-secrets.sh，按实际值填写后执行
+bash create-secrets.sh
+```
+
+#### 4. 配置 opencode（百炼 API）
+
+ECS 部署默认使用 opencode + 阿里云百炼（DashScope 兼容 Anthropic 接口）：
+
+- `honeyai.config.json` → `engine: "opencode"`, `model: "bailian-token-plan/qwen3.6-plus"`
+- Worker 启动时自动写入 `/root/.config/opencode/config.json`，使用 `DASHSCOPE_API_KEY`
+
+百炼端点：`https://coding.dashscope.aliyuncs.com/apps/anthropic/v1`
+
+#### 5. 触发 CI/CD 部署
+
+```bash
+git push origin main   # 触发 .github/workflows/deploy-prod.yml
+```
+
+CI 流程：构建三个镜像（web / worker / sandbox）→ 推送到 ACR → kubectl rollout 更新。
+
+#### 6. 验证部署
+
+```bash
+# ECS 上
+kubectl -n honeyai get pods
+curl http://<ECS_IP>:17777/api/health   # → {"ok":true}
+```
 
 ---
 
@@ -274,11 +372,11 @@ Stage 3 — 编码 + 单测（Code）
 
 ## 路线图
 
-| 阶段    | 目标                                             | 状态      |
-| ------- | ------------------------------------------------ | --------- |
-| Phase 1 | Monorepo 骨架 · DB 30 表 Schema · withTenant     | ✅ 完成   |
-| Phase 2 | Orchestrator FSM · Worker · Web UI · GitHub 集成 | 🚧 进行中 |
-| Phase 3 | 生产部署（k3s）· Observability · 多 Tenant       | 📋 计划中 |
+| 阶段    | 目标                                                        | 状态      |
+| ------- | ----------------------------------------------------------- | --------- |
+| Phase 1 | Monorepo 骨架 · DB 30 表 Schema · withTenant                | ✅ 完成   |
+| Phase 2 | Orchestrator FSM · Worker · Web UI · GitHub 集成 · ECS 部署 | ✅ 完成   |
+| Phase 3 | 多 Tenant · Observability · 生产级稳定性                    | 🚧 进行中 |
 
 ---
 
