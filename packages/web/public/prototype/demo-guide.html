@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HoneyAI · Demo Guideline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #06091280;
+  --bg-page: #060912;
+  --surf:    #0d1526;
+  --surf2:   #111d35;
+  --border:  rgba(255,255,255,.07);
+  --border2: rgba(255,255,255,.13);
+  --text:    #eef2ff;
+  --muted:   #7888a8;
+  --faint:   #2d3a55;
+
+  --amber:   oklch(78% 0.19 78);
+  --amber-s: oklch(78% 0.19 78 / .13);
+  --emerald: oklch(72% 0.17 155);
+  --emld-s:  oklch(72% 0.17 155 / .12);
+  --purple:  oklch(68% 0.22 290);
+  --purp-s:  oklch(68% 0.22 290 / .12);
+  --rose:    oklch(66% 0.23 25);
+  --rose-s:  oklch(66% 0.23 25 / .12);
+  --sky:     oklch(72% 0.18 230);
+  --sky-s:   oklch(72% 0.18 230 / .12);
+  --indigo:  oklch(65% 0.20 265);
+}
+
+html, body {
+  height: 100%; overflow: hidden;
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg-page);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── BG ─────────────────────────────────────────── */
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px);
+  background-size: 52px 52px;
+}
+.bg-radial {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(ellipse 80% 60% at 50% -10%, oklch(55% 0.15 265 / .18), transparent 70%);
+}
+
+/* ─── SLIDES ─────────────────────────────────────── */
+.deck {
+  position: relative; width: 100%; height: 100vh; overflow: hidden; z-index: 1;
+}
+.slide {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 56px 80px 80px;
+  transform: translateX(100%);
+  transition: transform .6s cubic-bezier(.77, 0, .175, 1);
+  will-change: transform;
+}
+.slide.active  { transform: translateX(0); }
+.slide.prev    { transform: translateX(-100%); }
+
+/* ─── NAV ────────────────────────────────────────── */
+.nav-dots {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 7px; z-index: 200;
+}
+.dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--faint); cursor: pointer;
+  transition: all .2s ease;
+}
+.dot.on { background: var(--amber); transform: scale(1.5); }
+
+.nav-arrows {
+  position: fixed; top: 50%; transform: translateY(-50%);
+  width: 100%; display: flex; justify-content: space-between;
+  padding: 0 20px; pointer-events: none; z-index: 200;
+}
+.arr {
+  pointer-events: all; width: 42px; height: 42px; border-radius: 50%;
+  border: 1px solid var(--border2);
+  background: rgba(13,21,38,.75); backdrop-filter: blur(10px);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--muted); transition: all .15s; font-size: 16px;
+}
+.arr:hover { border-color: var(--amber); color: var(--amber); background: oklch(78% 0.19 78 / .08); }
+
+.counter {
+  position: fixed; top: 26px; right: 32px;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  color: var(--faint); z-index: 200; letter-spacing: .12em;
+}
+
+.slide-label {
+  position: absolute; top: 32px; left: 40px;
+  font-size: 11px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* ─── UTILITIES ───────────────────────────────────── */
+.serif  { font-family: 'Instrument Serif', Georgia, serif; }
+.mono   { font-family: 'JetBrains Mono', monospace; }
+.tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+  padding: 4px 11px; border-radius: 999px;
+  background: var(--amber-s); border: 1px solid oklch(78% 0.19 78 / .3);
+  color: var(--amber);
+}
+.card {
+  background: var(--surf); border: 1px solid var(--border2);
+  border-radius: 16px; overflow: hidden;
+}
+.pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 600; letter-spacing: .06em;
+  padding: 3px 9px; border-radius: 999px;
+}
+.pill-done   { background: var(--emld-s);  border: 1px solid oklch(72% 0.17 155/.3); color: var(--emerald); }
+.pill-run    { background: var(--amber-s); border: 1px solid oklch(78% 0.19 78 /.3); color: var(--amber);   }
+.pill-gate   { background: var(--purp-s);  border: 1px solid oklch(68% 0.22 290/.3); color: var(--purple);  }
+.pill-fail   { background: var(--rose-s);  border: 1px solid oklch(66% 0.23 25 /.3); color: var(--rose);    }
+.url-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  padding: 5px 12px; border-radius: 8px;
+  background: var(--surf2); border: 1px solid var(--border2);
+  color: var(--muted); user-select: all;
+}
+.url-chip span { color: var(--sky); }
+
+/* ═══════════════════════════════════════════════════
+   SLIDE 1 · HERO
+═══════════════════════════════════════════════════ */
+#s1 { gap: 0; }
+.hero-eyebrow {
+  font-size: 12px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 32px;
+  display: flex; align-items: center; gap: 10px;
+}
+.hero-eyebrow::before,
+.hero-eyebrow::after {
+  content: ''; flex: 1; max-width: 80px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--faint), transparent);
+}
+.hero-main {
+  font-size: clamp(52px, 7vw, 86px);
+  font-weight: 800; line-height: 1.05; text-align: center;
+  letter-spacing: -.03em;
+}
+.hero-accent { color: var(--amber); }
+.hero-arrow {
+  font-size: 52px; color: var(--faint); line-height: 1;
+  margin: 16px 0; animation: bob 2.2s ease-in-out infinite;
+}
+@keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+.hero-sub {
+  margin-top: 40px; font-size: 15px; color: var(--muted);
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap; justify-content: center;
+}
+.hero-sep { width: 4px; height: 4px; border-radius: 50%; background: var(--faint); }
+.hero-cta {
+  margin-top: 56px;
+  font-size: 12px; color: var(--faint);
+  display: flex; align-items: center; gap: 8px;
+  font-family: 'JetBrains Mono', monospace; letter-spacing: .08em;
+  animation: blink-cta 1.6s ease-in-out infinite;
+}
+@keyframes blink-cta { 0%,100%{opacity:.4} 50%{opacity:1} }
+.hero-cta svg { animation: slide-r .9s ease-in-out infinite alternate; }
+@keyframes slide-r { from{transform:translateX(0)} to{transform:translateX(4px)} }
+
+/* ═══════════════════════════════════════════════════
+   SLIDE 2 · STORY MAP
+═══════════════════════════════════════════════════ */
+#s2 { gap: 36px; }
+.slide-title {
+  font-size: 11px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--muted); text-align: center;
+}
+.slide-h {
+  font-size: clamp(28px, 3.5vw, 42px); font-weight: 700;
+  letter-spacing: -.025em; text-align: center; line-height: 1.1;
+}
+.story-map {
+  display: flex; gap: 0; align-items: stretch; width: 100%; max-width: 960px;
+}
+.story-act {
+  flex: 1; padding: 28px 28px 24px;
+  border: 1px solid var(--border2); background: var(--surf);
+  display: flex; flex-direction: column; gap: 14px;
+  transition: border-color .2s, background .2s;
+  position: relative;
+}
+.story-act:first-child { border-radius: 16px 0 0 16px; }
+.story-act:last-child  { border-radius: 0 16px 16px 0; }
+.story-act + .story-act { border-left: none; }
+.story-act:hover { border-color: var(--border2); background: var(--surf2); }
+.act-num {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
+  letter-spacing: .2em; text-transform: uppercase; color: var(--faint);
+}
+.act-icon { font-size: 28px; line-height: 1; }
+.act-name { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+.act-desc { font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+.act-url  { margin-top: auto; }
+.act-arrow {
+  position: absolute; right: -18px; top: 50%; transform: translateY(-50%);
+  z-index: 5; width: 36px; height: 36px; border-radius: 50%;
+  background: var(--bg-page); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: var(--faint);
+}
+
+/* ═══════════════════════════════════════════════════
+   SLIDE 3 · KANBAN
+═══════════════════════════════════════════════════ */
+#s3 { flex-direction: row; gap: 48px; align-items: center; }
+.s3-left { flex: 1; display: flex; flex-direction: column; gap: 20px; }
+.s3-right { flex: 1.2; }
+
+.kanban-mock {
+  display: flex; gap: 8px; width: 100%;
+}
+.km-col {
+  flex: 1; border-radius: 10px; overflow: hidden;
+  border: 1px solid var(--border);
+  display: flex; flex-direction: column;
+}
+.km-col-hd {
+  padding: 8px 10px 7px;
+  font-size: 9.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.km-col-hd .cnt {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  padding: 1px 6px; border-radius: 999px; font-weight: 700;
+}
+.km-col-body { padding: 6px; display: flex; flex-direction: column; gap: 5px; flex: 1; }
+.km-card {
+  border-radius: 7px; padding: 8px 9px; border: 1px solid var(--border);
+  background: var(--surf2);
+}
+.km-card-t { font-size: 10px; font-weight: 500; color: var(--text); line-height: 1.4; margin-bottom: 4px; }
+.km-card-m { font-size: 9px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+/* col themes */
+.km-blue  .km-col-hd { background: oklch(60% 0.18 240 / .15); color: oklch(72% 0.18 230); border-bottom: 1px solid oklch(60% 0.18 240 / .2); }
+.km-blue  .km-col-hd .cnt { background: oklch(60% 0.18 240 / .2); color: oklch(72% 0.18 230); }
+.km-amber .km-col-hd { background: oklch(78% 0.19 78 / .15); color: var(--amber); border-bottom: 1px solid oklch(78% 0.19 78 / .25); }
+.km-amber .km-col-hd .cnt { background: oklch(78% 0.19 78 / .2); color: var(--amber); }
+.km-purp  .km-col-hd { background: oklch(68% 0.22 290 / .15); color: var(--purple); border-bottom: 1px solid oklch(68% 0.22 290 / .25); }
+.km-purp  .km-col-hd .cnt { background: oklch(68% 0.22 290 / .2); color: var(--purple); }
+.km-grn   .km-col-hd { background: oklch(72% 0.17 155 / .15); color: var(--emerald); border-bottom: 1px solid oklch(72% 0.17 155 / .25); }
+.km-grn   .km-col-hd .cnt { background: oklch(72% 0.17 155 / .2); color: var(--emerald); }
+.km-rose  .km-col-hd { background: oklch(66% 0.23 25 / .15); color: var(--rose); border-bottom: 1px solid oklch(66% 0.23 25 / .25); }
+.km-rose  .km-col-hd .cnt { background: oklch(66% 0.23 25 / .2); color: var(--rose); }
+
+.pulse-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--amber); box-shadow: 0 0 0 0 oklch(78% 0.19 78 / .4);
+  animation: pulse-ring 2s ease-in-out infinite;
+}
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0   oklch(78% 0.19 78 / .4); }
+  70%  { box-shadow: 0 0 0 7px oklch(78% 0.19 78 / 0); }
+  100% { box-shadow: 0 0 0 0   oklch(78% 0.19 78 / 0); }
+}
+.realtime-row {
+  display: flex; align-items: center; gap: 7px;
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted);
+}
+
+/* ═══════════════════════════════════════════════════
+   SLIDE 4 · NODE RAIL
+═══════════════════════════════════════════════════ */
+#s4 { gap: 40px; }
+.rail-wrap {
+  width: 100%; max-width: 900px;
+  background: var(--surf); border: 1px solid var(--border2); border-radius: 18px;
+  padding: 32px 36px;
+}
+.rail-row {
+  display: flex; align-items: center; gap: 0;
+  position: relative;
+}
+.rail-node {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  flex: 1;
+}
+.rn-dot {
+  width: 48px; height: 48px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; position: relative; z-index: 2;
+  border: 2px solid;
+}
+.rn-done  { background: var(--emld-s);  border-color: var(--emerald); }
+.rn-gate  { background: var(--purp-s);  border-color: var(--purple);  }
+.rn-agent { background: var(--amber-s); border-color: var(--amber);   }
+.rn-label {
+  font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--text);
+  text-align: center;
+}
+.rn-sub { font-size: 10px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+.rn-connector {
+  flex: 0 0 auto; height: 2px; width: 100%;
+  background: linear-gradient(90deg, var(--border2), var(--border2));
+  position: relative; top: -24px; margin: 0 -2px;
+}
+.rn-connector.done { background: linear-gradient(90deg, var(--emerald), var(--emerald)); opacity: .35; }
+.rn-connector.gate { background: linear-gradient(90deg, var(--emerald), var(--purple));  opacity: .35; }
+
+.rail-artifacts {
+  display: flex; gap: 0; width: 100%; margin-top: 20px;
+}
+.ra-item {
+  flex: 1; padding: 10px 14px;
+  border: 1px solid var(--border); border-radius: 9px;
+  background: var(--surf2); margin: 0 4px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.ra-kind {
+  font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase;
+}
+.ra-badge { font-size: 9px; color: var(--muted); }
+.ra-done  { border-color: oklch(72% 0.17 155 / .3); }
+.ra-done .ra-kind { color: var(--emerald); }
+.ra-gate  { border-color: oklch(68% 0.22 290 / .3); }
+.ra-gate .ra-kind { color: var(--purple); }
+
+/* ═══════════════════════════════════════════════════
+   SLIDE 5 · IR CHAIN
+═══════════════════════════════════════════════════ */
+#s5 { gap: 36px; }
+.ir-chain {
+  display: flex; align-items: stretch; gap: 0;
+  width: 100%; max-width: 900px;
+}
+.ir-node {
+  flex: 1; padding: 22px 20px 20px;
+  background: var(--surf); border: 1px solid var(--border2);
+  display: flex; flex-direction: column; gap: 10px;
+  position: relative;
+}
+.ir-node:first-child { border-radius: 14px 0 0 14px; }
+.ir-node:last-child  { border-radius: 0 14px 14px 0; }
+.ir-node + .ir-node  { border-left: none; }
+.ir-arrow-sep {
+  position: absolute; right: -18px; top: 50%; transform: translateY(-50%);
+  z-index: 5; width: 36px; height: 36px; border-radius: 50%;
+  background: var(--bg-page); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: oklch(65% 0.15 240);
+}
+.ir-stage-tag {
+  font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 5px; width: fit-content;
+}
+.ir-v0 .ir-stage-tag { background: oklch(78% 0.19 78 / .12); color: var(--amber); }
+.ir-v1 .ir-stage-tag { background: oklch(72% 0.17 155 / .12); color: var(--emerald); }
+.ir-d  .ir-stage-tag { background: oklch(65% 0.20 265 / .12); color: var(--indigo); }
+.ir-i  .ir-stage-tag { background: oklch(68% 0.22 290 / .12); color: var(--purple); }
+.ir-name { font-size: 14px; font-weight: 700; }
+.ir-desc { font-size: 11.5px; color: var(--muted); line-height: 1.6; }
+.ir-highlight {
+  font-size: 10.5px; padding: 8px 12px; border-radius: 8px;
+  background: var(--surf2); border-left: 2px solid;
+  font-family: 'JetBrains Mono', monospace; line-height: 1.6;
+  color: var(--muted); margin-top: auto;
+}
+.ir-v0 .ir-highlight { border-color: var(--amber);   }
+.ir-v1 .ir-highlight { border-color: var(--emerald); }
+.ir-d  .ir-highlight { border-color: var(--indigo);  }
+.ir-i  .ir-highlight { border-color: var(--purple);  }
+
+/* ═══════════════════════════════════════════════════
+   SLIDE 6 · COST
+═══════════════════════════════════════════════════ */
+#s6 { flex-direction: row; gap: 64px; align-items: center; }
+.s6-left { flex: 1; display: flex; flex-direction: column; gap: 24px; }
+.s6-right { flex: 1; }
+
+.cost-bars { display: flex; flex-direction: column; gap: 14px; width: 100%; }
+.cost-bar-row { display: flex; flex-direction: column; gap: 6px; }
+.cost-bar-meta {
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.cost-bar-label { font-size: 12px; font-weight: 600; }
+.cost-bar-val   { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+.cost-bar-track {
+  height: 8px; border-radius: 4px; background: var(--surf2); overflow: hidden;
+}
+.cost-bar-fill  { height: 100%; border-radius: 4px; }
+
+.cost-total-card {
+  padding: 24px 28px; border-radius: 14px;
+  background: var(--surf); border: 1px solid var(--border2);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.cost-total-label { font-size: 12px; color: var(--muted); font-weight: 500; }
+.cost-total-val {
+  font-size: 42px; font-weight: 800; letter-spacing: -.03em;
+  color: var(--amber);
+  font-family: 'JetBrains Mono', monospace;
+}
+.cost-total-sub { font-size: 12px; color: var(--muted); }
+.cost-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+.cost-meta-item { display: flex; flex-direction: column; gap: 3px; }
+.cost-meta-key  { font-size: 10px; color: var(--faint); letter-spacing: .1em; text-transform: uppercase; }
+.cost-meta-num  { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 600; }
+
+/* ═══════════════════════════════════════════════════
+   SLIDE 7 · GATE
+═══════════════════════════════════════════════════ */
+#s7 { flex-direction: row; gap: 64px; align-items: center; }
+.s7-left { flex: 1; display: flex; flex-direction: column; gap: 22px; }
+.s7-right { flex: 1; }
+
+.gate-mock {
+  background: var(--surf); border: 1.5px solid oklch(68% 0.22 290 / .4);
+  border-radius: 18px; overflow: hidden;
+}
+.gate-mock-hd {
+  padding: 16px 20px;
+  background: oklch(68% 0.22 290 / .1); border-bottom: 1px solid oklch(68% 0.22 290 / .2);
+  display: flex; align-items: center; gap: 10px;
+}
+.gate-icon { font-size: 18px; }
+.gate-hd-text { display: flex; flex-direction: column; }
+.gate-hd-title { font-size: 14px; font-weight: 700; color: var(--text); }
+.gate-hd-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.gate-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+
+.gate-status-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 10px;
+  background: var(--surf2); border: 1px solid var(--border);
+}
+.gate-status-icon { font-size: 16px; }
+.gate-status-text { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.gate-status-text strong { color: var(--text); }
+
+.gate-summary {
+  padding: 12px 14px; border-radius: 10px;
+  background: oklch(68% 0.22 290 / .06); border: 1px solid oklch(68% 0.22 290 / .2);
+  font-size: 12px; color: var(--muted); line-height: 1.7;
+}
+.gate-summary strong { color: var(--text); }
+
+.gate-actions { display: flex; gap: 8px; margin-top: 4px; }
+.gate-btn {
+  flex: 1; padding: 10px 12px; border-radius: 10px; border: 1.5px solid;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: opacity .15s;
+}
+.gate-btn:hover { opacity: .82; }
+.gate-btn-pass { background: var(--emld-s); border-color: oklch(72% 0.17 155/.4); color: var(--emerald); }
+.gate-btn-rej  { background: var(--rose-s);  border-color: oklch(66% 0.23 25/.4);  color: var(--rose); }
+.gate-btn-mod  { background: var(--surf2);   border-color: var(--border2);          color: var(--muted); }
+
+.insight-list { display: flex; flex-direction: column; gap: 12px; }
+.insight {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px 16px; border-radius: 12px;
+  background: var(--surf); border: 1px solid var(--border2);
+}
+.insight-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+.insight-body { display: flex; flex-direction: column; gap: 4px; }
+.insight-title { font-size: 13px; font-weight: 600; }
+.insight-desc  { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+/* ═══════════════════════════════════════════════════
+   SLIDE 8 · KEY TAKEAWAYS
+═══════════════════════════════════════════════════ */
+#s8 { gap: 40px; }
+.key-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; width: 100%; max-width: 960px; }
+.key-card {
+  padding: 28px 24px; border-radius: 18px;
+  background: var(--surf); border: 1px solid var(--border2);
+  display: flex; flex-direction: column; gap: 14px;
+  transition: transform .2s, border-color .2s;
+}
+.key-card:hover { transform: translateY(-3px); }
+.kc-1:hover { border-color: oklch(72% 0.18 230 / .5); }
+.kc-2:hover { border-color: oklch(78% 0.19 78 / .5); }
+.kc-3:hover { border-color: oklch(68% 0.22 290 / .5); }
+.kc-icon {
+  width: 52px; height: 52px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center; font-size: 24px;
+}
+.kc-1 .kc-icon { background: var(--sky-s); }
+.kc-2 .kc-icon { background: var(--amber-s); }
+.kc-3 .kc-icon { background: var(--purp-s); }
+.kc-num {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
+  letter-spacing: .18em; text-transform: uppercase; color: var(--faint);
+}
+.kc-title { font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+.kc-desc  { font-size: 13px; color: var(--muted); line-height: 1.7; }
+.kc-bullet {
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted);
+  padding: 8px 12px; border-radius: 8px; background: var(--surf2);
+  border: 1px solid var(--border); line-height: 2;
+}
+.kc-bullet span { color: var(--text); }
+
+.fin-line {
+  font-size: 13px; color: var(--faint); display: flex; align-items: center; gap: 14px;
+  font-family: 'JetBrains Mono', monospace; letter-spacing: .06em;
+}
+.fin-line::before, .fin-line::after {
+  content: ''; flex: 1; max-width: 120px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--faint), transparent);
+}
+
+/* ─── CLICKABLE / CTA ─────────────────────────────── */
+.story-act { cursor: pointer; }
+.story-act:hover { transform: translateY(-2px); }
+.story-act:hover .act-arrow { color: var(--amber); border-color: oklch(78% 0.19 78 / .4); }
+.story-act:hover .url-chip  { border-color: oklch(78% 0.19 78 / .5); color: var(--amber); }
+.story-act:hover .url-chip span { color: var(--amber); }
+
+.km-card.clickable { cursor: pointer; transition: transform .15s, border-color .15s; }
+.km-card.clickable:hover { transform: translateY(-2px); border-color: var(--border2); background: #18253d; }
+
+.ir-node.clickable { cursor: pointer; }
+.ir-node.clickable:hover { transform: translateY(-3px) !important; }
+
+.cost-total-card.clickable { cursor: pointer; }
+.cost-total-card.clickable:hover { box-shadow: 0 20px 48px rgba(0,0,0,.5); border-color: oklch(78% 0.19 78 / .5) !important; }
+
+.url-chip.clickable { cursor: pointer; transition: border-color .15s, color .15s; }
+.url-chip.clickable:hover { border-color: var(--amber); color: var(--amber); }
+.url-chip.clickable:hover span { color: var(--amber); }
+
+.cta-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 20px;
+  border: 1px solid var(--amber-s); background: var(--amber-s);
+  color: var(--amber); font-size: 12px; font-weight: 600; letter-spacing: .04em;
+  cursor: pointer; text-decoration: none; transition: all .15s;
+  align-self: flex-start;
+}
+.cta-btn:hover { background: oklch(78% 0.19 78 / .22); border-color: var(--amber); }
+.cta-btn.purple { border-color: var(--purp-s); background: var(--purp-s); color: var(--purple); }
+.cta-btn.purple:hover { background: oklch(68% 0.22 290 / .22); border-color: var(--purple); }
+.cta-btn.center { align-self: center; }
+
+/* ─── SETUP SLIDE ─────────────────────────────────── */
+.setup-steps { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 520px; }
+.setup-step {
+  display: flex; align-items: flex-start; gap: 16px;
+  padding: 16px 20px; border-radius: 14px;
+  background: var(--surf); border: 1px solid var(--border2);
+}
+.setup-step-num {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
+  background: var(--amber-s); color: var(--amber); border: 1px solid oklch(78% 0.19 78 / .3);
+}
+.setup-step-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+.setup-step-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.setup-step-badge {
+  font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+  padding: 2px 7px; border-radius: 5px; background: var(--surf2);
+  color: var(--faint); display: inline-block; margin-top: 5px;
+}
+
+/* ─── TRANSFORM SLIDE ─────────────────────────────── */
+.transform-split {
+  display: grid; grid-template-columns: 1fr auto 1fr; gap: 0;
+  align-items: center; width: 100%; max-width: 880px;
+}
+.tx-panel {
+  padding: 22px 24px; border-radius: 16px;
+  border: 1px solid var(--border2); background: var(--surf);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.tx-label { font-size: 10px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+.tx-input-text {
+  font-family: 'Instrument Serif', serif; font-size: 22px;
+  color: var(--text); line-height: 1.4; font-style: italic;
+}
+.tx-output-item { display: flex; align-items: flex-start; gap: 8px; }
+.tx-output-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+.tx-output-text { font-size: 12px; color: var(--text); line-height: 1.6; }
+.tx-arrow-col { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0 24px; }
+.tx-arrow-label { font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--amber); font-weight: 600; writing-mode: vertical-rl; text-orientation: mixed; }
+.tx-big-arrow { font-size: 32px; color: var(--amber); line-height: 1; }
+.tx-cost-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 11px; color: var(--muted); }
+.tx-time-chip {
+  padding: 3px 9px; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
+  background: var(--amber-s); color: var(--amber); border: 1px solid oklch(78% 0.19 78 / .3);
+}
+
+/* ─── CREATE-RUN SLIDE ─────────────────────────────── */
+.create-steps { display: flex; gap: 16px; width: 100%; max-width: 860px; }
+.create-step {
+  flex: 1; background: var(--surf); border: 1px solid var(--border);
+  border-radius: 14px; padding: 22px 18px; cursor: pointer;
+  transition: border-color .15s, transform .12s; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.create-step:hover { border-color: var(--border2); transform: translateY(-3px); }
+.create-step-num {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; margin-bottom: 2px;
+}
+.create-step-icon { font-size: 24px; }
+.create-step-title { font-size: 14px; font-weight: 700; }
+.create-step-desc { font-size: 12px; color: var(--muted); line-height: 1.65; }
+.create-step-badge {
+  margin-top: 6px; font-size: 10px; padding: 2px 9px;
+  border-radius: 20px; background: var(--faint); color: var(--muted);
+}
+
+/* ─── OUTPUT (REVIEW + DIFF) SLIDE ─────────────────── */
+.output-split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; max-width: 920px; }
+.output-card {
+  background: var(--surf); border: 1px solid var(--border); border-radius: 14px;
+  padding: 22px 20px; cursor: pointer; transition: border-color .15s, transform .12s;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.output-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+.output-card-tag { font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.output-card-title { font-size: 19px; font-weight: 700; line-height: 1.3; }
+.output-card-desc { font-size: 12.5px; color: var(--muted); line-height: 1.7; }
+.output-bullets { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+.output-bullet { font-size: 12px; color: var(--muted); display: flex; gap: 7px; align-items: flex-start; }
+.output-bullet-dot { width: 5px; height: 5px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+.output-card-link { font-size: 11px; color: var(--sky); font-family: 'JetBrains Mono', monospace; margin-top: 4px; }
+
+/* ─── OPS SLIDE ──────────────────────────────────────── */
+.ops-kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; width: 100%; max-width: 840px; margin-bottom: 16px; }
+.ops-kpi { background: var(--surf); border: 1px solid var(--border); border-radius: 11px; padding: 16px; text-align: center; }
+.ops-kpi-val { font-size: 24px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+.ops-kpi-label { font-size: 10.5px; color: var(--muted); margin-top: 4px; }
+.ops-kpi-delta { font-size: 10px; margin-top: 6px; }
+.ops-asset-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; max-width: 840px; }
+.ops-asset-card {
+  background: var(--surf); border: 1px solid var(--border); border-radius: 11px;
+  padding: 16px; cursor: pointer; transition: border-color .15s;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.ops-asset-card:hover { border-color: var(--border2); }
+.ops-asset-title { font-size: 13px; font-weight: 600; }
+.ops-asset-sub { font-size: 11.5px; color: var(--muted); line-height: 1.6; }
+.ops-asset-stat { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-radial"></div>
+
+<div class="deck" id="deck">
+
+<!-- ══════════════════════════════════════
+     SLIDE 1 · HERO
+══════════════════════════════════════ -->
+<div class="slide active" id="s1">
+  <div class="hero-eyebrow">HoneyAI &nbsp;·&nbsp; DevPipeline &nbsp;·&nbsp; Demo Guideline</div>
+  <div class="hero-main">一句话需求</div>
+  <div class="hero-arrow">↓</div>
+  <div class="hero-main hero-accent serif" style="font-style:italic">自动产出 PR</div>
+  <div class="hero-sub">
+    <span>3 阶段 AI 流水线</span>
+    <span class="hero-sep"></span>
+    <span>人在回路 Gate</span>
+    <span class="hero-sep"></span>
+    <span>全程可观测</span>
+    <span class="hero-sep"></span>
+    <span>成本透明</span>
+  </div>
+  <div class="hero-cta">
+    按 → 或点击右箭头开始
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 2 · SETUP
+══════════════════════════════════════ -->
+<div class="slide" id="s-setup">
+  <div class="slide-label">第 0 步 · 初始化配置</div>
+  <div class="slide-h">5 分钟完成配置，永久生效</div>
+  <div style="font-size:13.5px; color:var(--muted); text-align:center; max-width:540px; line-height:1.7; margin-bottom:28px">
+    第一次使用 HoneyAI，只需配置 3 件事——之后每次提需求都是一句话的事
+  </div>
+  <div class="setup-steps">
+    <div class="setup-step" style="cursor:pointer" onclick="window.open('setup.html#step-1','_blank')">
+      <div class="setup-step-num" style="background:var(--amber-s);color:var(--amber)">1</div>
+      <div>
+        <div class="setup-step-title">🔑 Anthropic API Key</div>
+        <div class="setup-step-desc">粘贴你的 Claude API Key，本地加密存储，不上传任何服务器。<br/>每次运行按实际 token 消耗计费，没有月费。</div>
+        <span class="setup-step-badge">约 30 秒</span>
+      </div>
+    </div>
+    <div class="setup-step" style="cursor:pointer" onclick="window.open('setup.html#step-2','_blank')">
+      <div class="setup-step-num" style="background:var(--purp-s);color:var(--purple)">2</div>
+      <div>
+        <div class="setup-step-title">🐙 GitHub 仓库授权</div>
+        <div class="setup-step-desc">安装 HoneyAI GitHub App，选择目标仓库。AI Agent 最终会向这个仓库提 PR。</div>
+        <span class="setup-step-badge">约 2 分钟</span>
+      </div>
+    </div>
+    <div class="setup-step" style="cursor:pointer" onclick="window.open('setup.html#step-3','_blank')">
+      <div class="setup-step-num" style="background:var(--emld-s);color:var(--emerald)">3</div>
+      <div>
+        <div class="setup-step-title">📦 Skills 导入（可选）</div>
+        <div class="setup-step-desc">上传项目专属编码规范、架构约束或代码模板，AI 会在每次生成中遵循。</div>
+        <span class="setup-step-badge">约 2 分钟（可跳过）</span>
+      </div>
+    </div>
+  </div>
+  <a class="cta-btn" href="setup.html" target="_blank" style="margin-top:24px">前往配置页面 →</a>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 3 · TRANSFORM
+══════════════════════════════════════ -->
+<div class="slide" id="s-transform">
+  <div class="slide-label">核心魔法 · 输入 vs 输出</div>
+  <div class="slide-h" style="margin-bottom:6px">一句话 → 可执行的工程规格</div>
+  <div style="font-size:13px; color:var(--muted); text-align:center; margin-bottom:28px">
+    Stage 1 只用 <span style="color:var(--amber); font-weight:600">$0.20 · 约 3 分钟</span>，把模糊意图变成 AI 和人类都能读懂的结构化文档
+  </div>
+  <div class="transform-split">
+    <div class="tx-panel">
+      <div class="tx-label">你的输入</div>
+      <div class="tx-input-text">"给用户列表加个搜索框"</div>
+      <div style="margin-top:12px; font-size:11.5px; color:var(--muted); line-height:1.6">
+        这就是全部。不需要 PRD，不需要技术方案，不需要画原型。
+      </div>
+    </div>
+    <div class="tx-arrow-col">
+      <div class="tx-arrow-label">AI 生成</div>
+      <div class="tx-big-arrow">→</div>
+      <div class="tx-time-chip">~3 min</div>
+    </div>
+    <div class="tx-panel clickable" style="cursor:pointer;transition:border-color .15s" onclick="window.open('run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79#ir-chain-section','_blank')" title="点击查看真实 IR 文档">
+      <div class="tx-label">Requirement IR · 结构化输出 <span style="color:var(--sky);font-size:9px;margin-left:6px">↗ 点击查看真实文档</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+        <div class="tx-output-item">
+          <div class="tx-output-dot" style="background:var(--amber)"></div>
+          <div class="tx-output-text"><strong style="color:var(--text)">验收标准 × 5 条</strong> — 含边界情况：搜索为空时显示全部 / 大小写不敏感 / 防抖 300ms</div>
+        </div>
+        <div class="tx-output-item">
+          <div class="tx-output-dot" style="background:var(--emerald)"></div>
+          <div class="tx-output-text"><strong style="color:var(--text)">技术约束</strong> — 复用现有 API endpoint，不引入新依赖，兼容移动端</div>
+        </div>
+        <div class="tx-output-item">
+          <div class="tx-output-dot" style="background:var(--purple)"></div>
+          <div class="tx-output-text"><strong style="color:var(--text)">影响范围分析</strong> — 涉及 3 个组件 / 1 个 hook / 0 个数据库改动</div>
+        </div>
+        <div class="tx-output-item">
+          <div class="tx-output-dot" style="background:var(--sky)"></div>
+          <div class="tx-output-text"><strong style="color:var(--text)">风险识别</strong> — 大数据量时性能预警，建议加服务端搜索入口</div>
+        </div>
+      </div>
+      <div class="tx-cost-row">
+        <span>成本</span>
+        <span class="tx-time-chip" style="color:var(--amber)">$0.20</span>
+        <span style="color:var(--muted)">· 用这 $0.20 确认方向对了，再投入后续 $1.12</span>
+      </div>
+    </div>
+  </div>
+  <a class="cta-btn center" href="run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79#ir-chain-section" target="_blank" style="margin-top:20px">查看完整 Run · IR 链 →</a>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 4 · CREATE RUN
+══════════════════════════════════════ -->
+<div class="slide" id="s-create">
+  <div class="slide-label">第 1 步 · 发起新任务</div>
+  <div class="slide-h" style="margin-bottom:6px">三步提需求，无需写文档</div>
+  <div style="font-size:13.5px; color:var(--muted); text-align:center; max-width:560px; line-height:1.7; margin-bottom:28px">
+    不需要 PRD，不需要拆 ticket——填一句话，确认后 AI 立刻接管，你去做别的事
+  </div>
+  <div class="create-steps">
+    <div class="create-step" onclick="window.open('create-run.html','_blank')">
+      <div class="create-step-num" style="background:var(--sky-s);color:var(--sky)">1</div>
+      <div class="create-step-icon">✍️</div>
+      <div class="create-step-title">输入需求</div>
+      <div class="create-step-desc">一句话描述要做什么。支持 JIRA / GitHub Issue / PRD 一键导入，也可手填。</div>
+      <span class="create-step-badge">< 30 秒</span>
+    </div>
+    <div class="create-step" onclick="window.open('create-run.html','_blank')">
+      <div class="create-step-num" style="background:var(--purp-s);color:var(--purple)">2</div>
+      <div class="create-step-icon">🗂️</div>
+      <div class="create-step-title">选择模板</div>
+      <div class="create-step-desc">标准 4 阶段 · 极速通道 · 安全敏感型 · 自定义 Agent 组合，4 种预设开箱即用。</div>
+      <span class="create-step-badge">4 种预设</span>
+    </div>
+    <div class="create-step" onclick="window.open('create-run.html','_blank')">
+      <div class="create-step-num" style="background:var(--emld-s);color:var(--emerald)">3</div>
+      <div class="create-step-icon">🚀</div>
+      <div class="create-step-title">确认 & 启动</div>
+      <div class="create-step-desc">预览完整 Pipeline、预估成本 & 时长。确认后 AI 接手，PR 自动提到你的仓库。</div>
+      <span class="create-step-badge">成本透明预估</span>
+    </div>
+  </div>
+  <a class="cta-btn" href="create-run.html" target="_blank" style="margin-top:8px">立即发起新任务 →</a>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 5 · STORY MAP
+══════════════════════════════════════ -->
+<div class="slide" id="s2">
+  <div class="slide-label">Demo 路线图</div>
+  <div class="slide-title">三幕剧结构</div>
+  <div class="slide-h" style="margin-bottom:8px">按顺序走完，讲清楚整个产品</div>
+  <div style="font-size:13px; color:var(--muted); text-align:center; max-width:600px; line-height:1.7; margin-bottom:20px">
+    每幕聚焦一个核心价值点——从全局管控、到执行细节、到人机协作的关键时刻。
+  </div>
+
+  <div class="story-map">
+    <div class="story-act" onclick="window.open('runs-list.html','_blank')" title="点击进入 → 全局看板">
+      <div class="act-num">第一幕</div>
+      <div class="act-icon">🗂️</div>
+      <div class="act-name">全局管线视图</div>
+      <div class="act-desc">多任务并发管理，列表与看板双视图，实时状态轮询，token &amp; 成本一览。</div>
+      <div class="act-url"><div class="url-chip"><span>runs-list.html</span></div></div>
+      <div class="act-arrow">→</div>
+    </div>
+    <div class="story-act" onclick="window.open('run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79','_blank')" title="点击进入 → Run 详情">
+      <div class="act-num">第二幕</div>
+      <div class="act-icon">🔍</div>
+      <div class="act-name">Run 全链路解析</div>
+      <div class="act-desc">节点 Rail · IR 文档演化链 · Agent 执行轨迹 · 三阶段成本明细。</div>
+      <div class="act-url"><div class="url-chip" style="font-size:9.5px"><span>run-detail.html?runId=019e6a51…</span></div></div>
+      <div class="act-arrow">→</div>
+    </div>
+    <div class="story-act" onclick="window.open('run-detail.html?runId=019e6a3e-6d7c-7359-b1f6-68fa7b24821b','_blank')" title="点击进入 → Gate 审查 Run">
+      <div class="act-num">第三幕</div>
+      <div class="act-icon">🚦</div>
+      <div class="act-name">Gate 审查时刻</div>
+      <div class="act-desc">AI 主动暂停等待人类拍板，Stage 1 用 $0.20 确认方向，再投入后续算力。</div>
+      <div class="act-url"><div class="url-chip" style="font-size:9.5px"><span>run-detail.html?runId=019e6a3e…</span></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 3 · KANBAN VIEW
+══════════════════════════════════════ -->
+<div class="slide" id="s3">
+  <div class="slide-label">第一幕 · 全局视图</div>
+
+  <div class="s3-left">
+    <div>
+      <div class="tag" onclick="window.open('runs-list.html','_blank')" style="cursor:pointer" title="点击前往全局看板">🗂 runs-list.html ↗</div>
+    </div>
+    <div class="slide-h" style="text-align:left">像管 Scrum 看板<br/>一样管理 AI 任务</div>
+    <div style="font-size:13.5px; color:var(--muted); line-height:1.8">
+      切换右上角 <strong style="color:var(--text)">「看板」</strong> 视图，25 条并发 Run 跨越
+      5 个状态列实时呈现，每 5 秒自动刷新——
+      <em style="color:var(--amber)">这些卡片上的工程师是 AI Agent。</em>
+    </div>
+    <div class="realtime-row">
+      <div class="pulse-dot"></div>
+      <span>每 5 秒轮询 · 无需手动刷新</span>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:8px">
+      <div style="font-size:11.5px; color:var(--muted); font-weight:600; letter-spacing:.08em; text-transform:uppercase">列表视图额外展示</div>
+      <div style="display:flex; flex-wrap:wrap; gap:6px">
+        <span class="pill pill-done">✓ Token 估算</span>
+        <span class="pill pill-run">$ 成本列</span>
+        <span class="pill pill-gate">Stage 进度条</span>
+        <span class="pill pill-fail">状态颜色编码</span>
+      </div>
+    </div>
+    <a class="cta-btn" href="runs-list.html" target="_blank">前往全局看板 →</a>
+  </div>
+
+  <div class="s3-right">
+    <div class="kanban-mock">
+      <!-- 创建/调度中 -->
+      <div class="km-col km-blue">
+        <div class="km-col-hd">创建/调度<div class="cnt">0</div></div>
+        <div class="km-col-body">
+          <div style="font-size:9px; color:var(--faint); text-align:center; padding:8px 0">暂无</div>
+        </div>
+      </div>
+      <!-- 运行中 -->
+      <div class="km-col km-amber">
+        <div class="km-col-hd">运行中 ●<div class="cnt">1</div></div>
+        <div class="km-col-body">
+          <div class="km-card">
+            <div class="km-card-t">为 index 页面<br/>增加… L</div>
+            <div class="km-card-m">S1 · —</div>
+          </div>
+        </div>
+      </div>
+      <!-- 待审批 -->
+      <div class="km-col km-purp">
+        <div class="km-col-hd">待人工审批<div class="cnt">4</div></div>
+        <div class="km-col-body">
+          <div class="km-card clickable" onclick="window.open('run-detail.html?runId=019e6a3e-6d7c-7359-b1f6-68fa7b24821b','_blank')" title="点击查看 Gate 审查 Run">
+            <div class="km-card-t">Final validation<br/>run</div>
+            <div class="km-card-m">S1 · — · ⏸ 待审批</div>
+          </div>
+          <div class="km-card">
+            <div class="km-card-t">Cancel test run</div>
+            <div class="km-card-m">S1 · —</div>
+          </div>
+          <div style="font-size:9px; color:var(--faint); text-align:center; padding:4px 0">还有 2 条…</div>
+        </div>
+      </div>
+      <!-- 已完成 -->
+      <div class="km-col km-grn">
+        <div class="km-col-hd">已完成 ✓<div class="cnt">2</div></div>
+        <div class="km-col-body">
+          <div class="km-card clickable" onclick="window.open('run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79','_blank')" title="点击查看已完成 Run">
+            <div class="km-card-t">在 login 页面增加<br/>阿童木动画</div>
+            <div class="km-card-m">S3 · $1.32 · ✓ 完成</div>
+          </div>
+          <div class="km-card">
+            <div class="km-card-t">Test run after<br/>CLAUDECODE fix</div>
+            <div class="km-card-m">S3 · —</div>
+          </div>
+        </div>
+      </div>
+      <!-- 失败 -->
+      <div class="km-col km-rose">
+        <div class="km-col-hd">失败/取消<div class="cnt">18</div></div>
+        <div class="km-col-body">
+          <div class="km-card">
+            <div class="km-card-t">在 welcome 页面<br/>增加阿童木动画</div>
+            <div class="km-card-m">S1 · —</div>
+          </div>
+          <div style="font-size:9px; color:var(--faint); text-align:center; padding:4px 0">还有 17 条…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 4 · NODE RAIL
+══════════════════════════════════════ -->
+<div class="slide" id="s4">
+  <div class="slide-label">第二幕 · 执行细节</div>
+  <div class="slide-h">每一步都可见，不是黑盒</div>
+  <div style="font-size:13px; color:var(--muted); max-width:680px; text-align:center; line-height:1.7">
+    Run 详情页顶部展示完整执行 Rail——AI 产出了什么、Gate 在哪里停下、产物文档是哪个版本，
+    <strong style="color:var(--amber)">三行信息对齐</strong>，一眼读完。
+  </div>
+
+  <div class="rail-wrap">
+    <!-- 节点一行 -->
+    <div class="rail-row" style="margin-bottom:6px">
+      <div class="rail-node">
+        <div class="rn-dot rn-done">✓</div>
+        <div class="rn-label">enrich</div>
+        <div class="rn-sub">Stage 1 · agent</div>
+      </div>
+      <div class="rn-connector done" style="flex:1"></div>
+      <div class="rail-node">
+        <div class="rn-dot rn-gate">🚦</div>
+        <div class="rn-label">Gate 1</div>
+        <div class="rn-sub">人工审查</div>
+      </div>
+      <div class="rn-connector gate" style="flex:1"></div>
+      <div class="rail-node">
+        <div class="rn-dot rn-done">✓</div>
+        <div class="rn-label">design</div>
+        <div class="rn-sub">Stage 2 · agent</div>
+      </div>
+      <div class="rn-connector done" style="flex:1"></div>
+      <div class="rail-node">
+        <div class="rn-dot rn-gate">🚦</div>
+        <div class="rn-label">Gate 2</div>
+        <div class="rn-sub">人工审查</div>
+      </div>
+      <div class="rn-connector gate" style="flex:1"></div>
+      <div class="rail-node">
+        <div class="rn-dot rn-done">✓</div>
+        <div class="rn-label">code</div>
+        <div class="rn-sub">Stage 3 · agent</div>
+      </div>
+    </div>
+    <!-- 产物一行 -->
+    <div class="rail-artifacts">
+      <div class="ra-item ra-done">
+        <div class="ra-kind">req_ir v0</div>
+        <div class="ra-badge">原始输入</div>
+      </div>
+      <div class="ra-item ra-done">
+        <div class="ra-kind">req_ir v1</div>
+        <div class="ra-badge">AI 富化后</div>
+      </div>
+      <div style="flex:0.6"></div>
+      <div class="ra-item ra-done">
+        <div class="ra-kind">design_ir</div>
+        <div class="ra-badge">架构设计</div>
+      </div>
+      <div style="flex:0.6"></div>
+      <div class="ra-item ra-done">
+        <div class="ra-kind">impl_ir</div>
+        <div class="ra-badge">实现规划</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="url-chip clickable" style="align-self:center" onclick="window.open('run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79','_blank')" title="点击前往 Run 详情">
+    访问：<span>run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79 ↗</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 5 · IR CHAIN
+══════════════════════════════════════ -->
+<div class="slide" id="s5">
+  <div class="slide-label">第二幕 · IR 文档演化</div>
+  <div class="slide-h">需求如何从一句话<br/>变成可执行规格</div>
+  <div style="font-size:13px; color:var(--muted); max-width:640px; text-align:center; line-height:1.7; margin-bottom:4px">
+    「在 login 页面增加一个阿童木的动画」——AI 不直接翻译成代码，
+    <em style="color:var(--amber)">它先做 3 轮结构化表示</em>，让每步都可审查。
+  </div>
+
+  <div class="ir-chain">
+
+    <div class="ir-node ir-v0 clickable" onclick="window.open('run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79','_blank')" title="点击查看 IR 链">
+      <div class="ir-stage-tag">v0 · 原始输入</div>
+      <div class="ir-name">requirement_ir</div>
+      <div class="ir-desc">用户一句话<br/>原封不动落库</div>
+      <div class="ir-highlight">在 login 页面，<br/>增加一个阿童木<br/>的动画</div>
+      <div class="ir-arrow-sep">→</div>
+    </div>
+
+    <div class="ir-node ir-v1 clickable" onclick="window.open('run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79','_blank')" title="点击查看 IR 链">
+      <div class="ir-stage-tag">v1 · AI 富化</div>
+      <div class="ir-name">requirement_ir</div>
+      <div class="ir-desc">Stage 1 enrich 产出<br/>结构化验收标准</div>
+      <div class="ir-highlight">+ 技术约束<br/>+ 验收标准 AC<br/>+ 边界情况</div>
+      <div class="ir-arrow-sep">→</div>
+    </div>
+
+    <div class="ir-node ir-d clickable" onclick="window.open('run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79','_blank')" title="点击查看 IR 链">
+      <div class="ir-stage-tag">Stage 2 · 设计</div>
+      <div class="ir-name">design_ir</div>
+      <div class="ir-desc">模块拆解<br/>接口定义<br/>组件关系图</div>
+      <div class="ir-highlight">+ 模块依赖<br/>+ API 接口<br/>+ 文件变更计划</div>
+      <div class="ir-arrow-sep">→</div>
+    </div>
+
+    <div class="ir-node ir-i clickable" onclick="window.open('run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79','_blank')" title="点击查看 IR 链">
+      <div class="ir-stage-tag">Stage 3 · 实现</div>
+      <div class="ir-name">impl_ir</div>
+      <div class="ir-desc">具体实现任务<br/>可执行 checklist<br/>测试覆盖计划</div>
+      <div class="ir-highlight">+ 实现步骤<br/>+ 单测 checklist<br/>→ Code + PR</div>
+    </div>
+
+  </div>
+
+  <div style="font-size:12px; color:var(--muted); text-align:center; max-width:600px; line-height:1.8">
+    页面 <strong style="color:var(--text)">Section 5「IR 文档演化链」</strong>——点击每个节点可展开原始 Markdown 内容，
+    <em style="color:var(--emerald)">全程可追溯</em>。<br/>
+    <span style="color:var(--faint)">↑ 上方节点可点击，直接跳转系统 ↑</span>
+  </div>
+  <a class="cta-btn center" href="run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79#ir-chain-section" target="_blank">查看完整 IR 链 →</a>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 6 · COST
+══════════════════════════════════════ -->
+<div class="slide" id="s6">
+  <div class="slide-label">第二幕 · 成本透明</div>
+
+  <div class="s6-left">
+    <div>
+      <div class="tag">$ Section 3 · 成本明细</div>
+    </div>
+    <div class="slide-h" style="text-align:left">每个 AI 任务<br/>都有账单</div>
+    <div style="font-size:13px; color:var(--muted); line-height:1.8">
+      不是每月账单末尾的惊喜——每条 Run 都有
+      <strong style="color:var(--amber)">按 Stage 拆解的成本</strong>，
+      知道花在哪、值不值得继续。
+    </div>
+
+    <div class="cost-bars">
+      <div class="cost-bar-row">
+        <div class="cost-bar-meta">
+          <span class="cost-bar-label" style="color:var(--sky)">Stage 1 · 需求富化</span>
+          <span class="cost-bar-val" style="color:var(--sky)">3,413 tokens · $0.198</span>
+        </div>
+        <div class="cost-bar-track">
+          <div class="cost-bar-fill" style="width:15%; background:var(--sky)"></div>
+        </div>
+      </div>
+      <div class="cost-bar-row">
+        <div class="cost-bar-meta">
+          <span class="cost-bar-label" style="color:var(--indigo)">Stage 2 · 设计拆解</span>
+          <span class="cost-bar-val" style="color:var(--indigo)">7,111 tokens · $0.370</span>
+        </div>
+        <div class="cost-bar-track">
+          <div class="cost-bar-fill" style="width:28%; background:var(--indigo)"></div>
+        </div>
+      </div>
+      <div class="cost-bar-row">
+        <div class="cost-bar-meta">
+          <span class="cost-bar-label" style="color:var(--purple)">Stage 3 · 编码+UT</span>
+          <span class="cost-bar-val" style="color:var(--purple)">17,919 tokens · $0.752</span>
+        </div>
+        <div class="cost-bar-track">
+          <div class="cost-bar-fill" style="width:57%; background:var(--purple)"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size:12px; color:var(--muted); line-height:1.8">
+      Gate 的价值：Stage 1 花 <strong style="color:var(--amber)">$0.20</strong> 确认 AI 理解正确，
+      确认后才投入 Stage 2+3 的 <strong style="color:var(--amber)">$1.12</strong>。
+    </div>
+  </div>
+
+  <div class="s6-right">
+    <div class="cost-total-card clickable" onclick="window.open('run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79','_blank')" title="点击查看成本明细">
+      <div class="cost-total-label">完成一个功能特性</div>
+      <div class="cost-total-val">$1.32</div>
+      <div class="cost-total-sub">3 阶段 · 全自动 · 含 PR 产出</div>
+      <div class="cost-meta-grid">
+        <div class="cost-meta-item">
+          <div class="cost-meta-key">Total Tokens</div>
+          <div class="cost-meta-num" style="color:var(--sky)">28,443</div>
+        </div>
+        <div class="cost-meta-item">
+          <div class="cost-meta-key">Stages</div>
+          <div class="cost-meta-num" style="color:var(--emerald)">3</div>
+        </div>
+        <div class="cost-meta-item">
+          <div class="cost-meta-key">Duration</div>
+          <div class="cost-meta-num" style="color:var(--amber)">~17 min</div>
+        </div>
+        <div class="cost-meta-item">
+          <div class="cost-meta-key">Human Input</div>
+          <div class="cost-meta-num" style="color:var(--purple)">1 句话</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 7 · GATE REVIEW
+══════════════════════════════════════ -->
+<div class="slide" id="s7">
+  <div class="slide-label">第三幕 · 人在回路</div>
+
+  <div class="s7-left">
+    <div>
+      <div class="tag">🚦 Gate 审查时刻</div>
+    </div>
+    <div class="slide-h" style="text-align:left; font-size:clamp(24px,3vw,38px)">AI 停下来<br/>等你拍板</div>
+
+    <div class="insight-list">
+      <div class="insight">
+        <div class="insight-icon">💡</div>
+        <div class="insight-body">
+          <div class="insight-title">为什么设计 Gate？</div>
+          <div class="insight-desc">Stage 1 完成后 AI 主动暂停，让你在 <strong style="color:var(--amber)">投入更多算力前</strong> 确认方向。
+          避免 AI 沿着错误理解一意孤行跑完三个阶段。</div>
+        </div>
+      </div>
+      <div class="insight">
+        <div class="insight-icon">✋</div>
+        <div class="insight-body">
+          <div class="insight-title">决策权永远在人手里</div>
+          <div class="insight-desc">通过 → AI 继续；拒绝 → 终止任务；修改意见 → 带上批注重跑。
+          不是 prompt in / code out 的黑盒。</div>
+        </div>
+      </div>
+      <div class="insight">
+        <div class="insight-icon">📍</div>
+        <div class="insight-body">
+          <div class="insight-title">当前演示 Run</div>
+          <div class="insight-desc mono" style="font-size:10.5px; word-break:break-all; color:var(--muted)">
+            019e6a3e-6d7c-7359-b1f6-68fa7b24821b<br/>
+            <span style="color:var(--purple)">paused_at_gate</span> · enrich ✓ · Gate1 ⏸
+          </div>
+          <a class="cta-btn purple" href="run-detail.html?runId=019e6a3e-6d7c-7359-b1f6-68fa7b24821b" target="_blank" style="margin-top:8px">前往 Gate 审查 →</a>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <a href="stage-1-requirement.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79" target="_blank"
+               style="font-size:11.5px;color:var(--sky);text-decoration:none;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surf)">
+              📋 Stage 1 需求详情 ↗
+            </a>
+            <a href="review-detail.html?runId=019e6a1f-1b83-7472-9385-a31c2481ea74" target="_blank"
+               style="font-size:11.5px;color:var(--emerald);text-decoration:none;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surf)">
+              🔍 代码审查界面 ↗
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="s7-right">
+    <div class="gate-mock">
+      <div class="gate-mock-hd">
+        <div class="gate-icon">🚦</div>
+        <div class="gate-hd-text">
+          <div class="gate-hd-title">Stage 1 Gate · 等待人工审批</div>
+          <div class="gate-hd-sub">AI 已完成需求富化，请审查后决定是否继续</div>
+        </div>
+        <div class="pill pill-gate" style="margin-left:auto; flex-shrink:0">待审批</div>
+      </div>
+      <div class="gate-body">
+        <div class="gate-status-row">
+          <div class="gate-status-icon">✅</div>
+          <div class="gate-status-text">
+            <strong>Stage 1 enrich</strong> 已完成——<br/>
+            AI 已将原始需求富化为结构化 <span style="color:var(--purple)">requirement_ir v1</span>。
+          </div>
+        </div>
+        <div class="gate-summary">
+          <strong style="color:var(--text)">AI 富化摘要：</strong><br/>
+          已补充验收标准 3 条、技术约束 2 条、边界情况 4 项，
+          核心功能范围已对齐原始需求。建议继续进入 Stage 2 设计阶段。
+        </div>
+        <div class="gate-actions">
+          <button class="gate-btn gate-btn-pass" onclick="window.open('run-detail.html?runId=019e6a3e-6d7c-7359-b1f6-68fa7b24821b','_blank')">✓ 通过，继续 ↗</button>
+          <button class="gate-btn gate-btn-rej" onclick="window.open('run-detail.html?runId=019e6a3e-6d7c-7359-b1f6-68fa7b24821b','_blank')">✗ 拒绝</button>
+          <button class="gate-btn gate-btn-mod" onclick="window.open('run-detail.html?runId=019e6a3e-6d7c-7359-b1f6-68fa7b24821b','_blank')">✏ 修改意见</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE · 代码审查 + DIFF
+══════════════════════════════════════ -->
+<div class="slide" id="s-review">
+  <div class="slide-label">第三幕 · 产出物审查</div>
+  <div class="slide-h" style="margin-bottom:6px">AI 审完，人再看一眼</div>
+  <div style="font-size:13px; color:var(--muted); text-align:center; max-width:620px; line-height:1.7; margin-bottom:22px">
+    编码完成后，你有两个视角——<em style="color:var(--amber)">AI 的信心报告</em> 和 <em style="color:var(--sky)">真实代码 Diff</em>——都在浏览器里，无需切 IDE
+  </div>
+  <div class="output-split">
+    <div class="output-card" onclick="window.open('review-detail.html?runId=019e6a1f-1b83-7472-9385-a31c2481ea74','_blank')">
+      <div class="output-card-tag">🔍 review-detail.html</div>
+      <div class="output-card-title" style="color:var(--emerald)">AI 代码审查<br/>置信报告</div>
+      <div class="output-card-desc">AI 对这次实现给出结构化评估——规则合规性、测试覆盖率、安全扫描——带置信分数。</div>
+      <div class="output-bullets">
+        <div class="output-bullet"><div class="output-bullet-dot" style="background:var(--emerald)"></div><span>置信度 <strong style="color:var(--text)">0.93</strong>（7 轮 Agent 辩论后收敛）</span></div>
+        <div class="output-bullet"><div class="output-bullet-dot" style="background:var(--sky)"></div><span>规则通过 <strong style="color:var(--text)">17/18</strong>，测试覆盖率 <strong style="color:var(--text)">86.4%</strong></span></div>
+        <div class="output-bullet"><div class="output-bullet-dot" style="background:var(--amber)"></div><span>安全扫描 0 个高危 / 0 个严重</span></div>
+        <div class="output-bullet"><div class="output-bullet-dot" style="background:var(--purple)"></div><span>一键 批准 / 拒绝 / 附意见</span></div>
+      </div>
+      <div class="output-card-link">review-detail.html?runId=019e6a1f… ↗</div>
+    </div>
+    <div class="output-card" onclick="window.open('artifact-diff.html?runId=019e6a1f-1b83-7472-9385-a31c2481ea74','_blank')">
+      <div class="output-card-tag">📂 artifact-diff.html</div>
+      <div class="output-card-title" style="color:var(--sky)">代码 Diff<br/>逐行查看</div>
+      <div class="output-card-desc">直接在浏览器里看 AI 改了哪些文件——不需要切 VS Code，不需要找 PR 链接。</div>
+      <div class="output-bullets">
+        <div class="output-bullet"><div class="output-bullet-dot" style="background:var(--sky)"></div><span>文件树 + 逐行 +/- diff，颜色高亮</span></div>
+        <div class="output-bullet"><div class="output-bullet-dot" style="background:var(--emerald)"></div><span>GitHub PR 真实 diff 直接对接</span></div>
+        <div class="output-bullet"><div class="output-bullet-dot" style="background:var(--amber)"></div><span>Lens 视图：变更 / 测试影响 / 语义分析</span></div>
+        <div class="output-bullet"><div class="output-bullet-dot" style="background:var(--purple)"></div><span>+148 / −22 行统计摘要</span></div>
+      </div>
+      <div class="output-card-link">artifact-diff.html?runId=019e6a1f… ↗</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:12px;margin-top:16px">
+    <a class="cta-btn" href="review-detail.html?runId=019e6a1f-1b83-7472-9385-a31c2481ea74" target="_blank" style="font-size:12.5px">查看 AI 审查报告 →</a>
+    <a class="cta-btn" href="artifact-diff.html?runId=019e6a1f-1b83-7472-9385-a31c2481ea74" target="_blank" style="font-size:12.5px;background:var(--sky-s);border-color:oklch(72% 0.18 230 / .3);color:var(--sky)">查看代码 Diff →</a>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE · 运营看板
+══════════════════════════════════════ -->
+<div class="slide" id="s-ops">
+  <div class="slide-label">彩蛋 · AI 资产运营</div>
+  <div class="slide-h" style="margin-bottom:6px">知道钱花在哪，Skill 好不好</div>
+  <div style="font-size:13px; color:var(--muted); text-align:center; max-width:620px; line-height:1.7; margin-bottom:20px">
+    不只是单条 Run 的账单——整个团队的 AI 消耗、Skill 健康度、Agent 成功率，一张看板搞定
+  </div>
+  <div class="ops-kpi-row">
+    <div class="ops-kpi">
+      <div class="ops-kpi-val" style="color:var(--sky)">28.4K</div>
+      <div class="ops-kpi-label">总调用次数</div>
+      <div class="ops-kpi-delta" style="color:var(--emerald)">↑ 12% 本周</div>
+    </div>
+    <div class="ops-kpi">
+      <div class="ops-kpi-val" style="color:var(--amber)">12.4M</div>
+      <div class="ops-kpi-label">Token 消耗</div>
+      <div class="ops-kpi-delta" style="color:var(--emerald)">¥ 3,128 本月</div>
+    </div>
+    <div class="ops-kpi">
+      <div class="ops-kpi-val" style="color:var(--purple)">1,840ms</div>
+      <div class="ops-kpi-label">P95 延迟</div>
+      <div class="ops-kpi-delta" style="color:var(--emerald)">↓ 5% 优化中</div>
+    </div>
+    <div class="ops-kpi">
+      <div class="ops-kpi-val" style="color:var(--emerald)">98.2%</div>
+      <div class="ops-kpi-label">成功率</div>
+      <div class="ops-kpi-delta" style="color:var(--muted)">512 次错误</div>
+    </div>
+  </div>
+  <div class="ops-asset-row">
+    <div class="ops-asset-card" onclick="window.open('operations.html','_blank')">
+      <div class="ops-asset-title" style="color:var(--sky)">🔧 Skill 健康</div>
+      <div class="ops-asset-stat" style="color:var(--sky)">9 个</div>
+      <div class="ops-asset-sub">requirement-decompose · code-review-guard · kg-entity-search…<br/>调用次数 / P95 / 成功率实时追踪</div>
+    </div>
+    <div class="ops-asset-card" onclick="window.open('operations.html','_blank')">
+      <div class="ops-asset-title" style="color:var(--amber)">🤖 模型用量</div>
+      <div class="ops-asset-stat" style="color:var(--amber)">4 款</div>
+      <div class="ops-asset-sub">Claude Sonnet · GPT-4o · DeepSeek · Qwen3<br/>按模型拆分成本占比与 Token 分布</div>
+    </div>
+    <div class="ops-asset-card" onclick="window.open('operations.html','_blank')">
+      <div class="ops-asset-title" style="color:var(--purple)">🏃 最近任务</div>
+      <div class="ops-asset-stat" style="color:var(--purple)" id="ops-run-count">—</div>
+      <div class="ops-asset-sub">实时拉取最近 10 条 Run，状态 · 成本 · 日期一览，点击跳转详情</div>
+    </div>
+  </div>
+  <a class="cta-btn" href="operations.html" target="_blank" style="margin-top:16px">查看运营看板 →</a>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE · KEY TAKEAWAYS
+══════════════════════════════════════ -->
+<div class="slide" id="s8">
+  <div class="slide-label">核心卖点</div>
+  <div class="slide-h">为什么选择 HoneyAI</div>
+  <div style="font-size:13px; color:var(--muted); text-align:center; max-width:560px; margin-bottom:8px; line-height:1.7">
+    三个不可替代的差异点——不只是"快"，而是<em style="color:var(--amber)">快且可控且可信</em>。
+  </div>
+
+  <div class="key-cards">
+    <div class="key-card kc-1">
+      <div class="kc-icon">⚡</div>
+      <div class="kc-num">差异点 01</div>
+      <div class="kc-title">极低输入门槛</div>
+      <div class="kc-desc">不需要写 PRD，不需要拆 ticket，不需要配置 prompt 模板。</div>
+      <div class="kc-bullet">
+        输入：<span>「一句话需求」</span><br/>
+        输出：<span>完整 GitHub PR</span><br/>
+        耗时：<span>~17 分钟自动完成</span>
+      </div>
+    </div>
+    <div class="key-card kc-2">
+      <div class="kc-icon">🔭</div>
+      <div class="kc-num">差异点 02</div>
+      <div class="kc-title">全程可观测</div>
+      <div class="kc-desc">不是黑盒——每个 AI 决策都有迹可查，每分钱都有账可算。</div>
+      <div class="kc-bullet">
+        <span>IR 文档演化链</span><br/>
+        <span>Agent 工具调用轨迹</span><br/>
+        <span>按 Stage 拆解成本账单</span>
+      </div>
+    </div>
+    <div class="key-card kc-3">
+      <div class="kc-icon">🤝</div>
+      <div class="kc-num">差异点 03</div>
+      <div class="kc-title">人在回路 Gate</div>
+      <div class="kc-desc">AI 不会一意孤行——关键节点强制等待人类确认，失败成本可控。</div>
+      <div class="kc-bullet">
+        Stage 1：<span>$0.20 确认方向</span><br/>
+        Gate 通过后：<span>投入 $1.12</span><br/>
+        方向错误：<span>随时中止</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="fin-line">
+    快且可控且可信 · 5–10 人小团队自部署试用 1–2 周
+  </div>
+</div>
+
+</div><!-- /deck -->
+
+<!-- ─── NAV DOTS ─── -->
+<div class="nav-dots" id="dots"></div>
+
+<!-- ─── ARROWS ─── -->
+<div class="nav-arrows">
+  <button class="arr" id="btn-prev" onclick="go(-1)">‹</button>
+  <button class="arr" id="btn-next" onclick="go(+1)">›</button>
+</div>
+
+<!-- ─── COUNTER ─── -->
+<div class="counter" id="counter">1 / 10</div>
+
+<script>
+(function () {
+  var slides = Array.from(document.querySelectorAll('.slide'));
+  var dotsEl = document.getElementById('dots');
+  var counterEl = document.getElementById('counter');
+  var cur = 0;
+
+  // Init counter
+  counterEl.textContent = '1 / ' + slides.length;
+
+  // Live: fetch run count for ops slide
+  (function fetchOpsRunCount() {
+    var el = document.getElementById('ops-run-count');
+    if (!el) return;
+    fetch('/api/prototype/runs', { credentials: 'include' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (data && Array.isArray(data.runs)) {
+          el.textContent = data.runs.length + ' 次运行';
+        } else if (data && Array.isArray(data)) {
+          el.textContent = data.length + ' 次运行';
+        }
+      })
+      .catch(function () { /* silently ignore */ });
+  })();
+
+  // Build dots
+  slides.forEach(function (_, i) {
+    var d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' on' : '');
+    d.onclick = function () { goTo(i); };
+    dotsEl.appendChild(d);
+  });
+
+  function goTo(n) {
+    if (n < 0 || n >= slides.length) return;
+    slides[cur].classList.remove('active');
+    slides[cur].classList.add('prev');
+    var prevIdx = cur;
+    cur = n;
+    slides[cur].classList.remove('prev');
+    slides[cur].classList.add('active');
+    // cleanup prev class after transition
+    setTimeout(function () {
+      slides[prevIdx].classList.remove('prev');
+    }, 650);
+    // dots
+    dotsEl.querySelectorAll('.dot').forEach(function (d, i) {
+      d.classList.toggle('on', i === cur);
+    });
+    counterEl.textContent = (cur + 1) + ' / ' + slides.length;
+  }
+
+  window.go = function (delta) { goTo(cur + delta); };
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); go(+1); }
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { e.preventDefault(); go(-1); }
+    if (e.key === 'Home') goTo(0);
+    if (e.key === 'End')  goTo(slides.length - 1);
+  });
+
+  // Touch / swipe
+  var tx = 0;
+  document.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', function (e) {
+    var dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 50) go(dx < 0 ? +1 : -1);
+  }, { passive: true });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>需求富化 · Stage 1 · DevPipeline</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-base: oklch(98% 0.006 85);
+      --bg-card: #ffffff;
+      --bg-elev: oklch(99% 0.004 85);
+      --bg-deep: oklch(15% 0.018 260);
+
+      --border-soft: oklch(93% 0.005 85);
+      --border-mid: oklch(88% 0.008 85);
+
+      --text-strong: oklch(22% 0.03 260);
+      --text-body: oklch(38% 0.02 260);
+      --text-muted: oklch(56% 0.015 260);
+      --text-faint: oklch(72% 0.01 260);
+
+      --done: oklch(62% 0.13 150);
+      --done-soft: oklch(94% 0.04 150);
+      --run: oklch(70% 0.15 65);
+      --run-soft: oklch(95% 0.05 75);
+      --review: oklch(58% 0.18 290);
+      --review-soft: oklch(95% 0.04 290);
+      --idle-soft: oklch(96% 0.005 260);
+      --halt: oklch(60% 0.21 25);
+
+      --a-req: oklch(62% 0.16 245);
+      --a-graph: oklch(60% 0.18 295);
+      --a-biz: oklch(58% 0.13 200);
+      --a-arch: oklch(58% 0.13 200);
+      --a-dev: oklch(58% 0.14 150);
+      --a-sec: oklch(60% 0.20 25);
+      --a-perf: oklch(70% 0.16 70);
+      --a-test: oklch(56% 0.17 270);
+
+      --shadow-sm: 0 1px 2px oklch(20% 0.02 260 / 0.04);
+      --shadow-md: 0 2px 6px oklch(20% 0.02 260 / 0.04), 0 1px 2px oklch(20% 0.02 260 / 0.06);
+      --shadow-lg: 0 12px 28px oklch(20% 0.02 260 / 0.07), 0 2px 6px oklch(20% 0.02 260 / 0.04);
+    }
+
+    * { -webkit-font-smoothing: antialiased; }
+    html, body { font-family: 'Inter', system-ui, sans-serif; }
+    body {
+      background: var(--bg-base);
+      color: var(--text-body);
+      font-feature-settings: 'cv02','cv03','cv04','cv11';
+    }
+    .font-display { font-family: 'Instrument Serif','Songti SC',serif; letter-spacing: -0.01em; }
+    .font-mono    { font-family: 'JetBrains Mono', monospace; }
+
+    .bg-atmosphere {
+      background:
+        radial-gradient(900px 460px at 8% -8%, oklch(93% 0.05 245 / 0.55), transparent 60%),
+        radial-gradient(700px 340px at 105% 0%, oklch(94% 0.05 295 / 0.45), transparent 60%),
+        var(--bg-base);
+    }
+    .grain::before {
+      content:''; position: fixed; inset: 0; pointer-events: none;
+      opacity: .03; mix-blend-mode: multiply; z-index: 100;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: 16px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow .2s, transform .2s;
+    }
+    .card:hover { box-shadow: var(--shadow-md); }
+    .card-elev  { box-shadow: var(--shadow-lg); }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 9px; border-radius: 999px;
+      font-size: 11px; font-weight: 500; letter-spacing: .01em;
+      border: 1px solid transparent;
+    }
+    .chip-dot { width: 6px; height: 6px; border-radius: 999px; }
+
+    .caps {
+      font-size: 10.5px; letter-spacing: .14em;
+      text-transform: uppercase; font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 12px; border-radius: 9px;
+      font-size: 12.5px; font-weight: 500;
+      border: 1px solid var(--border-mid);
+      background: var(--bg-card); color: var(--text-body);
+      transition: all .15s; cursor: pointer;
+    }
+    .btn:hover { background: var(--bg-elev); border-color: var(--text-faint); color: var(--text-strong); }
+    .btn-primary { background: var(--text-strong); color: white; border-color: var(--text-strong); }
+    .btn-primary:hover { background: oklch(28% 0.06 265); color: white; }
+    .btn-ghost { background: transparent; border-color: transparent; }
+    .btn-ghost:hover { background: var(--bg-elev); }
+
+    .agent-avatar {
+      width: 28px; height: 28px; border-radius: 8px;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: white; font-size: 11px; font-weight: 600;
+      letter-spacing: -.02em;
+      box-shadow: inset 0 -6px 12px rgba(0,0,0,.18), 0 1px 2px rgba(0,0,0,.06);
+    }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 999px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+
+    .lane-rail { position: relative; }
+    .lane-rail::before {
+      content:''; position: absolute; left: 14px; top: 36px; bottom: 0;
+      width: 1px; background: var(--border-soft);
+    }
+
+    /* knowledge graph node */
+    .kg-node {
+      position: absolute;
+      padding: 6px 10px;
+      background: white;
+      border: 1px solid var(--border-mid);
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-strong);
+      box-shadow: var(--shadow-sm);
+      white-space: nowrap;
+    }
+    .kg-node.entity { background: oklch(96% 0.04 245); border-color: oklch(82% 0.08 245); color: oklch(35% 0.12 245); }
+    .kg-node.attr   { background: oklch(96% 0.04 295); border-color: oklch(82% 0.08 295); color: oklch(35% 0.12 295); }
+    .kg-node.rule   { background: oklch(96% 0.04 65);  border-color: oklch(82% 0.08 65);  color: oklch(35% 0.12 65); }
+
+    /* timeline rail */
+    .tl-rail { position: relative; }
+    .tl-rail::before {
+      content:''; position: absolute; left: 7px; top: 0; bottom: 0;
+      width: 2px; background: var(--border-soft);
+    }
+    .tl-dot {
+      width: 16px; height: 16px; border-radius: 999px;
+      background: white; border: 2px solid var(--done);
+      position: relative; z-index: 1; flex-shrink: 0;
+    }
+
+    /* diff highlight */
+    .diff-ins { background: oklch(95% 0.06 150 / .6); padding: 0 2px; border-radius: 3px; }
+    .diff-del { background: oklch(95% 0.06 25 / .5);  padding: 0 2px; border-radius: 3px; text-decoration: line-through; }
+
+    /* markdown render */
+    .md-render h1,.md-render h2,.md-render h3{font-weight:700;margin:1em 0 .5em}
+    .md-render h1{font-size:1.4em}.md-render h2{font-size:1.2em}.md-render h3{font-size:1.05em}
+    .md-render ul,.md-render ol{padding-left:1.5em;margin:.5em 0}
+    .md-render li{margin:.25em 0;line-height:1.6}
+    .md-render code{background:#f3f4f6;border-radius:3px;padding:1px 5px;font-size:.9em}
+    .md-render pre{background:#1e1e1e;color:#d4d4d4;border-radius:6px;padding:12px;overflow-x:auto;margin:.75em 0}
+    .md-render pre code{background:none;color:inherit;padding:0}
+    .md-render blockquote{border-left:3px solid #e5e7eb;padding-left:1em;color:#6b7280;margin:.5em 0}
+    .md-render strong{font-weight:600}
+    .md-render a{color:#7c3aed;text-decoration:underline}
+    .md-render table{border-collapse:collapse;width:100%;margin:.75em 0}
+    .md-render th,.md-render td{border:1px solid #e5e7eb;padding:6px 12px;text-align:left}
+    .md-render th{background:#f9fafb;font-weight:600}
+  </style>
+</head>
+<body class="bg-atmosphere grain min-h-screen">
+
+  <!-- ==================== TOP BAR ==================== -->
+  <header class="border-b border-[var(--border-soft)] bg-white/65 backdrop-blur-xl sticky top-0 z-50">
+    <div class="max-w-[1480px] mx-auto px-8 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-6">
+        <a href="index.html" class="flex items-center gap-2.5 hover:opacity-80 transition">
+          <div class="w-8 h-8 rounded-lg bg-[var(--text-strong)] flex items-center justify-center text-white text-[11px] font-bold tracking-tight">DP</div>
+          <div>
+            <div class="text-[14.5px] font-semibold text-[var(--text-strong)] leading-tight">DevPipeline</div>
+            <div class="text-[10px] text-[var(--text-muted)] tracking-[.14em] uppercase">AI 研发流水线 · 驾驶舱</div>
+          </div>
+        </a>
+        <div class="text-[12px] text-[var(--text-muted)] flex items-center gap-1.5">
+          <a id="run-title" href="run-detail.html" class="hover:text-[var(--text-strong)]">运行 #2451</a>
+          <span class="text-[var(--text-faint)]">/</span>
+          <span class="text-[var(--text-strong)] font-medium">需求富化</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="btn"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>下载产物</button>
+        <button class="btn"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>配置</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-[1480px] mx-auto px-8 py-8">
+
+    <!-- ==================== STAGE HEADER ==================== -->
+    <section class="mb-7">
+      <div class="flex items-baseline justify-between gap-6 mb-3">
+        <div class="flex items-baseline gap-4">
+          <span class="caps font-mono">Stage 01</span>
+          <h1 class="font-display text-[44px] leading-[1.05] text-[var(--text-strong)]">需求富化</h1>
+          <span class="text-[13px] text-[var(--text-muted)]">业务原始诉求 → 注入领域语义 / 业务约束 / 验收条件,产出富化原始需求</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="run-status" class="chip" style="background:var(--done-soft); color:var(--done); border-color:color-mix(in oklch, var(--done) 20%, transparent)"><span class="chip-dot" style="background:var(--done)"></span>已完成</span>
+          <span class="chip" style="background:var(--review-soft); color:var(--review); border-color:color-mix(in oklch, var(--review) 20%, transparent)"><span class="chip-dot" style="background:var(--review)"></span>已评审 · 张工</span>
+        </div>
+      </div>
+
+      <!-- inline metrics rail -->
+      <div class="grid grid-cols-6 gap-4 mt-5">
+        <div class="card p-4">
+          <div class="caps mb-1.5">耗时</div>
+          <div class="font-display text-[28px] text-[var(--text-strong)] leading-none">4<span class="text-[14px] text-[var(--text-muted)] ml-0.5">m</span> 12<span class="text-[14px] text-[var(--text-muted)] ml-0.5">s</span></div>
+        </div>
+        <div class="card p-4">
+          <div class="caps mb-1.5">原子需求</div>
+          <div class="font-display text-[28px] text-[var(--text-strong)] leading-none">6</div>
+        </div>
+        <div class="card p-4">
+          <div class="caps mb-1.5">引用实体</div>
+          <div class="font-display text-[28px] text-[var(--text-strong)] leading-none">12</div>
+        </div>
+        <div class="card p-4">
+          <div class="caps mb-1.5">Agent 调用</div>
+          <div class="font-display text-[28px] text-[var(--text-strong)] leading-none">17</div>
+        </div>
+        <div class="card p-4">
+          <div class="caps mb-1.5">Token 消耗</div>
+          <div class="font-display text-[28px] text-[var(--text-strong)] leading-none">38<span class="text-[14px] text-[var(--text-muted)] ml-0.5">k</span></div>
+        </div>
+        <div class="card p-4">
+          <div class="caps mb-1.5">置信度</div>
+          <div class="font-display text-[28px] text-[var(--text-strong)] leading-none">92<span class="text-[14px] text-[var(--text-muted)] ml-0.5">%</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== INPUT/OUTPUT STRIP ==================== -->
+    <section class="grid grid-cols-12 gap-5 mb-7">
+      <!-- INPUT -->
+      <div class="col-span-5 card p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div class="caps">输入 · 原始需求</div>
+          <span class="text-[10.5px] font-mono text-[var(--text-muted)]">Jira / LGN-2451</span>
+        </div>
+        <div class="font-display text-[20px] leading-snug text-[var(--text-strong)] mb-3">
+          用户登录接口需要增加限流和并发优化
+        </div>
+        <p class="text-[13px] leading-relaxed text-[var(--text-body)]">
+          线上 <span class="font-mono text-[var(--text-strong)]">/api/auth/login</span> 在大促期间被恶意刷接口，单 IP QPS 飙到 <span class="font-mono">800+</span>，导致下游 Redis 连接耗尽。需要：(1) 在网关层增加多维度限流；(2) 优化登录主流程的并发瓶颈；(3) 暴力破解告警。预计大促前 <span class="font-mono">10</span> 天上线。
+        </p>
+        <div class="mt-4 flex items-center gap-2">
+          <span class="chip" style="background:var(--idle-soft); color:var(--text-muted)">P0</span>
+          <span class="chip" style="background:var(--idle-soft); color:var(--text-muted)">@auth-team</span>
+          <span class="chip" style="background:var(--idle-soft); color:var(--text-muted)">大促保障</span>
+        </div>
+      </div>
+
+      <!-- OUTPUT -->
+      <div class="col-span-7 card p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div class="caps">产物 · 原子需求列表<span style="font-size:11px;background:oklch(62% 0.16 270);color:#fff;padding:2px 6px;border-radius:4px;margin-left:8px;">V2 路线图预览</span></div>
+          <div class="flex items-center gap-2">
+            <button class="btn btn-ghost text-[11.5px]">JSON</button>
+            <button class="btn btn-ghost text-[11.5px]">Markdown</button>
+            <button class="btn btn-ghost text-[11.5px]">下载</button>
+          </div>
+        </div>
+
+        <div id="requirements-content" class="space-y-1.5">
+          <!-- REQ items -->
+          <div class="flex items-start gap-3 px-2.5 py-2.5 rounded-lg hover:bg-[var(--bg-elev)] group">
+            <span class="font-mono text-[10.5px] text-[var(--text-faint)] mt-0.5">R1</span>
+            <div class="flex-1 min-w-0">
+              <div class="text-[13.5px] text-[var(--text-strong)] leading-snug">在网关层对 <span class="font-mono text-[12.5px]">/api/auth/login</span> 增加按 IP + 账号双维度令牌桶限流</div>
+              <div class="text-[11.5px] text-[var(--text-muted)] mt-1 flex items-center gap-2.5">
+                <span>← <span class="font-mono">KG:Gateway.RateLimit</span></span>
+                <span>← <span class="font-mono">KG:Auth.LoginFlow</span></span>
+                <span class="chip" style="background:var(--done-soft); color:var(--done); font-size:10px; padding:1px 6px">可独立实现</span>
+              </div>
+            </div>
+            <span class="text-[10.5px] font-mono text-[var(--text-muted)]">3pt</span>
+          </div>
+
+          <div class="flex items-start gap-3 px-2.5 py-2.5 rounded-lg hover:bg-[var(--bg-elev)]">
+            <span class="font-mono text-[10.5px] text-[var(--text-faint)] mt-0.5">R2</span>
+            <div class="flex-1 min-w-0">
+              <div class="text-[13.5px] text-[var(--text-strong)] leading-snug">登录失败次数累计：同一账号 5min 内失败 5 次触发账号级 30min 锁定</div>
+              <div class="text-[11.5px] text-[var(--text-muted)] mt-1 flex items-center gap-2.5">
+                <span>← <span class="font-mono">KG:Auth.BruteForce</span></span>
+                <span>← <span class="font-mono">KG:Security.LockPolicy</span></span>
+                <span class="chip" style="background:var(--done-soft); color:var(--done); font-size:10px; padding:1px 6px">可独立实现</span>
+              </div>
+            </div>
+            <span class="text-[10.5px] font-mono text-[var(--text-muted)]">5pt</span>
+          </div>
+
+          <div class="flex items-start gap-3 px-2.5 py-2.5 rounded-lg hover:bg-[var(--bg-elev)]">
+            <span class="font-mono text-[10.5px] text-[var(--text-faint)] mt-0.5">R3</span>
+            <div class="flex-1 min-w-0">
+              <div class="text-[13.5px] text-[var(--text-strong)] leading-snug">将登录主流程中的同步 Redis 调用改为 Pipeline / 异步批处理</div>
+              <div class="text-[11.5px] text-[var(--text-muted)] mt-1 flex items-center gap-2.5">
+                <span>← <span class="font-mono">KG:Redis.Pipeline</span></span>
+                <span>← <span class="font-mono">KG:Perf.AsyncIO</span></span>
+                <span class="chip" style="background:var(--run-soft); color:var(--run); font-size:10px; padding:1px 6px">依赖 R1</span>
+              </div>
+            </div>
+            <span class="text-[10.5px] font-mono text-[var(--text-muted)]">8pt</span>
+          </div>
+
+          <div class="flex items-start gap-3 px-2.5 py-2.5 rounded-lg hover:bg-[var(--bg-elev)]">
+            <span class="font-mono text-[10.5px] text-[var(--text-faint)] mt-0.5">R4</span>
+            <div class="flex-1 min-w-0">
+              <div class="text-[13.5px] text-[var(--text-strong)] leading-snug">登录 JWT 签发改为本地缓存 + 异步刷新 RSA 密钥，避免每次落库</div>
+              <div class="text-[11.5px] text-[var(--text-muted)] mt-1 flex items-center gap-2.5">
+                <span>← <span class="font-mono">KG:Auth.JWT</span></span>
+                <span class="chip" style="background:var(--done-soft); color:var(--done); font-size:10px; padding:1px 6px">可独立实现</span>
+              </div>
+            </div>
+            <span class="text-[10.5px] font-mono text-[var(--text-muted)]">3pt</span>
+          </div>
+
+          <div class="flex items-start gap-3 px-2.5 py-2.5 rounded-lg hover:bg-[var(--bg-elev)]">
+            <span class="font-mono text-[10.5px] text-[var(--text-faint)] mt-0.5">R5</span>
+            <div class="flex-1 min-w-0">
+              <div class="text-[13.5px] text-[var(--text-strong)] leading-snug">暴力破解检测告警：异常模式上报至 <span class="font-mono text-[12.5px]">RiskCenter</span></div>
+              <div class="text-[11.5px] text-[var(--text-muted)] mt-1 flex items-center gap-2.5">
+                <span>← <span class="font-mono">KG:Security.RiskCenter</span></span>
+                <span class="chip" style="background:var(--done-soft); color:var(--done); font-size:10px; padding:1px 6px">可独立实现</span>
+              </div>
+            </div>
+            <span class="text-[10.5px] font-mono text-[var(--text-muted)]">2pt</span>
+          </div>
+
+          <div class="flex items-start gap-3 px-2.5 py-2.5 rounded-lg hover:bg-[var(--bg-elev)]">
+            <span class="font-mono text-[10.5px] text-[var(--text-faint)] mt-0.5">R6</span>
+            <div class="flex-1 min-w-0">
+              <div class="text-[13.5px] text-[var(--text-strong)] leading-snug">补充压测脚本与 SLO 验证：QPS ≥ 2000 / P99 ≤ 80ms</div>
+              <div class="text-[11.5px] text-[var(--text-muted)] mt-1 flex items-center gap-2.5">
+                <span>← <span class="font-mono">KG:Test.LoadProfile</span></span>
+                <span>← <span class="font-mono">KG:SLO.Login</span></span>
+                <span class="chip" style="background:var(--run-soft); color:var(--run); font-size:10px; padding:1px 6px">依赖 R1, R3</span>
+              </div>
+            </div>
+            <span class="text-[10.5px] font-mono text-[var(--text-muted)]">5pt</span>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-dashed border-[var(--border-soft)] flex items-center justify-between text-[12px] text-[var(--text-muted)]">
+          <span>共 <span class="font-mono text-[var(--text-strong)]">6</span> 条原子需求 · 估算 <span class="font-mono text-[var(--text-strong)]">26</span> 工时点</span>
+          <a href="knowledge-graph.html" class="text-[var(--text-strong)] hover:underline">查看依赖图 →</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== MAIN GRID ==================== -->
+    <section class="grid grid-cols-12 gap-5">
+
+      <!-- ===== LEFT: AGENT COLLAB PLAYBACK ===== -->
+      <div class="col-span-7 card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <div class="caps mb-1">多 Agent 协同 · 对话回放<span style="font-size:11px;background:oklch(62% 0.16 270);color:#fff;padding:2px 6px;border-radius:4px;margin-left:8px;">V2 路线图预览</span></div>
+            <div class="text-[13px] text-[var(--text-muted)]">3 个 Agent 协作，17 轮交互</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[var(--bg-elev)]">
+              <span class="agent-avatar" style="background:var(--a-req); width:18px; height:18px; font-size:9px;">RQ</span>
+              <span class="agent-avatar" style="background:var(--a-graph); width:18px; height:18px; font-size:9px;">KG</span>
+              <span class="agent-avatar" style="background:var(--a-biz); width:18px; height:18px; font-size:9px;">BZ</span>
+            </div>
+            <button class="btn btn-ghost text-[11.5px]">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              重放
+            </button>
+          </div>
+        </div>
+
+        <!-- conversation -->
+        <div id="tool-events-list" class="space-y-3.5 max-h-[560px] overflow-y-auto pr-1">
+
+          <!-- system -->
+          <div class="text-center">
+            <span class="text-[10.5px] font-mono text-[var(--text-faint)] px-2 py-0.5 bg-[var(--bg-elev)] rounded">14:23:01 · 任务启动</span>
+          </div>
+
+          <!-- REQ msg 1 -->
+          <div class="flex gap-3">
+            <span class="agent-avatar flex-shrink-0" style="background:var(--a-req)">RQ</span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline gap-2 mb-1">
+                <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">需求分析师</span>
+                <span class="text-[10.5px] text-[var(--text-faint)] font-mono">14:23:03</span>
+              </div>
+              <div class="text-[13px] leading-relaxed text-[var(--text-body)] bg-[var(--bg-elev)] rounded-lg px-3.5 py-2.5">
+                收到登录限流需求。识别到 3 个核心目标：<strong>限流</strong>、<strong>并发优化</strong>、<strong>暴力破解防护</strong>。先查询知识图谱获取既有约定。
+              </div>
+            </div>
+          </div>
+
+          <!-- REQ tool call -->
+          <div class="flex gap-3">
+            <span class="agent-avatar flex-shrink-0" style="background:var(--a-req)">RQ</span>
+            <div class="flex-1 min-w-0">
+              <div class="text-[11.5px] font-mono text-[var(--text-muted)] bg-[var(--bg-elev)] border border-dashed border-[var(--border-mid)] rounded-lg px-3 py-2">
+                <span class="text-[var(--text-faint)]">→ tool_call</span>
+                <span class="text-[var(--a-graph)] font-medium">kg.search</span>
+                <span class="text-[var(--text-muted)]">(</span>
+                <span>{ topic: ["登录限流", "暴力破解", "Redis 并发"] }</span>
+                <span class="text-[var(--text-muted)]">)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- KG msg 1 -->
+          <div class="flex gap-3">
+            <span class="agent-avatar flex-shrink-0" style="background:var(--a-graph)">KG</span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline gap-2 mb-1">
+                <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">知识图谱</span>
+                <span class="text-[10.5px] text-[var(--text-faint)] font-mono">14:23:09</span>
+                <span class="chip" style="background:var(--review-soft); color:var(--review); font-size:10px; padding:1px 6px">命中 12 实体</span>
+              </div>
+              <div class="text-[13px] leading-relaxed text-[var(--text-body)] bg-[var(--bg-elev)] rounded-lg px-3.5 py-2.5">
+                命中实体 12 个，相关性 ≥ 0.7 的 5 个：
+                <div class="mt-2 grid grid-cols-2 gap-1.5">
+                  <span class="text-[11.5px] font-mono px-2 py-1 bg-white border border-[var(--border-soft)] rounded">Gateway.RateLimit · 0.94</span>
+                  <span class="text-[11.5px] font-mono px-2 py-1 bg-white border border-[var(--border-soft)] rounded">Auth.LoginFlow · 0.91</span>
+                  <span class="text-[11.5px] font-mono px-2 py-1 bg-white border border-[var(--border-soft)] rounded">Auth.BruteForce · 0.88</span>
+                  <span class="text-[11.5px] font-mono px-2 py-1 bg-white border border-[var(--border-soft)] rounded">Redis.Pipeline · 0.82</span>
+                  <span class="text-[11.5px] font-mono px-2 py-1 bg-white border border-[var(--border-soft)] rounded">Security.LockPolicy · 0.79</span>
+                </div>
+                <div class="mt-2.5 text-[11.5px] text-[var(--text-muted)]">
+                  约束注释：限流必须按"IP+账号"双维度（团队规范 #SEC-014）；锁定阈值参考既有支付登录策略。
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- BIZ msg -->
+          <div class="flex gap-3">
+            <span class="agent-avatar flex-shrink-0" style="background:var(--a-biz)">BZ</span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline gap-2 mb-1">
+                <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">业务领域</span>
+                <span class="text-[10.5px] text-[var(--text-faint)] font-mono">14:23:14</span>
+              </div>
+              <div class="text-[13px] leading-relaxed text-[var(--text-body)] bg-[var(--bg-elev)] rounded-lg px-3.5 py-2.5">
+                补充上下文：大促期间登录峰值约 <span class="font-mono">QPS 2000</span>，历史 P99 在 <span class="font-mono">120ms</span>，存在 <span class="text-[var(--halt)]">明确瓶颈</span>。建议把 SLO 写入产物，便于后续测试输出阶段直接消费。
+              </div>
+            </div>
+          </div>
+
+          <!-- REQ msg 2 -->
+          <div class="flex gap-3">
+            <span class="agent-avatar flex-shrink-0" style="background:var(--a-req)">RQ</span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline gap-2 mb-1">
+                <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">需求分析师</span>
+                <span class="text-[10.5px] text-[var(--text-faint)] font-mono">14:23:22</span>
+              </div>
+              <div class="text-[13px] leading-relaxed text-[var(--text-body)] bg-[var(--bg-elev)] rounded-lg px-3.5 py-2.5">
+                综合 KG + BIZ 输入，拆解为 <strong>6 条原子需求</strong>。其中 R3/R6 存在依赖关系。SLO <span class="font-mono">QPS ≥ 2000 / P99 ≤ 80ms</span> 写入产物字段。等 BZ 确认。
+              </div>
+            </div>
+          </div>
+
+          <!-- BIZ approve -->
+          <div class="flex gap-3">
+            <span class="agent-avatar flex-shrink-0" style="background:var(--a-biz)">BZ</span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-baseline gap-2 mb-1">
+                <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">业务领域</span>
+                <span class="text-[10.5px] text-[var(--text-faint)] font-mono">14:26:48</span>
+                <span class="chip" style="background:var(--done-soft); color:var(--done); font-size:10px; padding:1px 6px">已确认</span>
+              </div>
+              <div class="text-[13px] leading-relaxed text-[var(--text-body)] bg-[var(--bg-elev)] rounded-lg px-3.5 py-2.5">
+                拆解粒度合理。建议把 R6（压测）独立成卡片，便于测试团队提前准备压测环境。
+              </div>
+            </div>
+          </div>
+
+          <!-- system done -->
+          <div class="text-center">
+            <span class="text-[10.5px] font-mono text-[var(--done)] px-2 py-0.5 bg-[var(--done-soft)] rounded">14:27:13 · 阶段完成 · 4m 12s</span>
+          </div>
+        </div>
+
+        <!-- input bar (replay control) -->
+        <div class="mt-4 pt-4 border-t border-[var(--border-soft)] flex items-center justify-between">
+          <div class="flex items-center gap-2 text-[11.5px] text-[var(--text-muted)]">
+            <input type="range" min="0" max="100" value="100" class="w-40 accent-[var(--text-strong)]">
+            <span class="font-mono">4:12 / 4:12</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button class="btn btn-ghost text-[11.5px]">下载对话</button>
+            <button class="btn btn-ghost text-[11.5px]">在 Agent 详情中打开</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== RIGHT COLUMN ===== -->
+      <div class="col-span-5 space-y-5">
+
+        <!-- KNOWLEDGE GRAPH SNAPSHOT -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <div class="caps mb-1">知识图谱命中 · 快照<span style="font-size:11px;background:oklch(62% 0.16 270);color:#fff;padding:2px 6px;border-radius:4px;margin-left:8px;">V2 路线图预览</span></div>
+              <div class="text-[12.5px] text-[var(--text-muted)]">12 实体 · 18 关系</div>
+            </div>
+            <a href="#" class="text-[11.5px] text-[var(--text-strong)] hover:underline">全屏 →</a>
+          </div>
+
+          <div class="relative h-[260px] bg-[var(--bg-elev)] rounded-lg overflow-hidden border border-[var(--border-soft)]">
+            <!-- svg edges -->
+            <svg viewBox="0 0 460 260" class="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+              <defs>
+                <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#bbb"/>
+                </marker>
+              </defs>
+              <g stroke="oklch(78% 0.01 260)" stroke-width="1" fill="none" marker-end="url(#arr)">
+                <path d="M 230 130 L 100 60"/>
+                <path d="M 230 130 L 370 60"/>
+                <path d="M 230 130 L 90 200"/>
+                <path d="M 230 130 L 370 200"/>
+                <path d="M 230 130 L 230 30"/>
+                <path d="M 230 130 L 230 235"/>
+                <path d="M 100 60 L 90 200"/>
+                <path d="M 370 60 L 370 200"/>
+              </g>
+            </svg>
+
+            <!-- nodes -->
+            <div class="kg-node entity" style="top: 45%; left: 44%;">Auth.LoginFlow</div>
+            <div class="kg-node entity" style="top: 18%; left: 16%;">Gateway.RateLimit</div>
+            <div class="kg-node entity" style="top: 18%; left: 71%;">Auth.BruteForce</div>
+            <div class="kg-node attr"   style="top: 73%; left: 12%;">Redis.Pipeline</div>
+            <div class="kg-node attr"   style="top: 73%; left: 72%;">Security.LockPolicy</div>
+            <div class="kg-node rule"   style="top: 6%; left: 42%;">SEC-014 · 双维度限流</div>
+            <div class="kg-node rule"   style="top: 86%; left: 40%;">SLO · QPS 2000</div>
+          </div>
+
+          <div class="mt-3 flex items-center gap-4 text-[11px]">
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm" style="background:oklch(82% 0.08 245)"></span><span class="text-[var(--text-muted)]">实体</span></span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm" style="background:oklch(82% 0.08 295)"></span><span class="text-[var(--text-muted)]">属性</span></span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm" style="background:oklch(82% 0.08 65)"></span><span class="text-[var(--text-muted)]">规范</span></span>
+          </div>
+        </div>
+
+        <!-- TIMELINE -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div class="caps">阶段时序</div>
+            <span class="text-[11px] font-mono text-[var(--text-muted)]">4m 12s</span>
+          </div>
+          <div class="tl-rail space-y-3.5 pl-1">
+            <div class="flex items-start gap-3">
+              <span class="tl-dot"></span>
+              <div class="flex-1 -mt-0.5">
+                <div class="text-[12.5px] text-[var(--text-strong)]">阶段启动 · 接收 Jira 输入</div>
+                <div class="text-[11px] text-[var(--text-muted)] font-mono">14:23:01</div>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="tl-dot"></span>
+              <div class="flex-1 -mt-0.5">
+                <div class="text-[12.5px] text-[var(--text-strong)]">KG.search 命中 12 实体</div>
+                <div class="text-[11px] text-[var(--text-muted)] font-mono">14:23:09 · +8s</div>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="tl-dot"></span>
+              <div class="flex-1 -mt-0.5">
+                <div class="text-[12.5px] text-[var(--text-strong)]">BIZ 注入 SLO 上下文</div>
+                <div class="text-[11px] text-[var(--text-muted)] font-mono">14:23:14 · +5s</div>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="tl-dot" style="border-color: var(--review)"></span>
+              <div class="flex-1 -mt-0.5">
+                <div class="text-[12.5px] text-[var(--text-strong)]">用户中断 · 补充上下文</div>
+                <div class="text-[11px] text-[var(--text-muted)] font-mono">14:24:31 · 张工: "请把 P99 改成 80ms"</div>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="tl-dot"></span>
+              <div class="flex-1 -mt-0.5">
+                <div class="text-[12.5px] text-[var(--text-strong)]">重新汇总，输出 6 原子需求</div>
+                <div class="text-[11px] text-[var(--text-muted)] font-mono">14:26:48 · +2m17s</div>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="tl-dot" style="background: var(--done); border-color: var(--done)"></span>
+              <div class="flex-1 -mt-0.5">
+                <div class="text-[12.5px] text-[var(--text-strong)]">阶段完成 · 进入评审</div>
+                <div class="text-[11px] text-[var(--text-muted)] font-mono">14:27:13</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AGENT BREAKDOWN -->
+        <div class="card p-5">
+          <div class="caps mb-3">本阶段 Agent</div>
+
+          <div class="space-y-3">
+            <a href="agent-detail.html" class="flex items-center gap-3 p-2 -mx-2 rounded-lg hover:bg-[var(--bg-elev)]">
+              <span class="agent-avatar" style="background:var(--a-req)">RQ</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">需求分析师</span>
+                  <span class="text-[10.5px] font-mono text-[var(--text-muted)]">9 调用 · 18k tok</span>
+                </div>
+                <div class="text-[11px] text-[var(--text-muted)] mt-0.5">主导拆解 · 基于 GPT-4o · skill: requirement-decompose v1.4</div>
+              </div>
+            </a>
+            <a href="agent-detail.html" class="flex items-center gap-3 p-2 -mx-2 rounded-lg hover:bg-[var(--bg-elev)]">
+              <span class="agent-avatar" style="background:var(--a-graph)">KG</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">知识图谱</span>
+                  <span class="text-[10.5px] font-mono text-[var(--text-muted)]">5 调用 · 12k tok</span>
+                </div>
+                <div class="text-[11px] text-[var(--text-muted)] mt-0.5">实体检索 · KG v3.2 · 12 命中</div>
+              </div>
+            </a>
+            <a href="agent-detail.html" class="flex items-center gap-3 p-2 -mx-2 rounded-lg hover:bg-[var(--bg-elev)]">
+              <span class="agent-avatar" style="background:var(--a-biz)">BZ</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">业务领域</span>
+                  <span class="text-[10.5px] font-mono text-[var(--text-muted)]">3 调用 · 8k tok</span>
+                </div>
+                <div class="text-[11px] text-[var(--text-muted)] mt-0.5">提供大促上下文 · skill: domain-context</div>
+              </div>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== REVIEW SECTION ==================== -->
+    <section class="mt-7 card card-elev p-6" style="background: linear-gradient(180deg, oklch(98% 0.012 290) 0%, white 30%);">
+      <div class="flex items-start justify-between gap-6 mb-5">
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="caps" style="color: var(--review)">阶段评审 · Gate #1</span>
+            <span class="chip" style="background:var(--done-soft); color:var(--done); border-color:color-mix(in oklch, var(--done) 20%, transparent)"><span class="chip-dot" style="background:var(--done)"></span>已通过</span>
+          </div>
+          <div class="font-display text-[24px] text-[var(--text-strong)] leading-tight">由 <span style="color: var(--review)">张工</span> 审核 · 14:31:08 通过</div>
+        </div>
+        <div class="text-right">
+          <div class="caps mb-1">耗时</div>
+          <div class="font-display text-[26px] text-[var(--text-strong)] leading-none">3<span class="text-[14px] text-[var(--text-muted)] ml-0.5">m</span> 55<span class="text-[14px] text-[var(--text-muted)] ml-0.5">s</span></div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-12 gap-5">
+        <!-- reviewer comment -->
+        <div class="col-span-7">
+          <div class="caps mb-2">评审意见</div>
+          <div class="bg-white border border-[var(--border-soft)] rounded-xl p-4">
+            <div class="flex items-center gap-2.5 mb-2.5">
+              <div class="w-7 h-7 rounded-full bg-[var(--bg-deep)] text-white flex items-center justify-center text-[11px] font-semibold">张</div>
+              <div>
+                <div class="text-[12.5px] font-semibold text-[var(--text-strong)]">张工 · 资深架构师</div>
+                <div class="text-[10.5px] text-[var(--text-muted)]">评审组 · 限流域 owner</div>
+              </div>
+            </div>
+            <p class="text-[13px] leading-relaxed text-[var(--text-body)]">
+              语义清晰 · 拆解粒度合理。<strong>R2 的锁定时长建议从 30min 调整为 15min</strong>（与支付域保持一致），已在中断时同步要求。R6 压测目标 P99 ≤ 80ms 与 SLO 对齐，OK。下游可继续。
+            </p>
+            <div class="mt-3 flex items-center gap-2 text-[11.5px] text-[var(--text-muted)]">
+              <span class="chip" style="background:var(--done-soft); color:var(--done); font-size:10.5px">通过</span>
+              <span class="chip" style="background:var(--review-soft); color:var(--review); font-size:10.5px">1 建议</span>
+              <span class="ml-auto font-mono text-[var(--text-faint)]">v1 → v2</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- checklist + change summary -->
+        <div class="col-span-5">
+          <div class="caps mb-2">评审清单</div>
+          <ul class="space-y-2 text-[12.5px] text-[var(--text-body)]">
+            <li class="flex items-start gap-2">
+              <svg class="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="var(--done)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              原子需求可独立交付
+            </li>
+            <li class="flex items-start gap-2">
+              <svg class="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="var(--done)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              KG 引用可追溯
+            </li>
+            <li class="flex items-start gap-2">
+              <svg class="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="var(--done)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              SLO 已显式声明
+            </li>
+            <li class="flex items-start gap-2">
+              <svg class="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="var(--done)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              依赖关系清晰
+            </li>
+            <li class="flex items-start gap-2">
+              <svg class="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="var(--review)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              R2 锁定时长 30→15min（建议）
+            </li>
+            <li class="flex items-start gap-2 text-[var(--text-muted)]">
+              <svg class="w-4 h-4 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/></svg>
+              估算总点数 ≤ 30pt
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- bottom action rail -->
+      <div class="mt-5 pt-5 border-t border-dashed border-[var(--border-soft)] flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <a href="#" class="btn">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            查看完整评审详情
+          </a>
+          <button class="btn btn-ghost text-[11.5px]">查看 diff（v1 → v2）</button>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="approveStage1()" class="btn btn-primary text-[12.5px]">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            通过 · 进入下一阶段
+          </button>
+          <button onclick="rejectStage1()" class="btn text-[12.5px]" style="border-color:var(--halt); color:var(--halt);">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            拒绝
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== STAGE NAV ==================== -->
+    <nav class="mt-7 flex items-center justify-between">
+      <a href="index.html" class="btn">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        返回驾驶舱
+      </a>
+      <div class="flex items-center gap-1.5 text-[11.5px] text-[var(--text-muted)]">
+        <span>下一阶段</span>
+      </div>
+      <a href="stage-2-architecture.html" class="btn btn-primary">
+        设计与拆解 · Stage 02
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+    </nav>
+
+    <footer class="mt-12 mb-6 text-center text-[11px] text-[var(--text-faint)]">
+      DevPipeline · AI 研发流水线 · Stage 01 / 需求富化 · prototype v0.2
+    </footer>
+  </main>
+
+<script>
+(function() {
+  var runId = new URLSearchParams(window.location.search).get('runId');
+
+  // 1. Auth check
+  fetch('/api/prototype/me').then(function(r) {
+    if (r.status === 401) {
+      // demo mode: skip redirect
+    }
+  });
+
+  if (!runId) {
+    var main = document.querySelector('main');
+    if (main) {
+      var errDiv = document.createElement('div');
+      errDiv.style.cssText = 'margin:40px auto;max-width:480px;padding:24px;background:#fff3cd;border:1px solid #ffc107;border-radius:12px;color:#856404;font-size:14px;text-align:center;';
+      errDiv.textContent = '未指定 runId，请从运行详情页导航至此页面。';
+      main.insertBefore(errDiv, main.firstChild);
+    }
+    return;
+  }
+
+  // 2. Load run detail
+  fetch('/api/prototype/runs/' + runId)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var run = data.run || data;
+      // Update header breadcrumb with real run title
+      var titleEl = document.getElementById('run-title');
+      if (titleEl) {
+        titleEl.textContent = run.title || ('Run ' + runId.slice(0, 8));
+        titleEl.href = 'run-detail.html?runId=' + runId;
+      }
+      // Update status
+      var statusEl = document.getElementById('run-status');
+      if (statusEl && run.status) {
+        var statusMap = {
+          running: '运行中', paused_at_gate: '待审批', completed: '已完成',
+          failed: '失败', cancelled: '已取消', created: '已创建'
+        };
+        statusEl.querySelector('.chip-dot') && (statusEl.querySelector('.chip-dot').style.display = '');
+        var labelNode = statusEl.lastChild;
+        if (labelNode && labelNode.nodeType === 3) {
+          statusEl.lastChild.textContent = statusMap[run.status] || run.status;
+        }
+      }
+    })
+    .catch(function() {
+      // Keep mock data if API fails
+    });
+
+  // 3. Load tool events for Stage 1
+  fetch('/api/prototype/runs/' + runId + '/tool-events')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      // data.byStage is an object like { "1": [...events], "2": [...events] }
+      // data.all is all events
+      var stage1Events = (data.byStage && data.byStage['1']) || data.all || [];
+      if (stage1Events.length > 0) {
+        renderToolEvents(stage1Events);
+      }
+    })
+    .catch(function() {
+      // Show error or keep mock data
+    });
+
+  function renderToolEvents(events) {
+    var container = document.getElementById('tool-events-list');
+    if (!container || !events.length) return;
+
+    container.innerHTML = events.map(function(evt) {
+      var toolName = evt.tool || evt.toolName || evt.name || 'unknown';
+      var input = evt.input || evt.toolInput || '';
+      var inputPreview = typeof input === 'string' ? input.slice(0, 120) : JSON.stringify(input).slice(0, 120);
+      var ts = evt.createdAt ? new Date(evt.createdAt).toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit', second:'2-digit'}) : '';
+      var duration = evt.durationMs ? (evt.durationMs / 1000).toFixed(1) + 's' : '';
+      var status = evt.status || 'success';
+      var statusColor = status === 'success' ? '#10b981' : status === 'error' ? '#ef4444' : '#6b7280';
+
+      return '<div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6;">' +
+        '<div style="width:4px;background:' + statusColor + ';border-radius:2px;flex-shrink:0;"></div>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+            '<span style="font-weight:600;font-size:13px;font-family:monospace;">' + escapeHtml(toolName) + '</span>' +
+            '<span style="font-size:11px;color:#9ca3af;">' + escapeHtml(ts) + (duration ? ' · ' + escapeHtml(duration) : '') + '</span>' +
+          '</div>' +
+          (inputPreview ? '<div style="font-size:12px;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(inputPreview) + '</div>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // 4. Load artifacts - find requirement_ir
+  fetch('/api/prototype/runs/' + runId + '/artifacts')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var artifacts = data.artifacts || [];
+      var reqIr = artifacts.find(function(a) { return a.kind === 'requirement_ir'; });
+      if (reqIr) {
+        loadRequirementContent(reqIr.blobSha256);
+      }
+    })
+    .catch(function() {
+      // Keep mock data if API fails
+    });
+
+  function loadRequirementContent(sha) {
+    fetch('/api/prototype/artifacts/' + sha + '/content')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var content = data.content || '';
+        var el = document.getElementById('requirements-content');
+        if (!el) return;
+
+        if (typeof marked !== 'undefined') {
+          el.innerHTML = '<div class="md-render">' + marked.parse(content) + '</div>';
+        } else {
+          el.innerHTML = '<pre style="white-space:pre-wrap;font-size:13px;">' + escapeHtml(content) + '</pre>';
+        }
+      })
+      .catch(function() {
+        // Keep mock data if API fails
+      });
+  }
+
+  // 5. Approve
+  window.approveStage1 = function() {
+    if (!confirm('确认通过 Stage 1 审查？')) return;
+    fetch('/api/prototype/runs/' + runId + '/approve', { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function() {
+        window.location.href = 'run-detail.html?runId=' + runId;
+      })
+      .catch(function(err) { alert('操作失败: ' + err.message); });
+  };
+
+  // 6. Reject
+  window.rejectStage1 = function() {
+    var comment = prompt('请输入拒绝原因（可选）:');
+    if (comment === null) return; // user cancelled
+    fetch('/api/prototype/runs/' + runId + '/reject', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comment: comment || '' })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function() {
+        window.location.href = 'run-detail.html?runId=' + runId;
+      })
+      .catch(function(err) { alert('操作失败: ' + err.message); });
+  };
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+})();
+</script>
+
+</body>
+</html>

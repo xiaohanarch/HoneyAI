@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>中断 · 补充上下文 · DevPipeline</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-base: oklch(98% 0.006 85);
+      --bg-card: #ffffff;
+      --bg-elev: oklch(99% 0.004 85);
+      --border-soft: oklch(93% 0.005 85);
+      --border-mid: oklch(88% 0.008 85);
+      --text-strong: oklch(22% 0.03 260);
+      --text-body: oklch(38% 0.02 260);
+      --text-muted: oklch(56% 0.015 260);
+      --text-faint: oklch(72% 0.01 260);
+      --done: oklch(62% 0.13 150);
+      --done-soft: oklch(94% 0.04 150);
+      --run: oklch(70% 0.15 65);
+      --run-soft: oklch(95% 0.05 75);
+      --review: oklch(58% 0.18 290);
+      --review-soft: oklch(95% 0.04 290);
+      --halt: oklch(60% 0.21 25);
+      --halt-soft: oklch(95% 0.04 25);
+      --a-dev: oklch(58% 0.14 150);
+      --shadow-lg: 0 30px 60px oklch(20% 0.05 260 / 0.18), 0 8px 20px oklch(20% 0.05 260 / 0.10);
+    }
+    * { -webkit-font-smoothing: antialiased; }
+    html, body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg-base); color: var(--text-body); }
+    .font-display { font-family: 'Instrument Serif','Songti SC',serif; letter-spacing: -0.01em; }
+    .font-mono    { font-family: 'JetBrains Mono', monospace; }
+
+    /* dim backdrop simulates parent page */
+    .backdrop {
+      position: fixed; inset: 0; z-index: 30;
+      background: oklch(15% 0.02 260 / 0.45);
+      backdrop-filter: blur(6px);
+    }
+
+    .modal {
+      position: relative; z-index: 40;
+      width: 640px; max-width: calc(100vw - 48px);
+      background: white; border-radius: 18px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border-soft);
+      overflow: hidden;
+    }
+
+    .seg {
+      display: inline-flex; padding: 3px; background: var(--bg-elev);
+      border-radius: 9px; gap: 2px;
+    }
+    .seg button {
+      padding: 6px 11px; border-radius: 7px; font-size: 12px;
+      color: var(--text-muted); transition: .15s; cursor: pointer;
+    }
+    .seg button:hover { color: var(--text-strong); }
+    .seg button.active { background: white; color: var(--text-strong); box-shadow: 0 1px 2px rgba(0,0,0,.05); font-weight: 500; }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 9px; border-radius: 999px;
+      font-size: 11px; font-weight: 500; border: 1px solid transparent;
+    }
+    .chip-dot { width: 6px; height: 6px; border-radius: 999px; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 14px; border-radius: 9px;
+      font-size: 12.5px; font-weight: 500;
+      border: 1px solid var(--border-mid);
+      background: white; color: var(--text-body); cursor: pointer;
+      transition: .15s;
+    }
+    .btn:hover { background: var(--bg-elev); color: var(--text-strong); }
+    .btn-primary { background: var(--text-strong); color: white; border-color: var(--text-strong); }
+    .btn-primary:hover { background: oklch(28% 0.06 265); color: white; }
+
+    .radio-card {
+      display: flex; gap: 10px; padding: 10px 12px;
+      border: 1px solid var(--border-soft); border-radius: 10px;
+      cursor: pointer; transition: .15s;
+    }
+    .radio-card:hover { border-color: var(--text-faint); background: var(--bg-elev); }
+    .radio-card.checked { border-color: var(--text-strong); background: oklch(99% 0.005 260); }
+    .radio-card .ring {
+      width: 16px; height: 16px; border-radius: 999px;
+      border: 2px solid var(--border-mid); flex-shrink: 0; margin-top: 2px;
+      position: relative;
+    }
+    .radio-card.checked .ring { border-color: var(--text-strong); }
+    .radio-card.checked .ring::after {
+      content:''; position: absolute; inset: 3px;
+      background: var(--text-strong); border-radius: 999px;
+    }
+
+    .ghost-page {
+      filter: blur(2px) saturate(.7);
+      pointer-events: none;
+      opacity: .8;
+    }
+  </style>
+</head>
+<body class="min-h-screen overflow-hidden">
+
+  <!-- ghost background (suggest parent page) -->
+  <div class="ghost-page">
+    <header class="border-b border-[var(--border-soft)] bg-white/65 backdrop-blur-xl">
+      <div class="max-w-[1480px] mx-auto px-8 py-3.5 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-[var(--text-strong)] flex items-center justify-center text-white text-[11px] font-bold">DP</div>
+          <span class="text-[14.5px] font-semibold text-[var(--text-strong)]">DevPipeline</span>
+        </div>
+      </div>
+    </header>
+    <main class="max-w-[1480px] mx-auto px-8 py-8">
+      <div class="font-display text-[44px] text-[var(--text-strong)]">运行 <span class="font-mono text-[26px] text-[var(--text-muted)]">#2451</span></div>
+      <div class="mt-8 grid grid-cols-4 gap-4">
+        <div class="h-32 rounded-2xl bg-white border border-[var(--border-soft)]"></div>
+        <div class="h-32 rounded-2xl bg-white border border-[var(--border-soft)]"></div>
+        <div class="h-32 rounded-2xl bg-white border border-[var(--border-soft)]"></div>
+        <div class="h-32 rounded-2xl bg-white border border-[var(--border-soft)]"></div>
+      </div>
+      <div class="mt-6 h-96 rounded-2xl bg-white border border-[var(--border-soft)]"></div>
+    </main>
+  </div>
+
+  <!-- modal -->
+  <a href="index.html" class="backdrop" aria-label="返回数字产线"></a>
+  <div class="fixed inset-0 z-40 flex items-start justify-center p-8 overflow-y-auto">
+    <div class="modal my-8">
+
+      <!-- header -->
+      <div class="px-6 pt-5 pb-4 border-b border-[var(--border-soft)] flex items-start justify-between">
+        <div class="flex items-start gap-3.5">
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background: var(--halt-soft); color: var(--halt);">
+            <svg class="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+          </div>
+          <div>
+            <div class="text-[15.5px] font-semibold text-[var(--text-strong)] leading-tight">中断 · 补充上下文</div>
+            <div class="text-[11.5px] text-[var(--text-muted)] mt-1">
+              目标 · <span class="font-mono">Stage 03 · 编码 + UT / DEV-3</span> · 当前生成
+              <span class="font-mono text-[var(--text-strong)]">LoginService.login()</span>
+            </div>
+          </div>
+        </div>
+        <button class="w-7 h-7 rounded-md hover:bg-[var(--bg-elev)] flex items-center justify-center text-[var(--text-muted)]">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- body -->
+      <div class="px-6 py-5 space-y-5">
+
+        <!-- input tab -->
+        <div>
+          <div class="flex items-center justify-between mb-2.5">
+            <div class="text-[10.5px] tracking-[.14em] uppercase font-medium text-[var(--text-muted)]">输入方式</div>
+            <div class="text-[10.5px] text-[var(--text-faint)] font-mono">Ctrl + Enter 提交</div>
+          </div>
+          <div class="seg mb-3">
+            <button class="active">文本</button>
+            <button>文件</button>
+            <button>引用 KG</button>
+            <button>引用代码</button>
+          </div>
+          <div class="border border-[var(--border-soft)] rounded-xl p-3 bg-[var(--bg-elev)]">
+            <textarea rows="4" class="w-full bg-transparent border-0 outline-none text-[13px] leading-relaxed text-[var(--text-strong)] resize-none placeholder:text-[var(--text-faint)]" placeholder="补充约束、修正方向或贴入相关上下文…">登录失败计数请用 Redis 原子计数器（INCR + EXPIRE），不要本地累加。锁定阈值要可热配置，参考 SEC-014。</textarea>
+
+            <div class="flex items-center justify-between pt-2 border-t border-dashed border-[var(--border-mid)]">
+              <div class="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]">
+                <button class="px-1.5 py-1 rounded hover:bg-white text-[var(--text-strong)]"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
+                <button class="px-1.5 py-1 rounded hover:bg-white text-[var(--text-muted)]"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="14 2 6 2 6 22 18 22 18 6 14 2"/></svg></button>
+                <span class="ml-1">附 1 个引用</span>
+              </div>
+              <span class="text-[10.5px] font-mono text-[var(--text-faint)]">68 / 4000 字符</span>
+            </div>
+          </div>
+
+          <!-- example chips -->
+          <div class="flex flex-wrap gap-1.5 mt-3">
+            <span class="text-[10.5px] text-[var(--text-faint)] mr-1 leading-7">示例:</span>
+            <button class="chip" style="background: var(--bg-elev); color: var(--text-muted); border-color: var(--border-soft);">改用 Redisson 限流器</button>
+            <button class="chip" style="background: var(--bg-elev); color: var(--text-muted); border-color: var(--border-soft);">复用现有事件总线</button>
+            <button class="chip" style="background: var(--bg-elev); color: var(--text-muted); border-color: var(--border-soft);">补充压测目标</button>
+          </div>
+        </div>
+
+        <!-- scope -->
+        <div>
+          <div class="text-[10.5px] tracking-[.14em] uppercase font-medium text-[var(--text-muted)] mb-2.5">影响范围</div>
+          <div class="grid grid-cols-3 gap-2">
+            <label class="radio-card checked">
+              <span class="ring"></span>
+              <div>
+                <div class="text-[12.5px] font-semibold text-[var(--text-strong)]">当前任务</div>
+                <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5 leading-snug">仅 DEV-3 · 不影响其他子任务</div>
+              </div>
+            </label>
+            <label class="radio-card">
+              <span class="ring"></span>
+              <div>
+                <div class="text-[12.5px] font-semibold text-[var(--text-strong)]">当前阶段</div>
+                <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5 leading-snug">Stage 03 全部子任务</div>
+              </div>
+            </label>
+            <label class="radio-card">
+              <span class="ring"></span>
+              <div>
+                <div class="text-[12.5px] font-semibold text-[var(--text-strong)]">整个运行</div>
+                <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5 leading-snug">写入运行级 system prompt</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- post-action -->
+        <div>
+          <div class="text-[10.5px] tracking-[.14em] uppercase font-medium text-[var(--text-muted)] mb-2.5">提交后行为</div>
+          <div class="space-y-2">
+            <label class="radio-card checked">
+              <span class="ring"></span>
+              <div class="flex-1">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">从当前位置继续</span>
+                  <span class="text-[10.5px] text-[var(--text-faint)] font-mono">默认</span>
+                </div>
+                <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">将上下文注入正在执行的 Agent · 保留已生成内容</div>
+              </div>
+            </label>
+            <label class="radio-card">
+              <span class="ring"></span>
+              <div class="flex-1">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">回滚到任务起点</span>
+                  <span class="text-[10.5px] text-[var(--run)] font-mono">≈ 重跑 4-6 分钟</span>
+                </div>
+                <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">放弃 DEV-3 的已生成代码，从头开始</div>
+              </div>
+            </label>
+            <label class="radio-card">
+              <span class="ring"></span>
+              <div class="flex-1">
+                <div class="flex items-baseline justify-between">
+                  <span class="text-[12.5px] font-semibold text-[var(--text-strong)]">回到架构阶段重新规划</span>
+                  <span class="text-[10.5px] text-[var(--halt)] font-mono">≈ 重跑 15+ 分钟</span>
+                </div>
+                <div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">影响 Stage 02 输出 · 评审需重做</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- cost estimate -->
+        <div class="p-3 rounded-lg flex items-center justify-between" style="background: oklch(98% 0.012 245); border: 1px solid oklch(90% 0.05 245 / 0.4);">
+          <div class="flex items-center gap-2.5">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="var(--review)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span class="text-[12px] text-[var(--text-body)]">预计追加 <span class="font-mono font-medium text-[var(--text-strong)]">+2.4k tokens</span> · <span class="font-mono font-medium text-[var(--text-strong)]">¥ 0.62</span> · 延迟 +18s</span>
+          </div>
+          <a href="#" class="text-[11px] text-[var(--text-strong)] hover:underline">详情</a>
+        </div>
+      </div>
+
+      <!-- footer -->
+      <div class="px-6 py-4 border-t border-[var(--border-soft)] bg-[var(--bg-elev)] flex items-center justify-between">
+        <label class="flex items-center gap-2 text-[11.5px] text-[var(--text-muted)] cursor-pointer">
+          <input type="checkbox" class="accent-[var(--text-strong)]"/>
+          记录为该 Agent 的长期偏好
+        </label>
+        <div class="flex items-center gap-2">
+          <a href="index.html" class="btn">取消</a>
+          <button class="btn btn-primary">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            提交并继续
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- floating helper -->
+  <div class="fixed bottom-6 left-6 z-50 text-[10.5px] font-mono text-white/80 bg-black/30 backdrop-blur px-2 py-1.5 rounded">
+    prototype · interrupt-modal.html · 模态浮层于 index.html 之上
+  </div>
+</body>
+</html>

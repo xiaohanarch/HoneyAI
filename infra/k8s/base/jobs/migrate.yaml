@@ -12,7 +12,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: migrate
-          image: ghcr.io/xiaohanarch/honeyai-worker:latest
+          image: registry.cn-hangzhou.aliyuncs.com/honeyai/honeyai-worker:latest
           command: ['pnpm', 'db:migrate']
           env:
             - name: DATABASE_URL

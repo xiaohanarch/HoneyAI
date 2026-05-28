@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SIT 集成测试 · Stage 4 · DevPipeline</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-base: oklch(98% 0.006 85);
+      --bg-card: #ffffff;
+      --bg-elev: oklch(99% 0.004 85);
+      --bg-deep: oklch(15% 0.018 260);
+
+      --border-soft: oklch(93% 0.005 85);
+      --border-mid: oklch(88% 0.008 85);
+
+      --text-strong: oklch(22% 0.03 260);
+      --text-body: oklch(38% 0.02 260);
+      --text-muted: oklch(56% 0.015 260);
+      --text-faint: oklch(72% 0.01 260);
+
+      --done: oklch(62% 0.13 150);
+      --done-soft: oklch(94% 0.04 150);
+      --run: oklch(70% 0.15 65);
+      --run-soft: oklch(95% 0.05 75);
+      --review: oklch(58% 0.18 290);
+      --review-soft: oklch(95% 0.04 290);
+      --idle-soft: oklch(96% 0.005 260);
+      --halt: oklch(60% 0.21 25);
+
+      --a-req: oklch(62% 0.16 245);
+      --a-graph: oklch(60% 0.18 295);
+      --a-arch: oklch(58% 0.13 200);
+      --a-dev: oklch(58% 0.14 150);
+      --a-sec: oklch(60% 0.20 25);
+      --a-perf: oklch(70% 0.16 70);
+      --a-test: oklch(56% 0.17 270);
+      --a-edge: oklch(60% 0.17 320);
+
+      --shadow-sm: 0 1px 2px oklch(20% 0.02 260 / 0.04);
+      --shadow-md: 0 2px 6px oklch(20% 0.02 260 / 0.04), 0 1px 2px oklch(20% 0.02 260 / 0.06);
+      --shadow-lg: 0 12px 28px oklch(20% 0.02 260 / 0.07), 0 2px 6px oklch(20% 0.02 260 / 0.04);
+    }
+
+    * { -webkit-font-smoothing: antialiased; }
+    html, body { font-family: 'Inter', system-ui, sans-serif; }
+    body {
+      background: var(--bg-base);
+      color: var(--text-body);
+      font-feature-settings: 'cv02','cv03','cv04','cv11';
+    }
+    .font-display { font-family: 'Instrument Serif','Songti SC',serif; letter-spacing: -0.01em; }
+    .font-mono    { font-family: 'JetBrains Mono', monospace; }
+
+    .bg-atmosphere {
+      background:
+        radial-gradient(900px 460px at 8% -8%, oklch(93% 0.05 270 / 0.40), transparent 60%),
+        radial-gradient(700px 340px at 105% 0%, oklch(94% 0.05 320 / 0.35), transparent 60%),
+        var(--bg-base);
+    }
+    .grain::before {
+      content:''; position: fixed; inset: 0; pointer-events: none;
+      opacity: .03; mix-blend-mode: multiply; z-index: 100;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: 16px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow .2s;
+    }
+    .card:hover { box-shadow: var(--shadow-md); }
+    .card-elev  { box-shadow: var(--shadow-lg); }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 9px; border-radius: 999px;
+      font-size: 11px; font-weight: 500; letter-spacing: .01em;
+      border: 1px solid transparent;
+    }
+    .chip-dot { width: 6px; height: 6px; border-radius: 999px; }
+
+    .caps {
+      font-size: 10.5px; letter-spacing: .14em;
+      text-transform: uppercase; font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 12px; border-radius: 9px;
+      font-size: 12.5px; font-weight: 500;
+      border: 1px solid var(--border-mid);
+      background: var(--bg-card); color: var(--text-body);
+      transition: all .15s; cursor: pointer;
+    }
+    .btn:hover { background: var(--bg-elev); border-color: var(--text-faint); color: var(--text-strong); }
+    .btn-primary { background: var(--text-strong); color: white; border-color: var(--text-strong); }
+    .btn-primary:hover { background: oklch(28% 0.06 265); color: white; }
+    .btn-ghost { background: transparent; border-color: transparent; }
+    .btn-ghost:hover { background: var(--bg-elev); }
+
+    .agent-avatar {
+      width: 28px; height: 28px; border-radius: 8px;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: white; font-size: 11px; font-weight: 600;
+      letter-spacing: -.02em;
+      box-shadow: inset 0 -6px 12px rgba(0,0,0,.18), 0 1px 2px rgba(0,0,0,.06);
+    }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 999px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+
+    /* idle / waiting state */
+    .ghost {
+      background: repeating-linear-gradient(
+        135deg,
+        oklch(98% 0.004 260) 0,
+        oklch(98% 0.004 260) 8px,
+        oklch(96% 0.004 260) 8px,
+        oklch(96% 0.004 260) 16px
+      );
+    }
+
+    .placeholder {
+      color: var(--text-faint);
+      font-style: italic;
+    }
+
+    /* matrix table */
+    table.matrix {
+      width: 100%; border-collapse: separate; border-spacing: 0;
+      font-size: 12px;
+    }
+    table.matrix th, table.matrix td {
+      padding: 9px 12px; text-align: left;
+      border-bottom: 1px solid var(--border-soft);
+    }
+    table.matrix th {
+      font-size: 10.5px; letter-spacing: .12em;
+      text-transform: uppercase; font-weight: 500;
+      color: var(--text-muted);
+      background: var(--bg-elev);
+    }
+    table.matrix tbody tr:hover { background: var(--bg-elev); }
+    table.matrix td { color: var(--text-body); }
+
+    .badge-unit { background: oklch(94% 0.04 245); color: oklch(40% 0.16 245); padding: 2px 7px; border-radius: 5px; font-size: 10.5px; font-weight: 500; }
+    .badge-int  { background: oklch(94% 0.04 150); color: oklch(35% 0.13 150); padding: 2px 7px; border-radius: 5px; font-size: 10.5px; font-weight: 500; }
+    .badge-e2e  { background: oklch(94% 0.04 290); color: oklch(40% 0.18 290); padding: 2px 7px; border-radius: 5px; font-size: 10.5px; font-weight: 500; }
+    .badge-load { background: oklch(94% 0.05 65);  color: oklch(40% 0.16 65);  padding: 2px 7px; border-radius: 5px; font-size: 10.5px; font-weight: 500; }
+    .badge-sec  { background: oklch(94% 0.04 25);  color: oklch(40% 0.18 25);  padding: 2px 7px; border-radius: 5px; font-size: 10.5px; font-weight: 500; }
+
+    .tl-rail { position: relative; }
+    .tl-rail::before {
+      content:''; position: absolute; left: 7px; top: 0; bottom: 0;
+      width: 2px; background: var(--border-soft);
+    }
+    .tl-dot {
+      width: 16px; height: 16px; border-radius: 999px;
+      background: white; border: 2px solid var(--text-faint);
+      position: relative; z-index: 1; flex-shrink: 0;
+    }
+
+    .ring-bar {
+      height: 8px; border-radius: 999px;
+      background: var(--border-soft); position: relative; overflow: hidden;
+    }
+    .ring-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; }
+  </style>
+</head>
+<body class="bg-atmosphere grain min-h-screen">
+
+  <!-- TOP BAR -->
+  <header class="border-b border-[var(--border-soft)] bg-white/65 backdrop-blur-xl sticky top-0 z-50">
+    <div class="max-w-[1480px] mx-auto px-8 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-6">
+        <a href="index.html" class="flex items-center gap-2.5 hover:opacity-80 transition">
+          <div class="w-8 h-8 rounded-lg bg-[var(--text-strong)] flex items-center justify-center text-white text-[11px] font-bold tracking-tight">DP</div>
+          <div>
+            <div class="text-[14.5px] font-semibold text-[var(--text-strong)] leading-tight">DevPipeline</div>
+            <div class="text-[10px] text-[var(--text-muted)] tracking-[.14em] uppercase">AI 研发流水线 · 驾驶舱</div>
+          </div>
+        </a>
+        <div class="text-[12px] text-[var(--text-muted)] flex items-center gap-1.5">
+          <a href="index.html" class="hover:text-[var(--text-strong)]">运行 #2451</a>
+          <span class="text-[var(--text-faint)]">/</span>
+          <span class="text-[var(--text-strong)] font-medium">SIT 集成测试</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="btn">配置</button>
+        <button class="btn btn-primary">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          预热启动
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-[1480px] mx-auto px-8 py-8">
+
+    <!-- STAGE HEADER -->
+    <section class="mb-7">
+      <div class="flex items-baseline justify-between gap-6 mb-3">
+        <div class="flex items-baseline gap-4">
+          <span class="caps font-mono">Stage 04</span>
+          <h1 class="font-display text-[44px] leading-[1.05] text-[var(--text-strong)]">SIT 集成测试 <span class="text-[18px] italic font-light text-[var(--text-muted)]">— 测试运行,非测试设计</span></h1>
+          <span class="text-[13px] text-[var(--text-muted)]">基于设计与代码生成单元/集成/压测/E2E 全套测试资产</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="chip" style="background:var(--idle-soft); color:var(--text-muted); border-color:var(--border-mid)"><span class="chip-dot" style="background:var(--text-faint)"></span>等待中</span>
+          <span class="chip" style="background:var(--idle-soft); color:var(--text-muted); border-color:var(--border-mid)">免评审</span>
+        </div>
+      </div>
+
+      <!-- waiting banner -->
+      <div class="mt-4 p-4 rounded-xl border border-dashed border-[var(--border-mid)] flex items-start gap-3" style="background: oklch(98% 0.012 270 / 0.6);">
+        <svg class="w-5 h-5 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+        <div class="flex-1">
+          <div class="text-[13.5px] text-[var(--text-strong)] font-medium leading-tight">尚未到达此阶段</div>
+          <div class="text-[12px] text-[var(--text-muted)] mt-1">SIT 用例已在 <span class="text-[var(--text-strong)]">Stage 02 · 设计与拆解</span> 完成设计（12 条 / IR 全覆盖）。等当前 <span class="text-[var(--text-strong)]">Stage 03 · 编码 + UT</span> 完成 ≥3 US 合 main 后,本阶段触发集中回归。</div>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <a href="#" class="btn btn-ghost text-[11.5px]">查看 #2447 实际数据 ↗</a>
+        </div>
+      </div>
+
+      <!-- metrics (预估 + 历史) -->
+      <div class="grid grid-cols-6 gap-4 mt-5">
+        <div class="card p-4"><div class="caps mb-1.5">预估耗时</div><div class="font-display text-[28px] text-[var(--text-muted)] leading-none">≈ 9<span class="text-[14px] ml-0.5">m</span></div><div class="text-[10.5px] text-[var(--text-faint)] mt-1">基于 6 原子需求</div></div>
+        <div class="card p-4"><div class="caps mb-1.5">预估用例</div><div class="font-display text-[28px] text-[var(--text-muted)] leading-none">≈ 42</div><div class="text-[10.5px] text-[var(--text-faint)] mt-1">含 5 类</div></div>
+        <div class="card p-4"><div class="caps mb-1.5">目标覆盖率</div><div class="font-display text-[28px] text-[var(--text-strong)] leading-none">85<span class="text-[14px] text-[var(--text-muted)] ml-0.5">%</span></div><div class="text-[10.5px] text-[var(--done)] mt-1">军规要求 ≥80%</div></div>
+        <div class="card p-4"><div class="caps mb-1.5">SLO QPS</div><div class="font-display text-[28px] text-[var(--text-strong)] leading-none">2,000</div><div class="text-[10.5px] text-[var(--text-faint)] mt-1">P99 ≤ 80ms</div></div>
+        <div class="card p-4"><div class="caps mb-1.5">边界场景</div><div class="font-display text-[28px] text-[var(--text-muted)] leading-none">≈ 14</div><div class="text-[10.5px] text-[var(--text-faint)] mt-1">EDG 生成</div></div>
+        <div class="card p-4"><div class="caps mb-1.5">预估 Token</div><div class="font-display text-[28px] text-[var(--text-muted)] leading-none">≈ 28<span class="text-[14px] ml-0.5">k</span></div><div class="text-[10.5px] text-[var(--text-faint)] mt-1">¥ ≈ 7.2</div></div>
+      </div>
+    </section>
+
+    <!-- INPUT/OUTPUT STRIP -->
+    <section class="grid grid-cols-12 gap-5 mb-7">
+      <!-- input -->
+      <div class="col-span-4 card p-5">
+        <div class="caps mb-3">输入 · 来自上游</div>
+
+        <a href="stage-1-requirement.html" class="block p-3 rounded-lg hover:bg-[var(--bg-elev)] mb-2">
+          <div class="flex items-baseline justify-between"><span class="text-[12.5px] font-semibold text-[var(--text-strong)]">Stage 01 · 需求富化</span><span class="chip" style="background:var(--done-soft); color:var(--done); font-size:10px; padding:1px 6px">已就绪</span></div>
+          <div class="text-[11.5px] text-[var(--text-muted)] mt-1">6 原子需求 + SLO QPS≥2000 / P99≤80ms</div>
+        </a>
+        <a href="stage-2-architecture.html" class="block p-3 rounded-lg hover:bg-[var(--bg-elev)] mb-2">
+          <div class="flex items-baseline justify-between"><span class="text-[12.5px] font-semibold text-[var(--text-strong)]">Stage 02 · 设计与拆解</span><span class="chip" style="background:var(--done-soft); color:var(--done); font-size:10px; padding:1px 6px">已就绪 · 含 SIT 用例设计</span></div>
+          <div class="text-[11.5px] text-[var(--text-muted)] mt-1">9 类 · 14 文件 · 5 风险点</div>
+        </a>
+        <a href="index.html" class="block p-3 rounded-lg hover:bg-[var(--bg-elev)]">
+          <div class="flex items-baseline justify-between"><span class="text-[12.5px] font-semibold text-[var(--text-strong)]">Stage 03 · 编码 + UT</span><span class="chip" style="background:var(--run-soft); color:var(--run); font-size:10px; padding:1px 6px">进行中 68%</span></div>
+          <div class="text-[11.5px] text-[var(--text-muted)] mt-1">预计 +12min 完成 · 待消费 diff</div>
+        </a>
+
+        <div class="mt-4 pt-3 border-t border-dashed border-[var(--border-soft)] text-[11.5px] text-[var(--text-muted)]">
+          <div class="caps mb-2" style="font-size:10px">触发条件</div>
+          <ul class="space-y-1">
+            <li class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="var(--done)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>上游 1 / 2 已通过评审</li>
+            <li class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/></svg>Stage 03 代码 PR 提交</li>
+            <li class="flex items-center gap-1.5"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/></svg>Stage 03 单元测试绿</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- output: matrix -->
+      <div class="col-span-8 card p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <div class="caps">预计产物 · 测试矩阵</div>
+            <div class="text-[12px] text-[var(--text-muted)] mt-0.5">需求 × 测试类型 · 灰色为待生成</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="btn btn-ghost text-[11.5px]">查看 #2447 完整矩阵</button>
+          </div>
+        </div>
+
+        <table class="matrix">
+          <thead>
+            <tr>
+              <th>需求</th>
+              <th class="text-center">单元</th>
+              <th class="text-center">集成</th>
+              <th class="text-center">E2E</th>
+              <th class="text-center">压测</th>
+              <th class="text-center">安全</th>
+              <th class="text-right">合计</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="font-mono text-[10.5px] text-[var(--text-faint)] mr-1.5">R1</span>双维度限流</td>
+              <td class="text-center"><span class="badge-unit">6</span></td>
+              <td class="text-center"><span class="badge-int">3</span></td>
+              <td class="text-center"><span class="badge-e2e">1</span></td>
+              <td class="text-center"><span class="badge-load">2</span></td>
+              <td class="text-center placeholder">—</td>
+              <td class="text-right font-mono text-[var(--text-strong)]">12</td>
+            </tr>
+            <tr>
+              <td><span class="font-mono text-[10.5px] text-[var(--text-faint)] mr-1.5">R2</span>账号锁定</td>
+              <td class="text-center"><span class="badge-unit">5</span></td>
+              <td class="text-center"><span class="badge-int">2</span></td>
+              <td class="text-center"><span class="badge-e2e">1</span></td>
+              <td class="text-center placeholder">—</td>
+              <td class="text-center"><span class="badge-sec">2</span></td>
+              <td class="text-right font-mono text-[var(--text-strong)]">10</td>
+            </tr>
+            <tr>
+              <td><span class="font-mono text-[10.5px] text-[var(--text-faint)] mr-1.5">R3</span>Redis Pipeline</td>
+              <td class="text-center"><span class="badge-unit">4</span></td>
+              <td class="text-center"><span class="badge-int">3</span></td>
+              <td class="text-center placeholder">—</td>
+              <td class="text-center"><span class="badge-load">2</span></td>
+              <td class="text-center placeholder">—</td>
+              <td class="text-right font-mono text-[var(--text-strong)]">9</td>
+            </tr>
+            <tr>
+              <td><span class="font-mono text-[10.5px] text-[var(--text-faint)] mr-1.5">R4</span>JWT 本地缓存</td>
+              <td class="text-center"><span class="badge-unit">3</span></td>
+              <td class="text-center"><span class="badge-int">1</span></td>
+              <td class="text-center placeholder">—</td>
+              <td class="text-center placeholder">—</td>
+              <td class="text-center"><span class="badge-sec">1</span></td>
+              <td class="text-right font-mono text-[var(--text-strong)]">5</td>
+            </tr>
+            <tr>
+              <td><span class="font-mono text-[10.5px] text-[var(--text-faint)] mr-1.5">R5</span>风控告警</td>
+              <td class="text-center"><span class="badge-unit">2</span></td>
+              <td class="text-center"><span class="badge-int">1</span></td>
+              <td class="text-center"><span class="badge-e2e">1</span></td>
+              <td class="text-center placeholder">—</td>
+              <td class="text-center placeholder">—</td>
+              <td class="text-right font-mono text-[var(--text-strong)]">4</td>
+            </tr>
+            <tr>
+              <td><span class="font-mono text-[10.5px] text-[var(--text-faint)] mr-1.5">R6</span>SLO 验证</td>
+              <td class="text-center placeholder">—</td>
+              <td class="text-center placeholder">—</td>
+              <td class="text-center placeholder">—</td>
+              <td class="text-center"><span class="badge-load">2</span></td>
+              <td class="text-center placeholder">—</td>
+              <td class="text-right font-mono text-[var(--text-strong)]">2</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr style="background: var(--bg-elev)">
+              <td class="font-semibold text-[var(--text-strong)]">预计合计</td>
+              <td class="text-center font-mono font-semibold text-[var(--text-strong)]">20</td>
+              <td class="text-center font-mono font-semibold text-[var(--text-strong)]">10</td>
+              <td class="text-center font-mono font-semibold text-[var(--text-strong)]">3</td>
+              <td class="text-center font-mono font-semibold text-[var(--text-strong)]">6</td>
+              <td class="text-center font-mono font-semibold text-[var(--text-strong)]">3</td>
+              <td class="text-right font-mono font-bold text-[var(--text-strong)]">42</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div class="mt-4 flex items-center gap-3 text-[11px] text-[var(--text-muted)]">
+          <span class="flex items-center gap-1.5"><span class="badge-unit">U</span>单元</span>
+          <span class="flex items-center gap-1.5"><span class="badge-int">I</span>集成</span>
+          <span class="flex items-center gap-1.5"><span class="badge-e2e">E</span>E2E</span>
+          <span class="flex items-center gap-1.5"><span class="badge-load">L</span>压测</span>
+          <span class="flex items-center gap-1.5"><span class="badge-sec">S</span>安全</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- MAIN GRID -->
+    <section class="grid grid-cols-12 gap-5">
+
+      <!-- LEFT: agent collab placeholder + load profile -->
+      <div class="col-span-7 space-y-5">
+
+        <!-- agent collab placeholder (ghost) -->
+        <div class="card p-5 ghost">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <div class="caps mb-1">多 Agent 协同 · 待启动<span style="font-size:11px;background:oklch(62% 0.16 270);color:#fff;padding:2px 6px;border-radius:4px;margin-left:8px;">V2 路线图预览</span></div>
+              <div class="text-[13px] text-[var(--text-muted)]">TS（测试策略）+ EDG（边界用例）</div>
+            </div>
+            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white">
+              <span class="agent-avatar" style="background:var(--a-test); width:18px; height:18px; font-size:9px;">TS</span>
+              <span class="agent-avatar" style="background:var(--a-edge); width:18px; height:18px; font-size:9px;">EG</span>
+            </div>
+          </div>
+
+          <div class="space-y-3 opacity-60">
+            <div class="flex gap-3">
+              <span class="agent-avatar flex-shrink-0" style="background:var(--a-test)">TS</span>
+              <div class="flex-1">
+                <div class="flex items-baseline gap-2 mb-1"><span class="text-[12.5px] font-semibold text-[var(--text-strong)]">测试策略 · 计划行为</span></div>
+                <div class="text-[13px] leading-relaxed text-[var(--text-body)] bg-white rounded-lg px-3.5 py-2.5 placeholder">
+                  阶段开始后，将根据 9 个新增/修改类及 6 原子需求生成测试策略；并把 SLO 写入压测脚本元数据。
+                </div>
+              </div>
+            </div>
+
+            <div class="flex gap-3">
+              <span class="agent-avatar flex-shrink-0" style="background:var(--a-edge)">EG</span>
+              <div class="flex-1">
+                <div class="flex items-baseline gap-2 mb-1"><span class="text-[12.5px] font-semibold text-[var(--text-strong)]">边界用例 · 计划行为</span></div>
+                <div class="text-[13px] leading-relaxed text-[var(--text-body)] bg-white rounded-lg px-3.5 py-2.5 placeholder">
+                  专攻边界 — 限流恰好阈值、锁定窗口边界、Redis 集群部分故障、JWT 刷新中签发，等。
+                </div>
+              </div>
+            </div>
+
+            <div class="flex gap-3">
+              <span class="agent-avatar flex-shrink-0" style="background:var(--a-test)">TS</span>
+              <div class="flex-1">
+                <div class="flex items-baseline gap-2 mb-1"><span class="text-[12.5px] font-semibold text-[var(--text-strong)]">测试策略 · 计划行为</span></div>
+                <div class="text-[13px] leading-relaxed text-[var(--text-body)] bg-white rounded-lg px-3.5 py-2.5 placeholder">
+                  最终合并去重，生成 JUnit 5 + Mockito 单元 / Testcontainers 集成 / Playwright E2E / k6 压测 / OWASP ZAP 安全扫描脚本。
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-4 border-t border-dashed border-[var(--border-mid)] flex items-center justify-between">
+            <span class="text-[11.5px] text-[var(--text-muted)]">实际对话将在阶段启动后填入</span>
+            <a href="#" class="text-[11.5px] text-[var(--text-strong)] hover:underline">查看 #2447 真实回放 ↗</a>
+          </div>
+        </div>
+
+        <!-- load profile -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <div class="caps mb-1">压测剖面 · 计划 (来自 SLO)</div>
+              <div class="text-[13px] text-[var(--text-muted)]">阶段输出 <span class="font-mono">k6</span> 脚本与 Grafana 看板</div>
+            </div>
+            <a href="#" class="text-[11.5px] text-[var(--text-strong)] hover:underline">下载脚本模板 →</a>
+          </div>
+
+          <div class="grid grid-cols-3 gap-4 mb-4">
+            <div class="p-3 rounded-lg border border-[var(--border-soft)]">
+              <div class="caps mb-1.5" style="font-size:9.5px">目标 QPS</div>
+              <div class="font-display text-[26px] text-[var(--text-strong)] leading-none">2,000</div>
+              <div class="text-[11px] text-[var(--text-muted)] mt-1.5">阶梯 200 → 500 → 1k → 2k</div>
+            </div>
+            <div class="p-3 rounded-lg border border-[var(--border-soft)]">
+              <div class="caps mb-1.5" style="font-size:9.5px">目标 P99</div>
+              <div class="font-display text-[26px] text-[var(--text-strong)] leading-none">≤80<span class="text-[13px] text-[var(--text-muted)] ml-0.5">ms</span></div>
+              <div class="text-[11px] text-[var(--text-muted)] mt-1.5">基线 P99 = 120ms</div>
+            </div>
+            <div class="p-3 rounded-lg border border-[var(--border-soft)]">
+              <div class="caps mb-1.5" style="font-size:9.5px">持续</div>
+              <div class="font-display text-[26px] text-[var(--text-strong)] leading-none">15<span class="text-[13px] text-[var(--text-muted)] ml-0.5">min</span></div>
+              <div class="text-[11px] text-[var(--text-muted)] mt-1.5">含 2min 爬升</div>
+            </div>
+          </div>
+
+          <!-- profile sketch -->
+          <div class="relative h-[100px] bg-[var(--bg-elev)] rounded-lg overflow-hidden border border-[var(--border-soft)]">
+            <svg viewBox="0 0 600 100" preserveAspectRatio="none" class="w-full h-full">
+              <defs>
+                <linearGradient id="loadg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%"  stop-color="oklch(70% 0.15 65 / 0.4)"/>
+                  <stop offset="100%" stop-color="oklch(70% 0.15 65 / 0.05)"/>
+                </linearGradient>
+              </defs>
+              <polyline fill="url(#loadg)" stroke="var(--run)" stroke-width="1.5"
+                points="0,90 60,80 120,60 180,40 240,20 300,15 360,15 420,15 480,18 540,30 600,80 600,100 0,100"/>
+              <text x="60" y="78" font-size="9" fill="var(--text-faint)">200</text>
+              <text x="120" y="58" font-size="9" fill="var(--text-faint)">500</text>
+              <text x="180" y="38" font-size="9" fill="var(--text-faint)">1k</text>
+              <text x="280" y="13" font-size="9" fill="var(--text-strong)" font-weight="600">2k QPS · 持续 9min</text>
+            </svg>
+          </div>
+          <div class="mt-2 flex items-center justify-between text-[10.5px] text-[var(--text-muted)] font-mono">
+            <span>0m</span><span>2m</span><span>5m</span><span>11m</span><span>14m</span><span>15m</span>
+          </div>
+        </div>
+
+        <!-- coverage targets -->
+        <div class="card p-5">
+          <div class="caps mb-3">覆盖率目标 · 军规 + 本次定制</div>
+          <div class="space-y-3">
+            <div>
+              <div class="flex items-baseline justify-between mb-1.5">
+                <span class="text-[12.5px] text-[var(--text-strong)]">单元覆盖率（语句）</span>
+                <span class="font-mono text-[11px] text-[var(--text-muted)]">目标 85% · 基线 73%</span>
+              </div>
+              <div class="ring-bar"><div class="ring-fill" style="width:73%; background:var(--text-faint)"></div></div>
+              <div class="text-[10.5px] text-[var(--text-faint)] mt-1">本次需新增 ≈ 12 个单元用例提升覆盖</div>
+            </div>
+            <div>
+              <div class="flex items-baseline justify-between mb-1.5">
+                <span class="text-[12.5px] text-[var(--text-strong)]">分支覆盖率</span>
+                <span class="font-mono text-[11px] text-[var(--text-muted)]">目标 80% · 基线 68%</span>
+              </div>
+              <div class="ring-bar"><div class="ring-fill" style="width:68%; background:var(--text-faint)"></div></div>
+            </div>
+            <div>
+              <div class="flex items-baseline justify-between mb-1.5">
+                <span class="text-[12.5px] text-[var(--text-strong)]">改动文件 patch 覆盖率</span>
+                <span class="font-mono text-[11px] text-[var(--text-muted)]">目标 ≥90%</span>
+              </div>
+              <div class="ring-bar"><div class="ring-fill" style="width:0%; background:var(--done)"></div></div>
+              <div class="text-[10.5px] text-[var(--text-faint)] mt-1">阶段开始后实时更新</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="col-span-5 space-y-5">
+
+        <!-- waiting timeline -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-4"><div class="caps">阶段时序 · 等待启动</div><span class="text-[11px] font-mono text-[var(--text-muted)]">预估 9m</span></div>
+          <div class="tl-rail space-y-3.5 pl-1">
+            <div class="flex items-start gap-3"><span class="tl-dot" style="background: var(--done); border-color: var(--done)"></span><div class="flex-1 -mt-0.5"><div class="text-[12.5px] text-[var(--text-strong)]">Stage 01 · 02 已完成</div><div class="text-[11px] text-[var(--text-muted)] font-mono">输入就绪</div></div></div>
+            <div class="flex items-start gap-3"><span class="tl-dot" style="background: var(--run); border-color: var(--run)"></span><div class="flex-1 -mt-0.5"><div class="text-[12.5px] text-[var(--text-strong)]">Stage 03 · 编码 + UT 进行中</div><div class="text-[11px] text-[var(--text-muted)] font-mono">68% · UT 18/26 · ≈ +9min</div></div></div>
+            <div class="flex items-start gap-3"><span class="tl-dot"></span><div class="flex-1 -mt-0.5"><div class="text-[12.5px] text-[var(--text-muted)]">TS 启动 · 生成测试策略</div><div class="text-[11px] text-[var(--text-faint)] font-mono">+1m 预估</div></div></div>
+            <div class="flex items-start gap-3"><span class="tl-dot"></span><div class="flex-1 -mt-0.5"><div class="text-[12.5px] text-[var(--text-muted)]">EDG 启动 · 边界用例生成</div><div class="text-[11px] text-[var(--text-faint)] font-mono">+3m 预估</div></div></div>
+            <div class="flex items-start gap-3"><span class="tl-dot"></span><div class="flex-1 -mt-0.5"><div class="text-[12.5px] text-[var(--text-muted)]">合并 + 去重 + 框架代码生成</div><div class="text-[11px] text-[var(--text-faint)] font-mono">+5m 预估</div></div></div>
+            <div class="flex items-start gap-3"><span class="tl-dot"></span><div class="flex-1 -mt-0.5"><div class="text-[12.5px] text-[var(--text-muted)]">CI 自动跑测 + 报告归档</div><div class="text-[11px] text-[var(--text-faint)] font-mono">+9m 预估</div></div></div>
+          </div>
+        </div>
+
+        <!-- agents (capability) -->
+        <div class="card p-5">
+          <div class="caps mb-3">本阶段 Agent · 能力清单</div>
+          <div class="space-y-3">
+            <a href="agent-detail.html" class="flex items-center gap-3 p-2 -mx-2 rounded-lg hover:bg-[var(--bg-elev)]">
+              <span class="agent-avatar" style="background:var(--a-test)">TS</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-baseline justify-between"><span class="text-[12.5px] font-semibold text-[var(--text-strong)]">测试策略师</span><span class="text-[10.5px] font-mono text-[var(--text-muted)]">Claude Sonnet 4.6</span></div>
+                <div class="text-[11px] text-[var(--text-muted)] mt-0.5">主导策略 · skill: test-strategy-gen v1.2</div>
+              </div>
+            </a>
+            <a href="agent-detail.html" class="flex items-center gap-3 p-2 -mx-2 rounded-lg hover:bg-[var(--bg-elev)]">
+              <span class="agent-avatar" style="background:var(--a-edge)">EG</span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-baseline justify-between"><span class="text-[12.5px] font-semibold text-[var(--text-strong)]">边界用例工程师</span><span class="text-[10.5px] font-mono text-[var(--text-muted)]">GPT-4o</span></div>
+                <div class="text-[11px] text-[var(--text-muted)] mt-0.5">边界 + 异常场景 · skill: edge-case-mine v1.1</div>
+              </div>
+            </a>
+          </div>
+
+          <div class="mt-4 pt-4 border-t border-dashed border-[var(--border-soft)]">
+            <div class="caps mb-2" style="font-size:10px">可挂载的扩展 skill</div>
+            <div class="flex flex-wrap gap-1.5">
+              <span class="chip" style="background:var(--idle-soft); color:var(--text-muted); font-size:10.5px">junit-template</span>
+              <span class="chip" style="background:var(--idle-soft); color:var(--text-muted); font-size:10.5px">testcontainers</span>
+              <span class="chip" style="background:var(--idle-soft); color:var(--text-muted); font-size:10.5px">k6-script-gen</span>
+              <span class="chip" style="background:var(--idle-soft); color:var(--text-muted); font-size:10.5px">playwright-flow</span>
+              <span class="chip" style="background:var(--idle-soft); color:var(--text-muted); font-size:10.5px">zap-passive</span>
+              <button class="chip" style="background:white; color:var(--text-strong); border:1px dashed var(--border-mid); font-size:10.5px">+ 添加 skill</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 历史快照 #2447 -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div class="caps">上次运行快照 · <a href="#" class="text-[var(--text-strong)] hover:underline normal-case tracking-normal">#2447</a></div>
+            <span class="chip" style="background:var(--done-soft); color:var(--done); font-size:10px; padding:1px 6px">已通过</span>
+          </div>
+          <div class="space-y-2.5 text-[12.5px]">
+            <div class="flex items-baseline justify-between"><span class="text-[var(--text-muted)]">实际耗时</span><span class="font-mono text-[var(--text-strong)]">8m 47s</span></div>
+            <div class="flex items-baseline justify-between"><span class="text-[var(--text-muted)]">生成用例</span><span class="font-mono text-[var(--text-strong)]">38 · 通过 36</span></div>
+            <div class="flex items-baseline justify-between"><span class="text-[var(--text-muted)]">覆盖率达成</span><span class="font-mono" style="color:var(--done)">86.4% · ✓</span></div>
+            <div class="flex items-baseline justify-between"><span class="text-[var(--text-muted)]">压测达标</span><span class="font-mono" style="color:var(--done)">QPS 2,140 · P99 72ms ✓</span></div>
+            <div class="flex items-baseline justify-between"><span class="text-[var(--text-muted)]">人工干预</span><span class="font-mono text-[var(--text-strong)]">0 次</span></div>
+          </div>
+          <a href="#" class="mt-3 btn w-full justify-center text-[11.5px]">查看完整报告 ↗</a>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- STAGE NAV -->
+    <nav class="mt-7 flex items-center justify-between">
+      <a href="stage-2-architecture.html" class="btn">← 设计与拆解 · Stage 02</a>
+      <a href="index.html" class="btn btn-ghost text-[11.5px]">返回驾驶舱</a>
+      <button class="btn" disabled style="opacity:.5; cursor:not-allowed">下一阶段 · 流水线终点</button>
+    </nav>
+
+    <footer class="mt-12 mb-6 text-center text-[11px] text-[var(--text-faint)]">
+      DevPipeline · AI 研发流水线 · Stage 04 / SIT 集成测试 · prototype v0.2
+    </footer>
+  </main>
+
+</body>
+</html>

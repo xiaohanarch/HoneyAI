@@ -3,8 +3,8 @@
 # because all workspace packages export TypeScript source directly.
 FROM node:22-alpine
 
-# Install both LLM CLI tools — active engine is selected via honeyai.config.json / LLM_ENGINE env
-RUN npm install -g @anthropic-ai/claude-code opencode-ai
+# Install opencode-ai CLI (claude-code lives in Dockerfile.sandbox, used via kubectl exec)
+RUN npm install -g opencode-ai
 
 # Install git (required by claude for repo operations inside the worker pod)
 RUN apk add --no-cache git

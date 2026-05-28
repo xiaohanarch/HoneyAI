@@ -27,7 +27,7 @@
 
 import { createHash } from 'node:crypto'
 import { v7 as uuidv7 } from 'uuid'
-import { eq, and, desc } from 'drizzle-orm'
+import { eq, and, desc, sql } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
 import * as schema from '@honeyai/db/schema'
 import { persistRun, persistNode, pauseRunAtGate } from '@honeyai/orchestrator'
@@ -113,7 +113,7 @@ async function runDesignStage(
   adapter: RuntimeAdapter,
   anthropicKey: string,
   getArtifactContent: (sha256: string) => Promise<string>,
-  run: { id: string; tenantId: string; title: string; repositoryId: string },
+  run: { id: string; tenantId: string; title: string; repositoryId: string; oneLiner: string },
   tenantId: string,
   runId: string,
 ): Promise<void> {
@@ -128,7 +128,10 @@ async function runDesignStage(
   if (!reqArtifact) {
     throw new Error(`handleAdvanceRun: no requirement_ir artifact found for run ${runId}`)
   }
-  const irInput = await getArtifactContent(reqArtifact.blobSha256)
+  // If artifact was user-submitted (nodeId=null), fall back to run.oneLiner directly
+  const irInput = reqArtifact.nodeId
+    ? await getArtifactContent(reqArtifact.blobSha256)
+    : run.oneLiner
 
   // If run was paused, notify it's running again
   await pgNotify(db, `run:${runId}`, { type: 'run_status', status: 'running' })
@@ -421,7 +424,7 @@ async function runImplementStage(
   }
 
   // createPR
-  await createPR({
+  const prResult = await createPR({
     octokit: {} as never,
     owner: repo.owner,
     repo: repo.name,
@@ -433,9 +436,17 @@ async function runImplementStage(
     stageSummary: 'Implementation complete',
   })
 
+  // Store prUrl in the implement node's config so the API can surface it
+  await db
+    .update(schema.nodes)
+    .set({
+      config: sql`${schema.nodes.config} || ${JSON.stringify({ prUrl: prResult.prUrl })}::jsonb`,
+    })
+    .where(eq(schema.nodes.id, nodeId))
+
   // persistRun status='completed'
   await persistRun(db, runId, { id: runId, status: 'completed' })
 
-  // pg_notify run_completed
-  await pgNotify(db, `run:${runId}`, { type: 'run_completed', runId })
+  // pg_notify run_completed (include prUrl so real-time listeners can update immediately)
+  await pgNotify(db, `run:${runId}`, { type: 'run_completed', runId, prUrl: prResult.prUrl })
 }

@@ -109,9 +109,10 @@ const advanceWorker = new Worker<AdvanceRunJob>(
         adapter: activeAdapter,
         anthropicKey: ANTHROPIC_API_KEY,
         createPR: async (params) => {
+          const fallbackUrl = `https://github.com/${params.owner}/${params.repo}/compare/${params.headBranch}`
           if (!githubConfigured) {
-            console.warn('[worker] GitHub App not configured — skipping createPR')
-            return { prNumber: 0, prUrl: '', branchName: params.headBranch, sha: '' }
+            console.warn('[worker] GitHub App not configured — returning compare URL as fallback')
+            return { prNumber: 0, prUrl: fallbackUrl, branchName: params.headBranch, sha: '' }
           }
           try {
             return await resolveAndCreatePR(db, params)
@@ -120,7 +121,7 @@ const advanceWorker = new Worker<AdvanceRunJob>(
               '[worker] createPR failed (non-fatal for E2E):',
               err instanceof Error ? err.message : err,
             )
-            return { prNumber: 0, prUrl: '', branchName: params.headBranch, sha: '' }
+            return { prNumber: 0, prUrl: fallbackUrl, branchName: params.headBranch, sha: '' }
           }
         },
         getArtifactContent: (blobSha256) => getArtifactContent(db, blobSha256),
@@ -137,8 +138,9 @@ advanceWorker.on('failed', (job, err) => {
 
 // ─── Reconcile loop ───────────────────────────────────────────────────────────
 
-// PodChecker stub — k8s integration in a future phase
-const podChecker: PodChecker = async (_tenantId, _runId) => ({ status: 'not_found' as const })
+// PodChecker stub — local dev: adapter spawns directly (no pods), always report running
+// so the reconcile loop never incorrectly kills in-progress runs.
+const podChecker: PodChecker = async (_tenantId, _runId) => ({ status: 'running' as const })
 const stopReconcile = startReconcileLoop(db, podChecker)
 
 // ─── Cost rollup cron (every 5 minutes) ──────────────────────────────────────

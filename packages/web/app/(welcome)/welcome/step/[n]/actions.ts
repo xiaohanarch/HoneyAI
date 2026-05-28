@@ -206,5 +206,5 @@ export async function submitStep4(
 
   revalidatePath('/welcome', 'layout')
   revalidatePath(`/t/${slug}/runs`, 'layout')
-  redirect(`/t/${slug}/runs`)
+  redirect('/prototype/index.html')
 }

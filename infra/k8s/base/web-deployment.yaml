@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: web
-          image: ghcr.io/xiaohanarch/honeyai-web:latest
+          image: registry.cn-hangzhou.aliyuncs.com/honeyai/honeyai-web:latest
           ports:
             - containerPort: 3000
           env:

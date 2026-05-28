@@ -1,0 +1,2201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>运行详情 · AI 数字产线</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-base: oklch(98% 0.006 85);
+    --bg-card: #ffffff;
+    --bg-elev: oklch(99% 0.004 85);
+    --border-soft: oklch(93% 0.005 85);
+    --border-mid: oklch(88% 0.008 85);
+    --text-strong: oklch(22% 0.03 260);
+    --text-body: oklch(38% 0.02 260);
+    --text-muted: oklch(56% 0.015 260);
+    --text-faint: oklch(72% 0.01 260);
+    --done: oklch(62% 0.13 150);
+    --done-soft: oklch(94% 0.04 150);
+    --run: oklch(70% 0.15 65);
+    --run-soft: oklch(95% 0.05 75);
+    --review: oklch(58% 0.18 290);
+    --review-soft: oklch(95% 0.04 290);
+    --halt: oklch(60% 0.21 25);
+    --halt-soft: oklch(95% 0.04 25);
+    --shadow-sm: 0 1px 2px oklch(20% 0.02 260 / 0.04);
+    --shadow-md: 0 2px 6px oklch(20% 0.02 260 / 0.06), 0 1px 2px oklch(20% 0.02 260 / 0.06);
+  }
+  * { -webkit-font-smoothing: antialiased; }
+  html, body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg-base); color: var(--text-body); }
+  .display { font-family: 'Instrument Serif', 'Songti SC', serif; letter-spacing: -0.01em; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .card { background: var(--bg-card); border: 1px solid var(--border-soft); border-radius: 16px; box-shadow: var(--shadow-sm); }
+  .caps { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; font-weight: 500; color: var(--text-muted); }
+
+  .bg-atmosphere {
+    background:
+      radial-gradient(900px 460px at 8% -8%, oklch(93% 0.05 245 / 0.55), transparent 60%),
+      radial-gradient(700px 340px at 105% 0%, oklch(94% 0.05 295 / 0.45), transparent 60%),
+      var(--bg-base);
+  }
+  .grain::before {
+    content:''; position: fixed; inset: 0; pointer-events: none;
+    opacity: .03; mix-blend-mode: multiply; z-index: 100;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Stage progress bar */
+  .stage-bar { display: grid; grid-template-columns: 1fr 28px 1fr 28px 1fr; align-items: center; gap: 0; }
+  .stage-node { display: flex; flex-direction: column; align-items: center; gap: 8px; position: relative; }
+  .stage-circle { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; font-family: 'JetBrains Mono', monospace; border: 2px solid var(--border-mid); background: var(--bg-card); color: var(--text-faint); transition: all 0.3s; }
+  .stage-circle.done { background: var(--done); border-color: var(--done); color: white; }
+  .stage-circle.running { background: var(--run-soft); border-color: var(--run); color: oklch(46% 0.16 65); animation: pulse-stage 2s infinite; }
+  .stage-circle.review { background: var(--review-soft); border-color: var(--review); color: var(--review); }
+  .stage-label { font-size: 12px; font-weight: 500; color: var(--text-muted); text-align: center; }
+  .stage-label.active { color: var(--text-strong); }
+  .stage-connector { height: 2px; background: var(--border-mid); margin: 0 4px; transition: background 0.3s; }
+  .stage-connector.done { background: var(--done); }
+
+  @keyframes pulse-stage {
+    0%, 100% { box-shadow: 0 0 0 0 oklch(70% 0.15 65 / 0.4); }
+    50% { box-shadow: 0 0 0 10px oklch(70% 0.15 65 / 0); }
+  }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  /* Node timeline */
+  .tl-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; position: relative; }
+  .tl-item:not(:last-child)::before {
+    content: ''; position: absolute; left: 11px; top: 30px; bottom: -10px;
+    width: 2px; background: var(--border-soft);
+  }
+  .tl-dot { width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; position: relative; z-index: 1; }
+  .tl-dot.idle { background: var(--bg-card); border: 2px solid var(--border-mid); }
+  .tl-dot.running { background: var(--run-soft); border: 2px solid var(--run); animation: pulse-stage 2s infinite; }
+  .tl-dot.success { background: var(--done); border: 2px solid var(--done); }
+  .tl-dot.pending { background: var(--review-soft); border: 2px solid var(--review); }
+  .tl-dot.failed { background: var(--halt-soft); border: 2px solid var(--halt); }
+  .tl-content { flex: 1; padding-top: 2px; }
+  .tl-name { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; color: var(--text-strong); }
+  .tl-meta { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+  .btn-rerun {
+    display: inline-flex; align-items: center; gap: 4px;
+    margin-top: 6px; padding: 4px 10px;
+    border-radius: 7px; font-size: 11px; font-weight: 500;
+    background: oklch(96% 0.01 260); border: 1px solid var(--border-mid);
+    color: var(--text-muted); cursor: pointer; transition: all 0.12s;
+  }
+  .btn-rerun:hover { background: oklch(94% 0.05 25); border-color: oklch(72% 0.15 25); color: var(--halt); }
+  .btn-rerun:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Gate panel */
+  .gate-panel { background: oklch(97% 0.04 290); border: 1.5px solid oklch(85% 0.08 290); border-radius: 16px; padding: 24px; }
+  .gate-panel .gate-title { font-size: 16px; font-weight: 600; color: var(--text-strong); }
+  .gate-panel .gate-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+  /* Markdown render inside gate / diff */
+  .md-render h1,.md-render h2,.md-render h3 { font-weight: 600; color: var(--text-strong); margin: 12px 0 6px; }
+  .md-render h1 { font-size: 15px; } .md-render h2 { font-size: 13.5px; } .md-render h3 { font-size: 13px; }
+  .md-render p { margin: 6px 0; line-height: 1.7; }
+  .md-render ul,.md-render ol { padding-left: 18px; margin: 6px 0; }
+  .md-render li { margin: 3px 0; line-height: 1.65; }
+  .md-render code { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; background: oklch(92% 0.01 260); padding: 1px 5px; border-radius: 4px; color: oklch(40% 0.12 290); }
+  .md-render pre { background: oklch(20% 0.02 260); border-radius: 8px; padding: 12px 14px; overflow-x: auto; margin: 10px 0; }
+  .md-render pre code { background: transparent; color: oklch(90% 0.03 260); padding: 0; font-size: 12px; }
+  .md-render blockquote { border-left: 3px solid oklch(70% 0.10 290); padding-left: 10px; color: var(--text-muted); margin: 8px 0; }
+  .md-render strong { color: var(--text-strong); font-weight: 600; }
+  .md-render a { color: oklch(55% 0.15 240); text-decoration: underline; }
+  .md-render hr { border: none; border-top: 1px solid var(--border-soft); margin: 12px 0; }
+  .md-render table { border-collapse: collapse; width: 100%; font-size: 12px; margin: 8px 0; }
+  .md-render th,.md-render td { border: 1px solid var(--border-mid); padding: 5px 10px; }
+  .md-render th { background: var(--bg-elev); font-weight: 600; }
+
+  /* Diff viewer */
+  .diff-file-header { padding: 9px 14px; background: var(--bg-elev); border-bottom: 1px solid var(--border-soft); display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+  .diff-file-header:hover { background: oklch(96% 0.005 260); }
+  .diff-file-patch { display: none; overflow-x: auto; background: #1e1e2e; }
+  .diff-line { display: block; padding: 0 6px; white-space: pre; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; line-height: 1.65; color: #cdd6f4; }
+  .diff-line.add { background: rgba(166,227,161,.10); color: #a6e3a1; }
+  .diff-line.del { background: rgba(243,139,168,.10); color: #f38ba8; }
+  .diff-line.hunk { color: #89b4fa; background: rgba(137,180,250,.06); }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: 1.5px solid transparent; }
+  .btn-approve { background: var(--done); color: white; }
+  .btn-approve:hover { background: oklch(55% 0.15 150); }
+  .btn-approve:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-reject { background: var(--bg-card); border-color: var(--halt); color: var(--halt); }
+  .btn-reject:hover { background: var(--halt-soft); }
+  .btn-cancel { background: var(--bg-card); border-color: var(--border-mid); color: var(--text-muted); }
+
+  /* ── Interrupt Modal ──────────────────────────────────────────────────────── */
+  .interrupt-backdrop {
+    position: fixed; inset: 0; z-index: 1000;
+    background: oklch(15% 0.02 260 / 0.45);
+    backdrop-filter: blur(6px);
+  }
+  .interrupt-modal {
+    position: fixed; inset: 0; z-index: 1001;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 32px; overflow-y: auto;
+  }
+  .interrupt-card {
+    width: 640px; max-width: calc(100vw - 48px);
+    background: white; border-radius: 18px;
+    box-shadow: 0 30px 60px oklch(20% 0.05 260 / 0.18), 0 8px 20px oklch(20% 0.05 260 / 0.10);
+    border: 1px solid var(--border-soft);
+    overflow: hidden;
+    margin: 32px auto;
+  }
+  .intr-seg {
+    display: inline-flex; padding: 3px; background: var(--bg-elev);
+    border-radius: 9px; gap: 2px;
+  }
+  .intr-seg button {
+    padding: 6px 11px; border-radius: 7px; font-size: 12px;
+    color: var(--text-muted); transition: .15s; cursor: pointer; background: none; border: none;
+  }
+  .intr-seg button:hover { color: var(--text-strong); }
+  .intr-seg button.active { background: white; color: var(--text-strong); box-shadow: 0 1px 2px rgba(0,0,0,.05); font-weight: 500; }
+  .intr-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 9px; border-radius: 999px;
+    font-size: 11px; font-weight: 500; border: 1px solid transparent;
+    background: var(--bg-elev); color: var(--text-muted); border-color: var(--border-soft);
+    cursor: pointer;
+  }
+  .intr-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 9px;
+    font-size: 12.5px; font-weight: 500;
+    border: 1px solid var(--border-mid);
+    background: white; color: var(--text-body); cursor: pointer;
+    transition: .15s;
+  }
+  .intr-btn:hover { background: var(--bg-elev); color: var(--text-strong); }
+  .intr-btn-primary { background: var(--text-strong); color: white; border-color: var(--text-strong); }
+  .intr-btn-primary:hover { background: oklch(28% 0.06 265); color: white; }
+  .intr-radio-card {
+    display: flex; gap: 10px; padding: 10px 12px;
+    border: 1px solid var(--border-soft); border-radius: 10px;
+    cursor: pointer; transition: .15s;
+  }
+  .intr-radio-card:hover { border-color: var(--text-faint); background: var(--bg-elev); }
+  .intr-radio-card.checked { border-color: var(--text-strong); background: oklch(99% 0.005 260); }
+  .intr-radio-card .intr-ring {
+    width: 16px; height: 16px; border-radius: 999px;
+    border: 2px solid var(--border-mid); flex-shrink: 0; margin-top: 2px;
+    position: relative;
+  }
+  .intr-radio-card.checked .intr-ring { border-color: var(--text-strong); }
+  .intr-radio-card.checked .intr-ring::after {
+    content:''; position: absolute; inset: 3px;
+    background: var(--text-strong); border-radius: 999px;
+  }
+
+  /* Status chips */
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 500; border: 1px solid transparent; }
+  .chip-dot { width: 6px; height: 6px; border-radius: 999px; }
+  .chip-run { background: var(--run-soft); color: oklch(46% 0.16 65); border-color: oklch(85% 0.08 65); }
+  .chip-done { background: var(--done-soft); color: oklch(40% 0.13 150); border-color: oklch(85% 0.08 150); }
+  .chip-review { background: var(--review-soft); color: oklch(40% 0.18 290); border-color: oklch(85% 0.08 290); }
+  .chip-halt { background: var(--halt-soft); color: var(--halt); border-color: oklch(85% 0.08 25); }
+  .chip-idle { background: oklch(97% 0.005 260); color: var(--text-muted); border-color: var(--border-soft); }
+
+  /* IR Chain section */
+  .ir-chain-row { display: flex; align-items: center; gap: 0; overflow-x: auto; padding-bottom: 4px; }
+  .ir-chain-node {
+    flex-shrink: 0;
+    width: 180px;
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-soft);
+    border-radius: 14px;
+    padding: 14px 14px 12px;
+    cursor: default;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    position: relative;
+  }
+  .ir-chain-node.has-content { cursor: pointer; }
+  .ir-chain-node.has-content:hover { border-color: var(--border-mid); box-shadow: var(--shadow-md); }
+  .ir-chain-node.active {
+    border-color: oklch(58% 0.18 250);
+    box-shadow: 0 0 0 3px oklch(58% 0.18 250 / 0.10), var(--shadow-md);
+  }
+  .ir-chain-node.pending-node { opacity: 0.55; }
+  .ir-chain-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    background: oklch(93% 0.03 250);
+    color: oklch(42% 0.18 250);
+    margin-bottom: 8px;
+  }
+  .ir-chain-badge.done { background: var(--done-soft); color: oklch(38% 0.13 150); }
+  .ir-chain-badge.raw { background: oklch(94% 0.03 65); color: oklch(44% 0.15 65); }
+  .ir-chain-title { font-size: 12.5px; font-weight: 600; color: var(--text-strong); margin-bottom: 4px; }
+  .ir-chain-meta { font-size: 11px; color: var(--text-muted); }
+  .ir-chain-expand-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 10px;
+    padding: 4px 9px;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 500;
+    background: oklch(96% 0.01 260);
+    border: 1px solid var(--border-soft);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+  .ir-chain-expand-btn:hover { background: oklch(92% 0.02 250); color: var(--text-strong); }
+  .ir-chain-arrow {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    color: var(--text-faint);
+    font-size: 18px;
+    line-height: 1;
+    user-select: none;
+  }
+  .ir-chain-content-panel {
+    margin-top: 16px;
+    background: oklch(13% 0.02 260);
+    border-radius: 12px;
+    border: 1px solid oklch(24% 0.025 260);
+    overflow: hidden;
+  }
+  .ir-chain-content-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid oklch(22% 0.025 260);
+  }
+  .ir-chain-content-body {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 14px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.75;
+    color: oklch(82% 0.018 260);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+</style>
+</head>
+<body class="bg-atmosphere grain min-h-screen">
+
+<!-- ─── Top bar ─────────────────────────────────────────────────────────── -->
+<header class="border-b border-[var(--border-soft)] bg-white/70 backdrop-blur-xl sticky top-0 z-50">
+  <div class="max-w-[1280px] mx-auto px-8 py-3.5 flex items-center gap-4">
+    <a href="runs-list.html" class="flex items-center gap-1.5 text-[12.5px] text-[var(--text-muted)] hover:text-[var(--text-strong)]">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      历史运行
+    </a>
+    <span class="text-[var(--border-mid)]">/</span>
+    <span id="hdr-title" class="text-[12.5px] font-medium text-[var(--text-strong)]">加载中…</span>
+    <div class="ml-auto flex items-center gap-3">
+      <span id="hdr-status-chip" class="chip chip-idle">加载中</span>
+      <button id="btn-cancel-run" class="hidden" onclick="cancelRun()" style="display:none; align-items:center; gap:6px; padding:8px 14px; border-radius:8px; background:oklch(95% 0.04 25); border:1.5px solid oklch(80% 0.12 25); color:oklch(45% 0.18 25); font-size:12.5px; font-weight:500; cursor:pointer;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        中断
+      </button>
+      <button onclick="loadRun()" class="text-[12px] text-[var(--text-muted)] hover:text-[var(--text-strong)]">↻ 刷新</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-[1280px] mx-auto px-8 py-8">
+
+  <!-- Run title -->
+  <section class="mb-8">
+    <div class="caps mb-2">AI 研发产线 · 运行详情</div>
+    <h1 id="run-title" class="display text-[42px] leading-[1.1] text-[var(--text-strong)] mb-2">加载中…</h1>
+    <p id="run-oneliner" class="text-[14px] text-[var(--text-muted)] max-w-[700px] leading-relaxed"></p>
+  </section>
+
+  <!-- Three-rail pipeline -->
+  <section class="card p-6 mb-6">
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <div class="caps">主流水线 · 三轨</div>
+        <div class="text-[11.5px] text-[var(--text-muted)] mt-0.5">上 · 执行流　→　中 · AI 产出　→　下 · 评审门</div>
+      </div>
+      <div class="flex items-center gap-3 text-[11px] text-[var(--text-muted)]">
+        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full" style="background:var(--done)"></span>已完成</span>
+        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full" style="background:var(--run)"></span>运行中</span>
+        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full" style="background:var(--review)"></span>评审中</span>
+      </div>
+    </div>
+    <!-- Rail 1 -->
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-[9.5px] tracking-[.18em] uppercase font-semibold" style="color:var(--text-muted)">执行流 · Execution</span>
+      <div class="flex-1 h-px bg-[var(--border-soft)]"></div>
+    </div>
+    <div id="rail-exec" class="grid grid-cols-4 gap-0 relative mb-1">
+      <div class="text-[12px] text-[var(--text-muted)] col-span-4 py-2">加载中…</div>
+    </div>
+    <!-- Connector 1→2 -->
+    <div id="rail-conn-1" class="grid grid-cols-4 gap-0 py-1"></div>
+    <!-- Rail 2 -->
+    <div class="flex items-center gap-2 mb-3 mt-1">
+      <span class="text-[9.5px] tracking-[.18em] uppercase font-semibold" style="color:var(--run)">AI 产出 · Artifacts</span>
+      <div class="flex-1 h-px" style="background:linear-gradient(90deg, var(--run) 0%, transparent 100%); opacity:.25"></div>
+    </div>
+    <div id="rail-artifacts" class="grid grid-cols-4 gap-0 relative mb-1"></div>
+    <!-- Connector 2→3 -->
+    <div id="rail-conn-2" class="grid grid-cols-4 gap-0 py-1"></div>
+    <!-- Rail 3 -->
+    <div class="flex items-center gap-2 mb-3 mt-1">
+      <span class="text-[9.5px] tracking-[.18em] uppercase font-semibold" style="color:var(--review)">评审门 · Review Gates</span>
+      <div class="flex-1 h-px" style="background:var(--review-soft)"></div>
+    </div>
+    <div id="rail-gates" class="grid grid-cols-4 gap-0 relative"></div>
+  </section>
+
+  <div class="grid grid-cols-12 gap-6">
+
+    <!-- Node timeline -->
+    <div class="col-span-5">
+      <div class="card p-5">
+        <div class="caps mb-4">节点时间线</div>
+        <div id="node-timeline">
+          <div class="text-[13px] text-[var(--text-muted)]">加载节点中…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right column: gate panel + output -->
+    <div class="col-span-7 space-y-5" id="right-col">
+
+      <!-- Gate approval panel (hidden by default) -->
+      <div id="gate-panel" class="gate-panel hidden">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <div class="caps mb-1">人工评审 · 待审批</div>
+            <div class="gate-title">请审阅 AI 产出并决策</div>
+            <div id="gate-stage-desc" class="gate-sub mt-1">当前阶段已完成，请确认是否进入下一阶段</div>
+            <a id="stage1-detail-link" href="stage-1-requirement.html" target="_blank"
+               style="display:inline-block;margin-top:8px;font-size:13px;color:#7c3aed;text-decoration:underline;">
+              查看 Stage 1 详情 →
+            </a>
+            <a id="review-detail-link" href="review-detail.html" target="_blank"
+               style="display:inline-block;margin-top:8px;margin-left:12px;font-size:13px;color:#7c3aed;text-decoration:underline;">
+              查看详细代码审查 →
+            </a>
+          </div>
+          <span class="chip chip-review">
+            <span class="chip-dot" style="background:var(--review)"></span>等待审批
+          </span>
+        </div>
+
+        <!-- Artifact preview inline -->
+        <div id="artifact-preview" class="hidden" style="margin:16px 0; border-radius:12px; border:1px solid oklch(88% 0.03 290); overflow:hidden;">
+          <div style="padding:9px 14px; background:oklch(93% 0.03 290); border-bottom:1px solid oklch(88% 0.03 290); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span id="artifact-preview-kind" class="caps" style="color:oklch(45% 0.18 290); font-size:9px; font-weight:700;">AI 产出文档</span>
+              <span id="artifact-preview-stats" style="font-size:10.5px; color:oklch(50% 0.08 290);">加载中…</span>
+            </div>
+            <span style="font-size:10.5px; color:oklch(55% 0.06 290);">↕ 请滚动阅读完整内容后再决策</span>
+          </div>
+          <div style="padding:16px 18px; background:oklch(98% 0.01 290); max-height:360px; overflow-y:auto;">
+            <div id="artifact-preview-content" class="md-render" style="font-size:13px; line-height:1.75; color:oklch(28% 0.03 260);">加载中…</div>
+          </div>
+        </div>
+
+        <div id="gate-approve-area">
+          <div class="flex gap-3">
+            <button id="btn-approve" class="btn btn-approve">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              通过 · 进入下一阶段
+            </button>
+            <button id="btn-show-reject" class="btn btn-reject">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              拒绝
+            </button>
+          </div>
+        </div>
+
+        <div id="gate-reject-area" class="hidden">
+          <div class="caps mb-2">拒绝原因</div>
+          <textarea id="reject-reason" rows="3" class="w-full p-3 rounded-xl border border-[var(--border-mid)] text-[13px] bg-white resize-none focus:outline-none focus:border-[var(--review)]" placeholder="请输入拒绝理由…"></textarea>
+          <div class="flex gap-2 mt-3">
+            <button id="btn-reject-submit" class="btn btn-reject">确认拒绝</button>
+            <button id="btn-reject-cancel" class="btn btn-cancel">取消</button>
+          </div>
+        </div>
+
+        <div id="gate-feedback" class="text-[12px] text-[var(--text-muted)] mt-3"></div>
+      </div>
+
+      <!-- Run output / status card -->
+      <div class="card p-5">
+        <div class="caps mb-3">当前状态</div>
+        <div id="output-content">
+          <div class="text-[13px] text-[var(--text-muted)]">等待 Agent 输出…</div>
+        </div>
+      </div>
+
+      <!-- PR link card (hidden until completed with PR) -->
+      <div id="pr-card" class="hidden" style="background:linear-gradient(135deg, oklch(94% 0.04 150), oklch(96% 0.03 200)); border:1.5px solid oklch(82% 0.10 150); border-radius:16px; padding:20px 24px;">
+        <div style="margin-bottom:14px;">
+          <div class="caps" style="color:oklch(40% 0.13 150); margin-bottom:6px;">GitHub Pull Request · 已创建</div>
+          <div style="font-size:15px; font-weight:600; color:oklch(22% 0.03 260);">代码变更已提交，等待 Code Review</div>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <a id="pr-link" href="#" target="_blank" style="display:inline-flex; align-items:center; gap:8px; padding:9px 16px; background:oklch(22% 0.03 260); color:white; border-radius:10px; font-size:13px; font-weight:500; text-decoration:none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>
+            在 GitHub 查看 PR
+          </a>
+          <a id="pr-diff-link" href="#" target="_blank" style="display:inline-flex; align-items:center; gap:8px; padding:9px 16px; background:white; color:oklch(35% 0.10 150); border:1.5px solid oklch(72% 0.13 150); border-radius:10px; font-size:13px; font-weight:500; text-decoration:none;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+            查看代码差异 (Files Changed)
+          </a>
+        </div>
+      </div>
+
+      <!-- Code diff section (shown when completed) -->
+      <div id="code-diff-section" class="hidden" style="border:1px solid var(--border-soft); border-radius:16px; overflow:hidden; background:var(--bg-card);">
+        <div style="padding:13px 16px; background:var(--bg-elev); border-bottom:1px solid var(--border-soft); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+          <div>
+            <div class="caps" style="font-size:9.5px; margin-bottom:3px;">代码变更 · Stage 3 产出</div>
+            <div id="diff-summary" style="font-size:12px; color:var(--text-muted);">加载中…</div>
+          </div>
+          <div id="diff-header-actions" style="display:flex; gap:8px; align-items:center; flex-shrink:0;"></div>
+        </div>
+        <div id="code-diff-files" style="max-height:520px; overflow-y:auto;">
+          <div style="padding:16px; font-size:13px; color:var(--text-muted);">加载中…</div>
+        </div>
+      </div>
+
+      <!-- Artifacts panel (shown when completed) -->
+      <div id="artifacts-panel" class="hidden card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div class="caps">AI 产出文档</div>
+          <span style="font-size:11px; color:var(--text-faint);">点击查看或下载</span>
+        </div>
+        <div id="artifacts-list">
+          <div class="text-[13px] text-[var(--text-muted)]">加载中…</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- LLM 交互终端 -->
+    <div id="llm-terminal-section" class="col-span-12 hidden">
+      <div style="background:oklch(14% 0.02 260); border-radius:16px; border:1px solid oklch(25% 0.03 260); overflow:hidden;">
+        <div style="padding:14px 20px; border-bottom:1px solid oklch(22% 0.025 260); display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div style="display:flex; gap:6px;">
+              <span style="width:10px;height:10px;border-radius:50%;background:oklch(62% 0.21 25)"></span>
+              <span style="width:10px;height:10px;border-radius:50%;background:oklch(70% 0.15 65)"></span>
+              <span style="width:10px;height:10px;border-radius:50%;background:oklch(62% 0.13 150)"></span>
+            </div>
+            <span id="terminal-node-label" style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:oklch(65% 0.02 260);">claude-code · agent</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span id="terminal-event-count" style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:oklch(50% 0.02 260);">0 events</span>
+            <div id="terminal-status-dot" style="width:7px;height:7px;border-radius:50%;background:oklch(50% 0.02 260)"></div>
+          </div>
+        </div>
+        <div id="llm-terminal-output" style="height:340px; overflow-y:auto; padding:18px 20px; font-family:'JetBrains Mono',monospace; font-size:12.5px; line-height:1.7; color:oklch(82% 0.018 260);">
+          <div style="color:oklch(50% 0.02 260); font-style:italic;">等待 Agent 启动…</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ─── SECTION 1: Skills 使用明细 (P0a) ──────────────────────────────────── -->
+  <div id="skills-section" style="display:none; margin-top:24px;">
+    <div class="card p-6 mb-6">
+      <div class="caps mb-4">Skills 使用明细</div>
+      <div id="skills-grid" class="grid grid-cols-3 gap-4">
+        <div class="text-[13px] text-[var(--text-muted)]">加载中…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 2: 需求富化对比 (P0b) ────────────────────────────────────── -->
+  <div id="req-compare-section" style="display:none; margin-top:24px;">
+    <div class="card mb-6" style="overflow:hidden;">
+      <div id="req-compare-header" onclick="toggleReqCompare()" style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; cursor:pointer; user-select:none; border-bottom:1px solid var(--border-soft);">
+        <div class="caps">需求富化对比</div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:11px; color:var(--text-faint);">点击展开</span>
+          <svg id="req-compare-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2" style="transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div id="req-compare-body" style="display:none; padding:0;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0;">
+          <div style="padding:20px 24px; border-right:1px solid var(--border-soft);">
+            <div class="caps" style="margin-bottom:12px;">原始需求输入</div>
+            <div id="req-original" style="font-family:'JetBrains Mono',monospace; font-size:12.5px; line-height:1.75; color:oklch(38% 0.02 260); background:oklch(98% 0.004 85); border-radius:10px; padding:14px 16px; max-height:320px; overflow-y:auto; white-space:pre-wrap; word-break:break-word;">—</div>
+          </div>
+          <div style="padding:20px 24px;">
+            <div class="caps" style="margin-bottom:12px;">富化后 requirement_ir</div>
+            <div id="req-enriched" style="font-family:'JetBrains Mono',monospace; font-size:12.5px; line-height:1.75; color:oklch(35% 0.02 260); background:oklch(14% 0.02 260); color:oklch(82% 0.018 260); border-radius:10px; padding:14px 16px; max-height:320px; overflow-y:auto; white-space:pre-wrap; word-break:break-word;">加载中…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 3: 成本明细 (P1a) ────────────────────────────────────────── -->
+  <div id="cost-section" style="display:none; margin-top:24px;">
+    <div class="card p-6 mb-6">
+      <div class="caps mb-4">成本明细</div>
+      <div id="cost-table">
+        <div class="text-[13px] text-[var(--text-muted)]">加载中…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 4: Agent 执行轨迹 ─────────────────────────────────────────── -->
+  <div id="agent-trace-section" style="display:none; margin-top:24px;">
+    <div class="card mb-6" style="overflow:hidden;">
+      <div id="agent-trace-header" onclick="toggleAgentTrace()" style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; cursor:pointer; user-select:none; border-bottom:1px solid var(--border-soft);">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:28px;height:28px;border-radius:8px;background:oklch(94% 0.05 250);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="oklch(42% 0.18 250)" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          </div>
+          <div>
+            <div class="caps">Agent 执行轨迹</div>
+            <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">AI 实际执行了哪些文件读取、命令、搜索</div>
+          </div>
+          <span id="agent-trace-total" style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--text-muted); padding:2px 9px; background:var(--bg-elev); border:1px solid var(--border-soft); border-radius:999px; display:none;"></span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:11px; color:var(--text-faint);">点击展开</span>
+          <svg id="agent-trace-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2" style="transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div id="agent-trace-body" style="display:none; padding:20px 24px;">
+        <div id="agent-trace-content" style="color:var(--text-muted); font-size:13px;">加载中…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 5: IR 文档演化链 ──────────────────────────────────────────── -->
+  <div id="ir-chain-section" style="display:none; margin-top:24px;">
+    <div class="card p-6 mb-6">
+      <div style="margin-bottom:18px;">
+        <div class="caps mb-1">IR 文档演化链</div>
+        <div style="font-size:12px; color:var(--text-muted);">需求如何从一句话演化成可执行代码</div>
+      </div>
+      <div id="ir-chain-nodes" class="ir-chain-row">
+        <div class="text-[13px] text-[var(--text-muted)]">加载中…</div>
+      </div>
+      <div id="ir-chain-content-panel" class="ir-chain-content-panel" style="display:none;">
+        <div class="ir-chain-content-header">
+          <span id="ir-chain-content-title" style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:oklch(65% 0.02 260);">—</span>
+          <button onclick="closeIRChainPanel()" style="background:none;border:none;cursor:pointer;color:oklch(50% 0.02 260);font-size:13px;line-height:1;padding:2px 4px;">✕</button>
+        </div>
+        <div id="ir-chain-content-body" class="ir-chain-content-body">加载中…</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer class="px-8 py-6 text-[10.5px] mono text-[var(--text-muted)] flex items-center gap-3">
+  <span class="w-1.5 h-1.5 rounded-full" style="background: var(--text-faint)"></span>
+  run-detail.html · AI 研发产线 · 实时运行视图
+</footer>
+
+<script>
+// ── Parse runId from URL ─────────────────────────────────────────────────────
+var params = new URLSearchParams(window.location.search);
+var runId = params.get('runId');
+if (!runId) window.location.href = 'runs-list.html';
+
+// ── Auth check ───────────────────────────────────────────────────────────────
+fetch('/api/prototype/me').then(function(r) {
+  if (r.status === 401) // demo mode: skip redirect
+});
+
+// ── State ────────────────────────────────────────────────────────────────────
+var currentGateNodeId = null;
+var currentRunStatus = null;
+var sseSource = null;
+var terminalLastSeq = 0;
+var terminalPollTimer = null;
+var terminalCurrentNodeId = null;
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+var STAGE_NAMES = { 1: '需求富化', 2: '设计与拆解', 3: '编码+UT' };
+var NODE_KIND_LABEL = { agent: 'Agent', gate: '人工评审' };
+var STATUS_LABEL = { running: '运行中', success: '已完成', pending: '待审批', failed: '失败', created: '已创建' };
+
+function statusChipHtml(status) {
+  var cls = { running:'chip-run', success:'chip-done', paused_at_gate:'chip-review', completed:'chip-done', failed:'chip-halt', cancelled:'chip-idle', created:'chip-idle' }[status] || 'chip-idle';
+  var label = { running:'运行中', success:'已完成', paused_at_gate:'待审批', completed:'已完成', failed:'失败', cancelled:'已取消', created:'已创建' }[status] || status;
+  var dotColor = { running:'var(--run)', success:'var(--done)', paused_at_gate:'var(--review)', completed:'var(--done)', failed:'var(--halt)', cancelled:'var(--text-muted)', created:'var(--text-muted)' }[status] || 'var(--text-muted)';
+  return '<span class="chip ' + cls + '"><span class="chip-dot" style="background:' + dotColor + '"></span>' + label + '</span>';
+}
+
+function nodeDotClass(status) {
+  return { running:'running', success:'success', pending:'pending', failed:'failed' }[status] || 'idle';
+}
+function nodeDotIcon(status, kind) {
+  if (status === 'success') return '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+  if (status === 'running') return '<div style="width:8px;height:8px;border-radius:50%;background:var(--run);animation:pulse-stage 1.5s infinite"></div>';
+  if (status === 'pending') return '<div style="width:6px;height:6px;border-radius:50%;background:var(--review)"></div>';
+  if (status === 'failed') return '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--halt)" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+  if (kind === 'gate') return '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+  return '';
+}
+
+// ── Render nodes timeline ─────────────────────────────────────────────────────
+function renderTimeline(nodes) {
+  var el = document.getElementById('node-timeline');
+  if (!nodes || nodes.length === 0) {
+    el.innerHTML = '<div class="text-[13px] text-[var(--text-muted)]">暂无节点</div>';
+    return;
+  }
+  var html = '';
+  nodes.forEach(function(n) {
+    var dotCls = nodeDotClass(n.status);
+    var icon = nodeDotIcon(n.status, n.kind);
+    var nameColor = n.status === 'success' ? 'color:var(--done)' : (n.status === 'running' ? 'color:oklch(46% 0.16 65)' : (n.status === 'pending' ? 'color:var(--review)' : (n.status === 'failed' ? 'color:var(--halt)' : '')));
+    var kindLabel = n.kind === 'gate' ? '人工评审' : ('Stage ' + n.stage);
+    var canRerun = n.status !== 'running' && n.status !== 'pending';
+    html += '<div class="tl-item">';
+    html += '<div class="tl-dot ' + dotCls + '">' + icon + '</div>';
+    html += '<div class="tl-content">';
+    html += '<div class="tl-name" style="' + nameColor + '">' + n.name + '</div>';
+    html += '<div class="tl-meta">' + kindLabel + ' · ' + (STATUS_LABEL[n.status] || n.status) + '</div>';
+    if (canRerun) {
+      html += '<button class="btn-rerun" onclick="rerunNode(\'' + n.id + '\',this)">';
+      html += '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.88"/></svg>';
+      html += '重跑此步骤及后续</button>';
+    }
+    html += '</div></div>';
+  });
+  el.innerHTML = html;
+}
+
+// ── Three-rail pipeline render ────────────────────────────────────────────────
+var EXEC_STAGES = [
+  { stage: 1, num: '01', name: '需求富化',    desc: '原始诉求 → 语义化富化' },
+  { stage: 2, num: '02', name: '设计与拆解',  desc: '需求 IR → 架构与拆解' },
+  { stage: 3, num: '03', name: '编码 + UT',   desc: '设计 IR → 代码实现' },
+  { stage: 4, num: '04', name: 'SIT 集成测试', desc: '功能回归 · 集成验证', placeholder: true },
+];
+var ART_INFO = [
+  { stage: 1, label: 'requirement_ir', desc: '需求 IR 文档' },
+  { stage: 2, label: 'design_ir',      desc: '设计 IR 文档' },
+  { stage: 3, label: 'impl_ir',        desc: '实现 IR 文档' },
+  { stage: 4, label: 'test_report',    desc: 'SIT 测试报告', placeholder: true },
+];
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderThreeRail(nodes, runStatus, prUrl) {
+  var agentByStage = {}, gateByStage = {};
+  (nodes || []).forEach(function(n) {
+    if (n.kind === 'agent') agentByStage[n.stage] = n;
+    if (n.kind === 'gate')  gateByStage[n.stage]  = n;
+  });
+  var isCompleted = runStatus === 'completed';
+
+  // ── Rail 1: Execution ──────────────────────────────────────────────────────
+  var execHtml = '';
+  EXEC_STAGES.forEach(function(info, i) {
+    var n = agentByStage[info.stage];
+    var st = info.placeholder ? 'idle' : (n ? n.status : 'idle');
+    if (!info.placeholder && isCompleted) st = 'success';
+    var isLast = i === 3;
+
+    var circStyle, statusLabel, statusColor, connBg;
+    if (st === 'success') {
+      circStyle = 'background:var(--done);border:2px solid var(--done);color:white;';
+      statusLabel = info.num + ' · DONE'; statusColor = 'var(--done)';
+      connBg = 'background:var(--done)';
+    } else if (st === 'running') {
+      circStyle = 'background:var(--run);border:2px solid var(--run);color:white;';
+      statusLabel = info.num + ' · RUNNING'; statusColor = 'var(--run)';
+      connBg = 'background:repeating-linear-gradient(90deg,var(--border-mid) 0 4px,transparent 4px 8px)';
+    } else if (info.placeholder) {
+      circStyle = 'background:white;border:2px dashed var(--border-soft);color:var(--text-faint);opacity:.55;';
+      statusLabel = info.num + ' · GATED'; statusColor = 'var(--text-faint)';
+      connBg = 'background:var(--border-soft)';
+    } else {
+      circStyle = 'background:white;border:2px dashed var(--border-mid);color:var(--text-faint);';
+      statusLabel = info.num + ' · PENDING'; statusColor = 'var(--text-faint)';
+      connBg = 'background:var(--border-soft)';
+    }
+    var icon = st === 'success'
+      ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>'
+      : (st === 'running'
+          ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56" stroke-linecap="round"/></svg>'
+          : info.num);
+
+    execHtml += '<div class="relative' + (isLast ? '' : ' pr-6') + '"' + (info.placeholder ? ' style="opacity:.5"' : '') + '>';
+    if (!isLast) execHtml += '<div class="absolute top-[13px] left-[26px] right-0 h-[2px]" style="' + connBg + '"></div>';
+    execHtml += '<div class="relative flex items-start gap-2.5">';
+    execHtml += '<div class="w-[26px] h-[26px] rounded-full flex-shrink-0 z-10 flex items-center justify-center text-[11px] font-semibold font-mono" style="' + circStyle + '">' + icon + '</div>';
+    execHtml += '<div class="min-w-0 flex-1">';
+    execHtml += '<div class="text-[10px] tracking-[.14em] uppercase font-semibold" style="color:' + statusColor + '">' + statusLabel + '</div>';
+    execHtml += '<div class="text-[13.5px] font-medium text-[var(--text-strong)] mt-0.5">' + esc(info.name) + '</div>';
+    execHtml += '<div class="text-[11px] text-[var(--text-muted)] mt-0.5 leading-snug">' + esc(info.desc) + '</div>';
+    execHtml += '</div></div></div>';
+  });
+  document.getElementById('rail-exec').innerHTML = execHtml;
+
+  // ── Connector 1→2 ─────────────────────────────────────────────────────────
+  var c1Html = '';
+  EXEC_STAGES.forEach(function(info) {
+    var n = agentByStage[info.stage];
+    var done = n && (n.status === 'success' || isCompleted);
+    var running = n && n.status === 'running' && !isCompleted;
+    var col = done ? 'var(--done)' : (running ? 'var(--run)' : 'var(--text-faint)');
+    var op = (done || running) ? '.8' : '.35';
+    var label = done ? '产出 → IR 文档' : (running ? '产出中…' : '待产出');
+    c1Html += '<div class="pl-[10px] flex items-center gap-1">';
+    c1Html += '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="' + col + '" stroke-width="2" style="opacity:' + op + '"' + (done ? '' : ' stroke-dasharray="2 2"') + '><line x1="12" y1="3" x2="12" y2="17"/><polyline points="6 11 12 17 18 11"/></svg>';
+    c1Html += '<span class="text-[10px]" style="color:' + col + ';opacity:' + op + '">' + label + '</span></div>';
+  });
+  document.getElementById('rail-conn-1').innerHTML = c1Html;
+
+  // ── Rail 2: Artifacts ──────────────────────────────────────────────────────
+  var artHtml = '';
+  ART_INFO.forEach(function(info, i) {
+    var n = info.placeholder ? null : agentByStage[info.stage];
+    var done = !info.placeholder && n && (n.status === 'success' || isCompleted);
+    var running = !info.placeholder && n && n.status === 'running' && !isCompleted;
+    var isLast = i === 3;
+
+    var border, iconCol, connStyle, statusLabel;
+    if (done) {
+      border = 'var(--done-soft)'; iconCol = 'var(--done)';
+      statusLabel = 'DONE'; connStyle = 'background:var(--done);opacity:.45';
+    } else if (running) {
+      border = 'oklch(85% 0.08 65)'; iconCol = 'var(--run)';
+      statusLabel = 'PRODUCING'; connStyle = 'background:repeating-linear-gradient(90deg,var(--run) 0 4px,transparent 4px 8px);opacity:.4';
+    } else {
+      border = 'var(--border-soft)'; iconCol = 'var(--text-faint)';
+      statusLabel = 'PENDING'; connStyle = 'background:var(--border-soft)';
+    }
+    var docIcon = done
+      ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>'
+      : '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+
+    artHtml += '<div class="relative' + (isLast ? '' : ' pr-6') + '">';
+    if (!isLast) artHtml += '<div class="absolute top-[13px] left-[26px] right-0 h-[2px]" style="' + connStyle + '"></div>';
+    artHtml += '<div class="relative rounded-xl border p-2.5 bg-white" style="border-color:' + border + '">';
+    artHtml += '<div class="flex items-start gap-2">';
+    artHtml += '<div class="w-[26px] h-[26px] rounded-lg border-2 flex-shrink-0 flex items-center justify-center" style="border-color:' + iconCol + ';color:' + iconCol + '">' + docIcon + '</div>';
+    artHtml += '<div class="min-w-0 flex-1">';
+    artHtml += '<div class="text-[10px] tracking-[.10em] uppercase font-semibold" style="color:' + iconCol + '">' + statusLabel + ' · ' + esc(info.label) + '</div>';
+    artHtml += '<div class="text-[12px] font-medium text-[var(--text-strong)] mt-0.5">' + esc(info.desc) + '</div>';
+    artHtml += '</div></div></div></div>';
+  });
+  document.getElementById('rail-artifacts').innerHTML = artHtml;
+
+  // ── Connector 2→3 ─────────────────────────────────────────────────────────
+  var c2Html = '';
+  EXEC_STAGES.forEach(function(info, i) {
+    var n = agentByStage[info.stage];
+    var done = n && (n.status === 'success' || isCompleted);
+    var col = done ? 'var(--review)' : 'var(--text-faint)';
+    var op = done ? '.8' : '.35';
+    var label = done ? (i === 2 ? 'IR → PR 提交' : 'IR → 人评 go/nogo') : '待评审';
+    c2Html += '<div class="pl-[10px] flex items-center gap-1">';
+    c2Html += '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="' + col + '" stroke-width="2" style="opacity:' + op + '"' + (done ? '' : ' stroke-dasharray="2 2"') + '><line x1="12" y1="3" x2="12" y2="17"/><polyline points="6 11 12 17 18 11"/></svg>';
+    c2Html += '<span class="text-[10px]" style="color:' + col + ';opacity:' + op + '">' + label + '</span></div>';
+  });
+  document.getElementById('rail-conn-2').innerHTML = c2Html;
+
+  // ── Rail 3: Gates ──────────────────────────────────────────────────────────
+  var GATE_DEF = [
+    { stage: 1, name: '评审门 · Stage 1', desc: '需求富化阶段人工评审', isPR: false },
+    { stage: 2, name: '评审门 · Stage 2', desc: '设计与拆解阶段人工评审', isPR: false },
+    { stage: 3, name: 'Pull Request',      desc: '编码完成 · 代码已提交', isPR: true },
+    { stage: 4, name: 'SIT 结果',          desc: '测试通过 · V2 路线图', placeholder: true },
+  ];
+  var gatesHtml = '';
+  GATE_DEF.forEach(function(info, i) {
+    var isLast = i === 3;
+    var gateNode = gateByStage[info.stage];
+    var agentNode = agentByStage[info.stage];
+    var agentDone = agentNode && (agentNode.status === 'success' || isCompleted);
+
+    var border, iconCol, statusLabel, connStyle, circleHtml, extraHtml = '', wrapOpacity = '';
+    if (info.placeholder) {
+      border = 'var(--border-soft)'; iconCol = 'var(--text-faint)'; statusLabel = 'GATED · V2';
+      circleHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2 2"/></svg>';
+      wrapOpacity = 'opacity:.45;';
+    } else if (info.isPR) {
+      if (prUrl) {
+        border = 'var(--done-soft)'; iconCol = 'var(--done)'; statusLabel = 'PR · 已创建';
+        circleHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>';
+        extraHtml = '<a href="' + esc(prUrl) + '" target="_blank" class="text-[10px] font-medium mt-1.5 inline-block hover:underline" style="color:var(--done)">在 GitHub 查看 PR →</a>';
+      } else {
+        border = 'var(--border-soft)'; iconCol = 'var(--text-faint)'; statusLabel = 'PR · 待生成';
+        circleHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>';
+      }
+    } else {
+      var gst = gateNode ? gateNode.status : (agentDone ? 'pending' : 'idle');
+      if (gst === 'success') {
+        border = 'var(--done-soft)'; iconCol = 'var(--done)'; statusLabel = '评审 · 通过';
+        connStyle = 'background:var(--done);opacity:.35';
+        circleHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+      } else if (gst === 'pending') {
+        border = 'var(--review)'; iconCol = 'var(--review)'; statusLabel = '评审 · 待审批';
+        connStyle = 'background:repeating-linear-gradient(90deg,var(--review-soft) 0 4px,transparent 4px 8px)';
+        circleHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+      } else {
+        border = 'var(--border-soft)'; iconCol = 'var(--text-faint)'; statusLabel = '评审 · 待启动';
+        connStyle = 'background:var(--border-soft)';
+        circleHtml = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+      }
+    }
+
+    gatesHtml += '<div class="relative' + (isLast ? '' : ' pr-6') + '" style="' + wrapOpacity + '">';
+    if (!isLast && connStyle) gatesHtml += '<div class="absolute top-[13px] left-[26px] right-0 h-[2px]" style="' + connStyle + '"></div>';
+    gatesHtml += '<div class="relative rounded-xl border p-2.5 bg-white" style="border-color:' + border + (info.placeholder ? ';border-style:dashed' : '') + '">';
+    gatesHtml += '<div class="flex items-start gap-2">';
+    gatesHtml += '<div class="w-[26px] h-[26px] rounded-full border-2 flex-shrink-0 flex items-center justify-center" style="border-color:' + iconCol + ';color:' + iconCol + '">' + circleHtml + '</div>';
+    gatesHtml += '<div class="min-w-0 flex-1">';
+    gatesHtml += '<div class="text-[10px] tracking-[.10em] uppercase font-semibold" style="color:' + iconCol + '">' + statusLabel + '</div>';
+    gatesHtml += '<div class="text-[12px] font-medium text-[var(--text-strong)] mt-0.5">' + esc(info.name) + '</div>';
+    gatesHtml += '<div class="text-[10.5px] text-[var(--text-muted)] mt-0.5">' + esc(info.desc) + '</div>';
+    gatesHtml += extraHtml;
+    gatesHtml += '</div></div></div></div>';
+  });
+  document.getElementById('rail-gates').innerHTML = gatesHtml;
+}
+
+// ── Render gate panel ─────────────────────────────────────────────────────────
+function renderGatePanel(nodes, runStatus) {
+  var gatePanel = document.getElementById('gate-panel');
+  if (runStatus !== 'paused_at_gate') {
+    gatePanel.classList.add('hidden');
+    currentGateNodeId = null;
+    return;
+  }
+  var gateNode = null;
+  (nodes || []).forEach(function(n) {
+    if (n.kind === 'gate' && n.status === 'pending') gateNode = n;
+  });
+  if (!gateNode) {
+    gatePanel.classList.add('hidden');
+    currentGateNodeId = null;
+    return;
+  }
+  currentGateNodeId = gateNode.id;
+  var stageDesc = gateNode.stage === 1 ? '需求富化阶段已完成，请确认进入设计与拆解阶段' : '设计与拆解阶段已完成，请确认进入编码+UT阶段';
+  document.getElementById('gate-stage-desc').textContent = stageDesc;
+  document.getElementById('gate-feedback').textContent = '';
+  document.getElementById('gate-approve-area').classList.remove('hidden');
+  document.getElementById('gate-reject-area').classList.add('hidden');
+  document.getElementById('btn-approve').disabled = false;
+  document.getElementById('btn-approve').textContent = '通过 · 进入下一阶段';
+  var s1link = document.getElementById('stage1-detail-link');
+  if (s1link && runId) {
+    s1link.href = 'stage-1-requirement.html?runId=' + runId;
+    s1link.style.display = gateNode.stage === 1 ? 'inline-block' : 'none';
+  }
+  var reviewLink = document.getElementById('review-detail-link');
+  if (reviewLink && runId) {
+    reviewLink.href = 'review-detail.html?runId=' + runId;
+  }
+  gatePanel.classList.remove('hidden');
+}
+
+// ── Render output status ──────────────────────────────────────────────────────
+function renderOutput(runStatus, nodes) {
+  var el = document.getElementById('output-content');
+  var runningNode = null;
+  (nodes || []).forEach(function(n) { if (n.status === 'running') runningNode = n; });
+
+  if (runStatus === 'completed') {
+    el.innerHTML = '<div class="flex items-center gap-2 text-[14px] font-medium" style="color:var(--done)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>运行已完成</div><p class="text-[13px] text-[var(--text-muted)] mt-2">三个阶段均已成功完成。↓ 下方可查看 AI 产出文档及 PR 代码差异。</p>';
+  } else if (runStatus === 'failed' || runStatus === 'cancelled') {
+    el.innerHTML = '<div class="flex items-center gap-2 text-[14px] font-medium" style="color:var(--halt)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' + (runStatus === 'cancelled' ? '运行已取消' : '运行失败') + '</div>';
+  } else if (runStatus === 'paused_at_gate') {
+    el.innerHTML = '<div class="flex items-center gap-2 text-[14px] font-medium" style="color:var(--review)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>等待人工审批</div><p class="text-[13px] text-[var(--text-muted)] mt-2">请在上方审批面板中确认或拒绝。</p>';
+  } else if (runningNode) {
+    var stageName = STAGE_NAMES[runningNode.stage] || ('Stage ' + runningNode.stage);
+    el.innerHTML = '<div class="flex items-center gap-2 text-[13px]" style="color:oklch(46% 0.16 65)"><div style="width:8px;height:8px;border-radius:50%;background:var(--run);animation:pulse-stage 1.5s infinite;flex-shrink:0"></div>Agent 运行中…</div><p class="text-[13px] text-[var(--text-muted)] mt-2">当前阶段：' + stageName + ' · 节点：' + runningNode.name + '</p><p class="text-[11.5px] text-[var(--text-faint)] mt-3 mono">等待 Agent 完成，结果将自动更新</p>';
+  } else {
+    el.innerHTML = '<div class="text-[13px] text-[var(--text-muted)]">等待中…</div>';
+  }
+}
+
+// ── LLM Terminal ─────────────────────────────────────────────────────────────
+function appendTerminalLine(kind, content) {
+  var el = document.getElementById('llm-terminal-output');
+  var line = document.createElement('div');
+  line.style.cssText = 'margin-bottom:2px; word-break:break-word;';
+
+  if (kind === 'text') {
+    line.innerHTML = '<span style="color:oklch(76% 0.12 220)">' + escHtml(content) + '</span>';
+  } else if (kind === 'tool_use') {
+    line.innerHTML = '<span style="color:oklch(72% 0.15 65)">[tool] </span><span style="color:oklch(80% 0.08 65)">' + escHtml(content) + '</span>';
+  } else if (kind === 'finish') {
+    line.innerHTML = '<span style="color:oklch(62% 0.13 150)">✓ ' + escHtml(content) + '</span>';
+  } else if (kind === 'error') {
+    line.innerHTML = '<span style="color:oklch(60% 0.21 25)">✗ ' + escHtml(content) + '</span>';
+  } else {
+    line.innerHTML = '<span style="color:oklch(55% 0.02 260)">[' + kind + '] ' + escHtml(content) + '</span>';
+  }
+
+  // Remove placeholder if first real line
+  var placeholder = el.querySelector('div[style*="font-style:italic"]');
+  if (placeholder) el.removeChild(placeholder);
+
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+
+  var countEl = document.getElementById('terminal-event-count');
+  var current = parseInt(countEl.textContent) || 0;
+  countEl.textContent = (current + 1) + ' events';
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function extractEventContent(event) {
+  var p = event.payload || {};
+  if (event.kind === 'text') return p.content || p.text || '';
+  if (event.kind === 'tool_use') return (p.name || 'tool') + '(' + JSON.stringify(p.input || {}).slice(0, 120) + ')';
+  if (event.kind === 'finish') return 'Agent 完成 · stop_reason=' + (p.stop_reason || 'end_turn');
+  if (event.kind === 'error') return p.message || p.error || 'error';
+  return JSON.stringify(p).slice(0, 160);
+}
+
+function startTerminalPoll(nodeId, nodeLabel) {
+  stopTerminalPoll();
+  terminalCurrentNodeId = nodeId;
+  terminalLastSeq = 0;
+
+  var termSection = document.getElementById('llm-terminal-section');
+  termSection.classList.remove('hidden');
+  termSection.style.display = '';
+
+  document.getElementById('terminal-node-label').textContent = nodeLabel || 'claude-code · agent';
+  document.getElementById('terminal-status-dot').style.background = 'oklch(62% 0.13 150)';
+  document.getElementById('terminal-status-dot').style.animation = 'pulse-stage 1.5s infinite';
+
+  // Clear output
+  document.getElementById('llm-terminal-output').innerHTML = '<div style="color:oklch(50% 0.02 260); font-style:italic;">Agent 启动中…</div>';
+  document.getElementById('terminal-event-count').textContent = '0 events';
+
+  function poll() {
+    var url = '/api/prototype/runs/' + runId + '/events?after=' + terminalLastSeq;
+    if (terminalCurrentNodeId) url += '&nodeId=' + terminalCurrentNodeId;
+
+    fetch(url)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var evts = data.events || [];
+        evts.forEach(function(e) {
+          appendTerminalLine(e.kind, extractEventContent(e));
+          var seq = typeof e.seq === 'string' ? parseInt(e.seq) : Number(e.seq);
+          if (seq > terminalLastSeq) terminalLastSeq = seq;
+        });
+      })
+      .catch(function() {});
+  }
+
+  poll();
+  terminalPollTimer = setInterval(poll, 2000);
+}
+
+function stopTerminalPoll() {
+  if (terminalPollTimer) {
+    clearInterval(terminalPollTimer);
+    terminalPollTimer = null;
+  }
+  document.getElementById('terminal-status-dot').style.animation = '';
+  document.getElementById('terminal-status-dot').style.background = 'oklch(50% 0.02 260)';
+}
+
+// ── Artifact Preview (Gate 审查时展示最新 IR 文档) ────────────────────────────
+var GATE_IR_PRIORITY = ['design_ir', 'requirement_ir'];
+var GATE_IR_LABEL = {
+  requirement_ir: 'Gate 1 审查 · 需求 IR 文档',
+  design_ir: 'Gate 2 审查 · 设计 IR 文档',
+};
+var GATE_IR_DESC = {
+  requirement_ir: '以下是 AI 对你需求的理解与拆解，请确认方向正确再进入架构设计阶段。',
+  design_ir: '以下是 AI 的架构设计方案，请确认技术路线正确再进入编码阶段。',
+};
+
+function renderMd(text) {
+  if (typeof marked !== 'undefined') {
+    return marked.parse(text);
+  }
+  return '<pre style="white-space:pre-wrap;word-break:break-word">' + esc(text) + '</pre>';
+}
+
+function loadArtifactPreview(runId) {
+  fetch('/api/prototype/runs/' + runId + '/artifacts')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var arts = data.artifacts || [];
+      var byKind = {};
+      arts.forEach(function(a) {
+        if (a.status === 'ready' && a.blobSha256 && !byKind[a.kind]) byKind[a.kind] = a;
+      });
+
+      // Pick highest-priority IR for current gate
+      var art = null, irKind = null;
+      for (var i = 0; i < GATE_IR_PRIORITY.length; i++) {
+        if (byKind[GATE_IR_PRIORITY[i]]) { art = byKind[GATE_IR_PRIORITY[i]]; irKind = GATE_IR_PRIORITY[i]; break; }
+      }
+      // Fallback: any non-placeholder artifact
+      if (!art) {
+        for (var j = arts.length - 1; j >= 0; j--) {
+          if (arts[j].blobSha256 && (!arts[j].metadata || !arts[j].metadata.placeholder)) { art = arts[j]; irKind = arts[j].kind; break; }
+        }
+      }
+      if (!art || !art.blobSha256) return;
+
+      var preview = document.getElementById('artifact-preview');
+      preview.classList.remove('hidden');
+      document.getElementById('artifact-preview-kind').textContent = GATE_IR_LABEL[irKind] || 'AI 产出文档 · 请审阅';
+
+      // Update gate-stage-desc
+      var desc = document.getElementById('gate-stage-desc');
+      if (desc && GATE_IR_DESC[irKind]) desc.textContent = GATE_IR_DESC[irKind];
+
+      fetch('/api/prototype/artifacts/' + art.blobSha256 + '/content')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          var text = d.content || '（内容为空）';
+          var lines = text.split('\n').length;
+          var words = text.trim().split(/\s+/).filter(Boolean).length;
+          document.getElementById('artifact-preview-stats').textContent = lines + ' 行 · ' + words + ' 词';
+          document.getElementById('artifact-preview-content').innerHTML = renderMd(text);
+        })
+        .catch(function() { document.getElementById('artifact-preview-content').textContent = '（文档加载失败）'; });
+    })
+    .catch(function() {});
+}
+
+// ── Code Diff (Stage 3 产出代码变更查看) ─────────────────────────────────────
+function loadCodeDiff(runId, prUrl) {
+  var section = document.getElementById('code-diff-section');
+  section.classList.remove('hidden');
+
+  var actionsEl = document.getElementById('diff-header-actions');
+  if (prUrl) {
+    actionsEl.innerHTML =
+      '<a href="' + esc(prUrl) + '/files" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;font-size:11.5px;background:white;border:1px solid var(--border-mid);border-radius:8px;text-decoration:none;color:var(--text-body);">'
+      + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>'
+      + 'GitHub Files Changed</a>';
+  }
+
+  // Try GitHub API for real diff
+  if (prUrl) {
+    var m = prUrl.match(/github\.com\/([^/]+\/[^/]+)\/pull\/(\d+)/);
+    if (m) {
+      fetch('https://api.github.com/repos/' + m[1] + '/pulls/' + m[2] + '/files', {
+        headers: { 'Accept': 'application/vnd.github.v3+json' },
+      })
+      .then(function(r) { if (!r.ok) throw r.status; return r.json(); })
+      .then(function(files) { renderGitHubDiff(files, prUrl); })
+      .catch(function() { loadImplIRDiff(runId, prUrl); });
+      return;
+    }
+  }
+  loadImplIRDiff(runId, prUrl);
+}
+
+function renderGitHubDiff(files, prUrl) {
+  var addTotal = 0, delTotal = 0;
+  files.forEach(function(f) { addTotal += (f.additions || 0); delTotal += (f.deletions || 0); });
+  document.getElementById('diff-summary').textContent =
+    files.length + ' 个文件 · +' + addTotal + ' 行新增 / -' + delTotal + ' 行删除';
+
+  var STATUS_LABEL = { added: '+ 新增', removed: '- 删除', modified: '± 修改', renamed: '→ 重命名', copied: '⇒ 复制' };
+  var STATUS_COLOR = { added: 'var(--done)', removed: 'var(--halt)', modified: 'oklch(65% 0.14 65)', renamed: 'oklch(60% 0.14 240)', copied: 'oklch(60% 0.14 240)' };
+
+  var html = '';
+  files.forEach(function(f, idx) {
+    var sc = STATUS_COLOR[f.status] || 'var(--text-muted)';
+    var sl = STATUS_LABEL[f.status] || f.status;
+    var pid = 'dp-' + idx;
+    html += '<div style="border-bottom:1px solid var(--border-soft);">';
+    html += '<div class="diff-file-header" onclick="var p=document.getElementById(\'' + pid + '\');p.style.display=p.style.display===\'block\'?\'none\':\'block\'">';
+    html += '<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:' + sc + '/0.1;color:' + sc + '">' + sl + '</span>';
+    html += '<span style="font-family:\'JetBrains Mono\',monospace;font-size:12px;color:var(--text-body);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(f.filename) + '</span>';
+    html += '<span style="font-size:10.5px;font-family:\'JetBrains Mono\',monospace;color:var(--done);flex-shrink:0">+' + (f.additions||0) + '</span>';
+    html += '<span style="font-size:10.5px;font-family:\'JetBrains Mono\',monospace;color:var(--halt);margin-left:6px;flex-shrink:0">-' + (f.deletions||0) + '</span>';
+    html += '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5" style="margin-left:8px;flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>';
+    html += '</div>';
+    if (f.patch) {
+      html += '<div id="' + pid + '" class="diff-file-patch">';
+      html += '<div style="padding:10px 14px">';
+      f.patch.split('\n').forEach(function(line) {
+        var cls = 'diff-line';
+        if (line.startsWith('+') && !line.startsWith('+++')) cls += ' add';
+        else if (line.startsWith('-') && !line.startsWith('---')) cls += ' del';
+        else if (line.startsWith('@')) cls += ' hunk';
+        html += '<span class="' + cls + '">' + esc(line) + '</span>';
+      });
+      html += '</div></div>';
+    } else {
+      html += '<div id="' + pid + '" class="diff-file-patch" style="padding:10px 14px"><span style="color:#6c7086;font-family:\'JetBrains Mono\',monospace;font-size:11.5px">（Binary 文件或无 patch 数据）</span></div>';
+    }
+    html += '</div>';
+  });
+  document.getElementById('code-diff-files').innerHTML = html || '<div style="padding:16px;font-size:13px;color:var(--text-muted)">无文件变更</div>';
+}
+
+function loadImplIRDiff(runId, prUrl) {
+  fetch('/api/prototype/runs/' + runId + '/artifacts')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var arts = data.artifacts || [];
+      var implIR = null;
+      arts.forEach(function(a) { if (a.kind === 'impl_ir' && a.status === 'ready' && a.blobSha256) implIR = a; });
+
+      if (implIR) {
+        fetch('/api/prototype/artifacts/' + implIR.blobSha256 + '/content')
+          .then(function(r) { return r.json(); })
+          .then(function(d) {
+            var text = d.content || '（内容为空）';
+            var lines = text.split('\n').length;
+            document.getElementById('diff-summary').textContent = '实现 IR · Stage 3 编码计划（' + lines + ' 行）';
+            document.getElementById('code-diff-files').innerHTML =
+              '<div style="padding:16px 18px;max-height:460px;overflow-y:auto">'
+              + '<div class="md-render" style="font-size:13px;line-height:1.75;color:var(--text-body)">' + renderMd(text) + '</div>'
+              + '</div>';
+          })
+          .catch(function() {
+            document.getElementById('diff-summary').textContent = '实现 IR · 内容加载失败';
+            fallbackDiffMsg(prUrl);
+          });
+      } else {
+        document.getElementById('diff-summary').textContent = '代码已提交至 GitHub PR';
+        fallbackDiffMsg(prUrl);
+      }
+    })
+    .catch(function() { fallbackDiffMsg(prUrl); });
+}
+
+function fallbackDiffMsg(prUrl) {
+  document.getElementById('code-diff-files').innerHTML = prUrl
+    ? '<div style="padding:16px;font-size:13px;color:var(--text-muted)">代码已提交至 <a href="' + esc(prUrl) + '/files" target="_blank" style="color:var(--done)">GitHub PR → Files Changed ↗</a></div>'
+    : '<div style="padding:16px;font-size:13px;color:var(--text-muted)">（暂无代码变更数据）</div>';
+}
+
+// ── All artifacts panel (completed state) ────────────────────────────────────
+var KIND_LABEL = {
+  requirement_ir: '需求 IR 文档',
+  design_ir: '设计 IR 文档',
+  impl_ir: '实现 IR 文档',
+};
+var KIND_FILENAME = {
+  requirement_ir: 'requirement_ir.md',
+  design_ir: 'design_ir.md',
+  impl_ir: 'impl_ir.md',
+};
+// Track expanded state per artifact blobSha256
+var expandedArtifacts = {};
+
+function loadAllArtifacts(runId) {
+  fetch('/api/prototype/runs/' + runId + '/artifacts')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var arts = data.artifacts || [];
+      // Filter: only completed artifacts with a sha, deduplicate by kind (keep latest)
+      var byKind = {};
+      arts.forEach(function(a) {
+        if (a.status === 'ready' && a.blobSha256 && !byKind[a.kind]) {
+          byKind[a.kind] = a;
+        }
+      });
+      // Also include any ready artifact regardless of kind
+      arts.forEach(function(a) {
+        if (a.status === 'ready' && a.blobSha256 && !byKind[a.kind]) {
+          byKind[a.kind] = a;
+        }
+      });
+
+      var panel = document.getElementById('artifacts-panel');
+      var list = document.getElementById('artifacts-list');
+      var keys = Object.keys(byKind);
+
+      if (keys.length === 0) {
+        list.innerHTML = '<div class="text-[13px] text-[var(--text-muted)]">暂无产出文档。</div>';
+        panel.classList.remove('hidden');
+        return;
+      }
+
+      var html = '';
+      keys.forEach(function(kind) {
+        var a = byKind[kind];
+        var label = KIND_LABEL[kind] || kind;
+        var filename = KIND_FILENAME[kind] || (kind + '.md');
+        html += '<div id="art-row-' + esc(a.blobSha256) + '" style="border:1px solid var(--border-soft); border-radius:12px; overflow:hidden; margin-bottom:10px;">';
+        html += '  <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:var(--bg-elev);">';
+        html += '    <div style="display:flex; align-items:center; gap:10px;">';
+        html += '      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="oklch(56% 0.015 260)" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+        html += '      <span style="font-size:13px; font-weight:500; color:var(--text-strong);">' + esc(label) + '</span>';
+        html += '    </div>';
+        html += '    <div style="display:flex; gap:8px;">';
+        html += '      <button onclick="toggleArtContent(\'' + esc(a.blobSha256) + '\',\'' + esc(a.kind) + '\')" style="display:inline-flex;align-items:center;gap:5px;padding:5px 11px;font-size:12px;font-weight:500;background:white;border:1px solid var(--border-mid);border-radius:8px;cursor:pointer;color:var(--text-body);">';
+        html += '        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> 查看';
+        html += '      </button>';
+        html += '      <button onclick="downloadArt(\'' + esc(a.blobSha256) + '\',\'' + esc(filename) + '\')" style="display:inline-flex;align-items:center;gap:5px;padding:5px 11px;font-size:12px;font-weight:500;background:white;border:1px solid var(--border-mid);border-radius:8px;cursor:pointer;color:var(--text-body);">';
+        html += '        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> 下载';
+        html += '      </button>';
+        html += '    </div>';
+        html += '  </div>';
+        html += '  <div id="art-content-' + esc(a.blobSha256) + '" style="display:none; padding:14px 16px; background:var(--bg-base); border-top:1px solid var(--border-soft); max-height:320px; overflow-y:auto;">';
+        html += '    <div style="font-family:\'JetBrains Mono\',monospace; font-size:11.5px; line-height:1.75; color:oklch(35% 0.02 260); white-space:pre-wrap; word-break:break-word;">加载中…</div>';
+        html += '  </div>';
+        html += '</div>';
+      });
+
+      list.innerHTML = html;
+      panel.classList.remove('hidden');
+    })
+    .catch(function() {});
+}
+
+function toggleArtContent(sha, kind) {
+  var box = document.getElementById('art-content-' + sha);
+  if (!box) return;
+  if (box.style.display !== 'none') {
+    box.style.display = 'none';
+    return;
+  }
+  box.style.display = 'block';
+  if (expandedArtifacts[sha]) return; // already loaded
+  expandedArtifacts[sha] = true;
+  fetch('/api/prototype/artifacts/' + sha + '/content')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var pre = box.querySelector('div');
+      if (pre) pre.textContent = d.content || '(内容为空)';
+    })
+    .catch(function() {
+      var pre = box.querySelector('div');
+      if (pre) pre.textContent = '(加载失败)';
+    });
+}
+
+function downloadArt(sha, filename) {
+  fetch('/api/prototype/artifacts/' + sha + '/content')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var blob = new Blob([d.content || ''], { type: 'text/markdown;charset=utf-8' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    })
+    .catch(function() { alert('下载失败'); });
+}
+
+// ── Skills 使用明细 (P0a) ────────────────────────────────────────────────────
+var DEFAULT_SKILLS = [
+  { id: 'requirement-enrichment', name: '需求富化', stage: 1, category: 'requirement', desc: '将模糊需求转化为结构化规格' },
+  { id: 'context-extractor', name: '上下文提取', stage: 1, category: 'requirement', desc: '从 JIRA/Git 历史提取项目上下文' },
+  { id: 'acceptance-criteria', name: 'AC 生成', stage: 1, category: 'requirement', desc: '自动生成验收标准' },
+  { id: 'api-design', name: 'API 设计', stage: 2, category: 'architecture', desc: '生成 REST API 规范' },
+  { id: 'db-schema-design', name: '数据库设计', stage: 2, category: 'architecture', desc: '生成 ER 图与数据表结构' },
+  { id: 'task-breakdown', name: '任务拆解', stage: 2, category: 'architecture', desc: '将设计拆解为编码任务' },
+  { id: 'code-generation', name: '代码生成', stage: 3, category: 'coding', desc: '根据设计 IR 生成完整代码' },
+  { id: 'unit-test-writer', name: 'UT 编写', stage: 3, category: 'testing', desc: 'TDD 模式生成单元测试' },
+  { id: 'pr-description', name: 'PR 描述', stage: 3, category: 'docs', desc: '自动生成 PR 标题与描述' },
+  { id: 'code-review-prep', name: '代码自审', stage: 3, category: 'quality', desc: '提交前自动 lint 与安全检查' },
+];
+
+var SKILL_CAT_STYLE = {
+  requirement:  { dot: 'oklch(55% 0.20 250)', bg: 'oklch(94% 0.05 250)', border: 'oklch(82% 0.10 250)', text: 'oklch(35% 0.20 250)' },
+  architecture: { dot: 'oklch(58% 0.18 295)', bg: 'oklch(94% 0.04 295)', border: 'oklch(82% 0.09 295)', text: 'oklch(35% 0.18 295)' },
+  coding:       { dot: 'oklch(55% 0.15 150)', bg: 'oklch(94% 0.05 150)', border: 'oklch(82% 0.10 150)', text: 'oklch(35% 0.15 150)' },
+  testing:      { dot: 'oklch(62% 0.17 55)',  bg: 'oklch(95% 0.05 65)',  border: 'oklch(84% 0.10 65)',  text: 'oklch(40% 0.17 55)'  },
+  quality:      { dot: 'oklch(55% 0.20 25)',  bg: 'oklch(95% 0.04 25)',  border: 'oklch(84% 0.08 25)',  text: 'oklch(38% 0.20 25)'  },
+  docs:         { dot: 'oklch(55% 0.01 260)', bg: 'oklch(95% 0.005 260)',border: 'oklch(84% 0.01 260)', text: 'oklch(42% 0.01 260)' },
+};
+
+var STAGE_COL_NAMES = { 1: 'Stage 1 · 需求富化', 2: 'Stage 2 · 设计与拆解', 3: 'Stage 3 · 编码+UT' };
+
+function renderSkillsPanel(runStatus) {
+  var section = document.getElementById('skills-section');
+  var showStatuses = { running: true, paused_at_gate: true, completed: true };
+  if (!showStatuses[runStatus]) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = '';
+
+  var stored = null;
+  try { stored = JSON.parse(localStorage.getItem('honeyai_skills') || 'null'); } catch(e) {}
+  var skills = (stored && Array.isArray(stored) && stored.length > 0) ? stored : DEFAULT_SKILLS;
+
+  var byStage = { 1: [], 2: [], 3: [] };
+  skills.forEach(function(s) {
+    if (byStage[s.stage]) byStage[s.stage].push(s);
+  });
+
+  var html = '';
+  [1, 2, 3].forEach(function(stageNum) {
+    html += '<div style="border:1px solid var(--border-soft); border-radius:14px; padding:16px 18px; background:var(--bg-card);">';
+    html += '<div class="caps" style="margin-bottom:12px;">' + esc(STAGE_COL_NAMES[stageNum]) + '</div>';
+    html += '<div style="display:flex; flex-wrap:wrap; gap:6px;">';
+    byStage[stageNum].forEach(function(skill) {
+      var cat = skill.category || 'docs';
+      var style = SKILL_CAT_STYLE[cat] || SKILL_CAT_STYLE.docs;
+      html += '<span title="' + esc(skill.desc) + '" style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:500;background:' + style.bg + ';border:1px solid ' + style.border + ';color:' + style.text + ';">';
+      html += '<span style="width:6px;height:6px;border-radius:50%;background:' + style.dot + ';flex-shrink:0;"></span>';
+      html += esc(skill.name);
+      html += '</span>';
+    });
+    if (byStage[stageNum].length === 0) {
+      html += '<span style="font-size:12px; color:var(--text-faint);">暂无 Skills</span>';
+    }
+    html += '</div></div>';
+  });
+
+  // Stage 4 placeholder (always grayed)
+  html += '<div style="border:1px dashed var(--border-soft); border-radius:14px; padding:16px 18px; background:var(--bg-card); opacity:.45;">';
+  html += '<div class="caps" style="margin-bottom:12px;">Stage 4 · SIT 集成测试</div>';
+  html += '<div style="display:flex; flex-wrap:wrap; gap:6px;">';
+  html += '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:500;background:oklch(95% 0.005 260);border:1px solid var(--border-soft);color:var(--text-faint);">';
+  html += '<span style="width:6px;height:6px;border-radius:50%;background:var(--text-faint);flex-shrink:0;"></span>V2 路线图</span>';
+  html += '</div></div>';
+
+  // Wrap the 3 active + 1 placeholder in a 4-col grid
+  document.getElementById('skills-grid').style.gridTemplateColumns = 'repeat(4, 1fr)';
+  document.getElementById('skills-grid').innerHTML = html;
+}
+
+// ── 需求富化对比 (P0b) ───────────────────────────────────────────────────────
+var reqCompareExpanded = false;
+
+function toggleReqCompare() {
+  var body = document.getElementById('req-compare-body');
+  var chevron = document.getElementById('req-compare-chevron');
+  var hint = document.querySelector('#req-compare-header span[style*="font-size:11px"]');
+  reqCompareExpanded = !reqCompareExpanded;
+  body.style.display = reqCompareExpanded ? '' : 'none';
+  chevron.style.transform = reqCompareExpanded ? 'rotate(180deg)' : '';
+  if (hint) hint.textContent = reqCompareExpanded ? '点击收起' : '点击展开';
+}
+
+function renderReqCompare(runId, oneLiner) {
+  var section = document.getElementById('req-compare-section');
+  section.style.display = '';
+
+  var origEl = document.getElementById('req-original');
+  origEl.textContent = oneLiner || '（未填写）';
+
+  var enrichEl = document.getElementById('req-enriched');
+  enrichEl.textContent = '加载中…';
+
+  // Fetch requirement_ir artifact
+  fetch('/api/prototype/runs/' + runId + '/artifacts')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var arts = data.artifacts || [];
+      var reqArt = null;
+      for (var i = 0; i < arts.length; i++) {
+        if (arts[i].kind === 'requirement_ir' && arts[i].status === 'ready' && arts[i].blobSha256) {
+          reqArt = arts[i];
+        }
+      }
+      if (!reqArt) {
+        enrichEl.textContent = '（暂无富化文档）';
+        return;
+      }
+      return fetch('/api/prototype/artifacts/' + reqArt.blobSha256 + '/content')
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          enrichEl.textContent = d.content || '（内容为空）';
+        });
+    })
+    .catch(function() { enrichEl.textContent = '（加载失败）'; });
+}
+
+// ── 成本明细 (P1a) ───────────────────────────────────────────────────────────
+function fmtTokens(n) {
+  if (!n && n !== 0) return '—';
+  return n >= 1000 ? Math.round(n / 1000) + 'k' : String(n);
+}
+function fmtCost(usd) {
+  if (!usd && usd !== 0) return '—';
+  return '$' + Number(usd).toFixed(2);
+}
+function fmtDuration(ms) {
+  if (!ms && ms !== 0) return '—';
+  var secs = Math.round(ms / 1000);
+  if (secs < 60) return secs + 's';
+  var m = Math.floor(secs / 60);
+  var s = secs % 60;
+  return m + 'm ' + s + 's';
+}
+
+function renderCostPanel(runId) {
+  var section = document.getElementById('cost-section');
+  section.style.display = '';
+  var tableEl = document.getElementById('cost-table');
+  tableEl.innerHTML = '<div class="text-[13px] text-[var(--text-muted)]">加载中…</div>';
+
+  fetch('/api/prototype/runs/' + runId + '/cost')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var stages = data.stages || [];
+      var total = data.total || {};
+
+      var colStyle = 'padding:10px 16px; font-size:13px;';
+      var headStyle = 'padding:8px 16px; font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; font-weight:500; color:var(--text-muted);';
+      var html = '<div style="border:1px solid var(--border-soft); border-radius:12px; overflow:hidden;">';
+
+      // Header row
+      html += '<div style="display:grid; grid-template-columns:2fr 1.2fr 1.2fr 1.2fr; background:var(--bg-elev); border-bottom:1px solid var(--border-soft);">';
+      html += '<div style="' + headStyle + '">阶段</div>';
+      html += '<div style="' + headStyle + '">Token 用量</div>';
+      html += '<div style="' + headStyle + '">费用 (USD)</div>';
+      html += '<div style="' + headStyle + '">耗时</div>';
+      html += '</div>';
+
+      stages.forEach(function(s, i) {
+        var rowBg = i % 2 === 0 ? 'background:var(--bg-card)' : 'background:var(--bg-elev)';
+        html += '<div style="display:grid; grid-template-columns:2fr 1.2fr 1.2fr 1.2fr; ' + rowBg + '; border-bottom:1px solid var(--border-soft);">';
+        html += '<div style="' + colStyle + ' font-weight:500; color:var(--text-strong);">' + esc(s.stageName || ('Stage ' + s.stage)) + '</div>';
+        html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtTokens(s.tokens) + '</div>';
+        html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtCost(s.costUsd) + '</div>';
+        html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtDuration(s.durationMs) + '</div>';
+        html += '</div>';
+      });
+
+      // Grand total row
+      html += '<div style="display:grid; grid-template-columns:2fr 1.2fr 1.2fr 1.2fr; background:oklch(95% 0.008 260); border-top:2px solid var(--border-mid);">';
+      html += '<div style="' + colStyle + ' font-weight:700; color:var(--text-strong);">总计</div>';
+      html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtTokens(total.tokens) + '</div>';
+      html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtCost(total.costUsd) + '</div>';
+      html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtDuration(total.durationMs) + '</div>';
+      html += '</div>';
+
+      html += '</div>';
+      tableEl.innerHTML = html;
+    })
+    .catch(function() {
+      tableEl.innerHTML = '<div class="text-[13px] text-[var(--text-muted)]">成本数据加载失败</div>';
+    });
+}
+
+// ── Agent 执行轨迹 ────────────────────────────────────────────────────────────
+var agentTraceExpanded = false;
+var agentTraceLoaded = false;
+
+function toggleAgentTrace() {
+  var body = document.getElementById('agent-trace-body');
+  var chevron = document.getElementById('agent-trace-chevron');
+  var hint = document.querySelector('#agent-trace-header > div:last-child > span');
+  agentTraceExpanded = !agentTraceExpanded;
+  body.style.display = agentTraceExpanded ? '' : 'none';
+  chevron.style.transform = agentTraceExpanded ? 'rotate(180deg)' : '';
+  if (hint) hint.textContent = agentTraceExpanded ? '点击收起' : '点击展开';
+}
+
+var TOOL_ICONS = {
+  Read:      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
+  Write:     '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+  Edit:      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+  Bash:      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>',
+  Grep:      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+  Glob:      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+  WebFetch:  '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+  WebSearch: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+  Task:      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+};
+var TOOL_COLORS = {
+  Read:      { bg: 'oklch(94% 0.035 250)', border: 'oklch(82% 0.08 250)', text: 'oklch(36% 0.18 250)' },
+  Write:     { bg: 'oklch(94% 0.04 150)',  border: 'oklch(82% 0.10 150)', text: 'oklch(36% 0.15 150)' },
+  Edit:      { bg: 'oklch(94% 0.04 150)',  border: 'oklch(82% 0.10 150)', text: 'oklch(36% 0.15 150)' },
+  Bash:      { bg: 'oklch(94% 0.04 65)',   border: 'oklch(82% 0.10 65)',  text: 'oklch(40% 0.18 65)'  },
+  Grep:      { bg: 'oklch(94% 0.04 290)',  border: 'oklch(82% 0.08 290)', text: 'oklch(36% 0.18 290)' },
+  Glob:      { bg: 'oklch(94% 0.04 290)',  border: 'oklch(82% 0.08 290)', text: 'oklch(36% 0.18 290)' },
+  default:   { bg: 'oklch(96% 0.005 260)', border: 'oklch(88% 0.008 260)', text: 'oklch(42% 0.02 260)' },
+};
+
+function renderAgentTrace(runId) {
+  var section = document.getElementById('agent-trace-section');
+  section.style.display = '';
+
+  if (agentTraceLoaded) return;
+
+  fetch('/api/prototype/runs/' + runId + '/tool-events')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      agentTraceLoaded = true;
+      var total = data.total || 0;
+      var byStage = data.byStage || {};
+
+      var totalBadge = document.getElementById('agent-trace-total');
+      if (total > 0) {
+        totalBadge.textContent = total + ' 次工具调用';
+        totalBadge.style.display = '';
+      }
+
+      if (total === 0) {
+        document.getElementById('agent-trace-content').innerHTML = '<div style="color:var(--text-faint); font-size:13px;">暂无工具调用记录</div>';
+        return;
+      }
+
+      var STAGE_NAMES_TRACE = { 1: 'Stage 1 · 需求富化', 2: 'Stage 2 · 设计与拆解', 3: 'Stage 3 · 编码+UT' };
+      var stages = Object.keys(byStage).map(Number).sort(function(a, b) { return a - b; });
+      var html = '';
+
+      stages.forEach(function(stageNum) {
+        var evts = byStage[stageNum] || [];
+        if (evts.length === 0) return;
+
+        // Count by tool type
+        var toolCounts = {};
+        evts.forEach(function(e) { toolCounts[e.tool] = (toolCounts[e.tool] || 0) + 1; });
+
+        html += '<div style="margin-bottom:20px;">';
+        html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
+        html += '<div style="font-size:12px; font-weight:600; color:var(--text-strong);">' + esc(STAGE_NAMES_TRACE[stageNum] || ('Stage ' + stageNum)) + '</div>';
+        html += '<div style="flex:1; height:1px; background:var(--border-soft);"></div>';
+        html += '<div style="font-size:11px; color:var(--text-faint); font-family:\'JetBrains Mono\',monospace;">' + evts.length + ' calls</div>';
+        html += '</div>';
+
+        // Tool summary chips
+        html += '<div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:12px;">';
+        Object.keys(toolCounts).forEach(function(t) {
+          var c = TOOL_COLORS[t] || TOOL_COLORS.default;
+          html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:500;background:' + c.bg + ';border:1px solid ' + c.border + ';color:' + c.text + ';">';
+          html += (TOOL_ICONS[t] || '') + esc(t) + ' × ' + toolCounts[t];
+          html += '</span>';
+        });
+        html += '</div>';
+
+        // Timeline of individual calls (first 20 per stage to avoid overflow)
+        var showEvts = evts.slice(0, 20);
+        html += '<div style="display:flex; flex-direction:column; gap:4px;">';
+        showEvts.forEach(function(e) {
+          var c = TOOL_COLORS[e.tool] || TOOL_COLORS.default;
+          var summary = e.summary || '';
+          // Truncate display
+          var displaySummary = summary.length > 80 ? summary.slice(0, 80) + '…' : summary;
+          html += '<div style="display:flex; align-items:flex-start; gap:8px; padding:6px 10px; background:var(--bg-elev); border-radius:8px; border:1px solid var(--border-soft);">';
+          html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:6px;font-size:10.5px;font-weight:600;background:' + c.bg + ';border:1px solid ' + c.border + ';color:' + c.text + ';flex-shrink:0;">';
+          html += (TOOL_ICONS[e.tool] || '') + esc(e.label || e.tool);
+          html += '</span>';
+          html += '<span style="font-family:\'JetBrains Mono\',monospace; font-size:11.5px; color:var(--text-body); line-height:1.4; word-break:break-all; flex:1;">' + esc(displaySummary) + '</span>';
+          html += '</div>';
+        });
+        if (evts.length > 20) {
+          html += '<div style="font-size:11px; color:var(--text-faint); padding:4px 10px;">… 还有 ' + (evts.length - 20) + ' 次调用</div>';
+        }
+        html += '</div>';
+        html += '</div>';
+      });
+
+      document.getElementById('agent-trace-content').innerHTML = html || '<div style="color:var(--text-faint); font-size:13px;">暂无工具调用记录</div>';
+    })
+    .catch(function() {
+      document.getElementById('agent-trace-content').innerHTML = '<div style="color:var(--text-faint); font-size:13px;">执行轨迹加载失败</div>';
+    });
+}
+
+// ── IR 文档演化链 ─────────────────────────────────────────────────────────────
+var irChainActiveKind = null;
+var irChainLoadedContent = {};
+
+var IR_CHAIN_NODES = [
+  { key: 'raw_input',      label: '原始输入',  stageNum: '0', lineHint: '5行',   badgeClass: 'raw'  },
+  { key: 'requirement_ir', label: '需求 IR',   stageNum: '1', lineHint: '50行',  badgeClass: ''     },
+  { key: 'design_ir',      label: '设计 IR',   stageNum: '2', lineHint: '200行', badgeClass: ''     },
+  { key: 'impl_ir',        label: '实现 IR',   stageNum: '3', lineHint: '代码PR', badgeClass: ''    },
+];
+
+function renderIRChain(runId, oneLiner) {
+  var section = document.getElementById('ir-chain-section');
+  section.style.display = '';
+  if (window.location.hash === '#ir-chain-section') {
+    setTimeout(function () { section.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300);
+  }
+
+  fetch('/api/prototype/runs/' + runId + '/artifacts')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var arts = data.artifacts || [];
+      var byKind = {};
+      arts.forEach(function(a) {
+        if (a.status === 'ready' && a.blobSha256) {
+          if (!byKind[a.kind]) byKind[a.kind] = a;
+        }
+      });
+
+      var html = '';
+      IR_CHAIN_NODES.forEach(function(nodeDef, i) {
+        var isRaw = nodeDef.key === 'raw_input';
+        var art = isRaw ? null : byKind[nodeDef.key];
+        var hasContent = isRaw ? true : (art && art.blobSha256);
+        var isDone = isRaw ? true : !!hasContent;
+        var isPending = !isDone;
+
+        var badgeCls = nodeDef.badgeClass;
+        if (!badgeCls) badgeCls = isDone ? 'done' : '';
+
+        html += '<div';
+        html += ' class="ir-chain-node' + (hasContent ? ' has-content' : '') + (isPending ? ' pending-node' : '') + '"';
+        html += ' id="ir-node-' + nodeDef.key + '"';
+        if (isRaw) {
+          html += ' data-kind="raw_input"';
+        } else if (art) {
+          html += ' data-sha="' + esc(art.blobSha256) + '" data-kind="' + esc(nodeDef.key) + '"';
+        } else {
+          html += ' data-kind="' + esc(nodeDef.key) + '"';
+        }
+        if (hasContent) {
+          html += ' onclick="expandIRChainNode(this)"';
+        }
+        html += '>';
+
+        html += '<div class="ir-chain-badge ' + badgeCls + '">' + esc(nodeDef.stageNum) + '</div>';
+        html += '<div class="ir-chain-title">' + esc(nodeDef.label) + '</div>';
+
+        if (isRaw) {
+          var preview = (oneLiner || '').slice(0, 40) + ((oneLiner || '').length > 40 ? '…' : '');
+          html += '<div class="ir-chain-meta">' + esc(preview || '（无输入）') + '</div>';
+        } else if (isDone) {
+          html += '<div class="ir-chain-meta" style="color:var(--done);">已产出 · ' + esc(nodeDef.lineHint) + '</div>';
+        } else {
+          html += '<div class="ir-chain-meta">待产出</div>';
+        }
+
+        if (hasContent) {
+          html += '<button class="ir-chain-expand-btn" onclick="event.stopPropagation(); expandIRChainNode(document.getElementById(\'ir-node-' + nodeDef.key + '\'))">';
+          html += '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+          html += '展开</button>';
+        }
+
+        html += '</div>';
+
+        if (i < IR_CHAIN_NODES.length - 1) {
+          html += '<div class="ir-chain-arrow">→</div>';
+        }
+      });
+
+      document.getElementById('ir-chain-nodes').innerHTML = html;
+    })
+    .catch(function() {
+      document.getElementById('ir-chain-nodes').innerHTML = '<div style="font-size:13px; color:var(--text-muted);">演化链加载失败</div>';
+    });
+}
+
+function expandIRChainNode(nodeEl) {
+  if (!nodeEl) return;
+  var kind = nodeEl.getAttribute('data-kind');
+  var sha = nodeEl.getAttribute('data-sha');
+  var panel = document.getElementById('ir-chain-content-panel');
+  var titleEl = document.getElementById('ir-chain-content-title');
+  var bodyEl = document.getElementById('ir-chain-content-body');
+
+  // Remove active class from all nodes, set on clicked
+  var allNodes = document.querySelectorAll('.ir-chain-node');
+  for (var i = 0; i < allNodes.length; i++) {
+    allNodes[i].classList.remove('active');
+  }
+
+  // If same node is clicked again, toggle off
+  if (irChainActiveKind === kind) {
+    irChainActiveKind = null;
+    panel.style.display = 'none';
+    return;
+  }
+
+  irChainActiveKind = kind;
+  nodeEl.classList.add('active');
+  panel.style.display = '';
+
+  var nodeDef = null;
+  for (var j = 0; j < IR_CHAIN_NODES.length; j++) {
+    if (IR_CHAIN_NODES[j].key === kind) { nodeDef = IR_CHAIN_NODES[j]; break; }
+  }
+  titleEl.textContent = nodeDef ? nodeDef.label : kind;
+  bodyEl.textContent = '加载中…';
+
+  if (kind === 'raw_input') {
+    // Read from run data already displayed on page
+    var oneLinerEl = document.getElementById('run-oneliner');
+    bodyEl.textContent = oneLinerEl ? (oneLinerEl.textContent || '（无原始输入）') : '（无原始输入）';
+    return;
+  }
+
+  if (!sha) {
+    bodyEl.textContent = '（此文档尚未产出）';
+    return;
+  }
+
+  if (irChainLoadedContent[sha]) {
+    bodyEl.textContent = irChainLoadedContent[sha];
+    return;
+  }
+
+  fetch('/api/prototype/artifacts/' + sha + '/content')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      var content = d.content || '（内容为空）';
+      irChainLoadedContent[sha] = content;
+      if (irChainActiveKind === kind) {
+        bodyEl.textContent = content;
+      }
+    })
+    .catch(function() {
+      if (irChainActiveKind === kind) {
+        bodyEl.textContent = '（文档加载失败）';
+      }
+    });
+}
+
+function closeIRChainPanel() {
+  irChainActiveKind = null;
+  var panel = document.getElementById('ir-chain-content-panel');
+  if (panel) panel.style.display = 'none';
+  var allNodes = document.querySelectorAll('.ir-chain-node');
+  for (var i = 0; i < allNodes.length; i++) {
+    allNodes[i].classList.remove('active');
+  }
+}
+
+// ── Cancel run / Interrupt modal ──────────────────────────────────────────────
+function cancelRun() {
+  document.getElementById('interrupt-modal').style.display = '';
+}
+
+function closeInterruptModal() {
+  document.getElementById('interrupt-modal').style.display = 'none';
+}
+
+function submitInterrupt() {
+  closeInterruptModal();
+  fetch('/api/prototype/runs/' + runId + '/cancel', { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function() { loadRun(); })
+    .catch(function(err) { console.error('Cancel failed:', err); });
+}
+
+function selectIntrScope(card) {
+  var cards = document.querySelectorAll('#interrupt-modal .intr-radio-card[data-scope]');
+  for (var i = 0; i < cards.length; i++) cards[i].classList.remove('checked');
+  card.classList.add('checked');
+}
+
+function selectIntrAction(card) {
+  var cards = document.querySelectorAll('#interrupt-modal .intr-radio-card[data-action]');
+  for (var i = 0; i < cards.length; i++) cards[i].classList.remove('checked');
+  card.classList.add('checked');
+}
+
+function switchIntrSegTab(btn) {
+  var segs = btn.parentElement.querySelectorAll('button');
+  for (var i = 0; i < segs.length; i++) segs[i].classList.remove('active');
+  btn.classList.add('active');
+  var target = btn.getAttribute('data-target');
+  var modal = document.getElementById('interrupt-modal');
+  var contents = modal.querySelectorAll('.intr-seg-content');
+  for (var j = 0; j < contents.length; j++) {
+    contents[j].style.display = contents[j].getAttribute('data-type') === target ? '' : 'none';
+  }
+}
+
+function setIntrText(text) {
+  var ta = document.getElementById('intr-context-text');
+  if (ta) { ta.value = text; ta.focus(); updateIntrCharCount(); }
+}
+
+function updateIntrCharCount() {
+  var ta = document.getElementById('intr-context-text');
+  var counter = document.getElementById('intr-char-count');
+  if (ta && counter) counter.textContent = ta.value.length + ' / 4000 字符';
+}
+
+// Wire char counter after DOM ready
+document.addEventListener('DOMContentLoaded', function() {
+  var ta = document.getElementById('intr-context-text');
+  if (ta) ta.addEventListener('input', updateIntrCharCount);
+  // Close modal when clicking backdrop
+  var backdrop = document.getElementById('interrupt-backdrop');
+  if (backdrop) backdrop.addEventListener('click', closeInterruptModal);
+});
+
+// ── Load run data ─────────────────────────────────────────────────────────────
+function loadRun() {
+  fetch('/api/prototype/runs/' + runId)
+    .then(function(r) {
+      if (r.status === 404) { window.location.href = 'runs-list.html'; return null; }
+      return r.json();
+    })
+    .then(function(data) {
+      if (!data) return;
+      var run = data.run;
+      var nodes = data.nodes || [];
+      currentRunStatus = run.status;
+
+      document.getElementById('hdr-title').textContent = run.title || '(无标题)';
+      document.getElementById('run-title').textContent = run.title || '(无标题)';
+      document.getElementById('run-oneliner').textContent = run.oneLiner || '';
+      document.getElementById('hdr-status-chip').outerHTML = '<span id="hdr-status-chip">' + statusChipHtml(run.status) + '</span>';
+
+      var prUrl = run.metadata && run.metadata.prUrl ? run.metadata.prUrl : null;
+      renderTimeline(nodes);
+      renderThreeRail(nodes, run.status, prUrl);
+      renderGatePanel(nodes, run.status);
+      renderOutput(run.status, nodes);
+
+      // New sections
+      renderSkillsPanel(run.status);
+      if (run.status === 'completed' || run.status === 'running' || run.status === 'paused_at_gate') {
+        renderAgentTrace(runId);
+      }
+      if (run.status === 'completed') {
+        renderReqCompare(runId, run.oneLiner);
+        renderCostPanel(runId);
+        renderIRChain(runId, run.oneLiner);
+      }
+
+      // Show/hide cancel button
+      var cancelBtn = document.getElementById('btn-cancel-run');
+      var showCancel = run.status === 'running' || run.status === 'paused_at_gate';
+      cancelBtn.style.display = showCancel ? 'inline-flex' : 'none';
+
+      // Terminal: start polling for running nodes
+      var runningNode = null;
+      (nodes || []).forEach(function(n) { if (n.status === 'running' && n.kind === 'agent') runningNode = n; });
+      if (runningNode) {
+        if (runningNode.id !== terminalCurrentNodeId) {
+          startTerminalPoll(runningNode.id, runningNode.name || 'claude-code');
+        }
+      } else if (run.status === 'paused_at_gate') {
+        stopTerminalPoll();
+        // Load artifact preview when gate appears
+        loadArtifactPreview(runId);
+      } else if (run.status === 'completed' || run.status === 'failed' || run.status === 'cancelled') {
+        stopTerminalPoll();
+        // Show PR card if prUrl available
+        if (prUrl) {
+          var prCard = document.getElementById('pr-card');
+          prCard.classList.remove('hidden');
+          document.getElementById('pr-link').href = prUrl;
+          document.getElementById('pr-diff-link').href = prUrl + '/files';
+        }
+        // Load code diff + artifacts panel on terminal states
+        loadCodeDiff(runId, prUrl);
+        loadAllArtifacts(runId);
+      }
+    })
+    .catch(function(err) { console.warn('loadRun error:', err); });
+}
+
+// ── Gate approval ─────────────────────────────────────────────────────────────
+document.getElementById('btn-approve').addEventListener('click', function() {
+  if (!currentGateNodeId) return;
+  var btn = document.getElementById('btn-approve');
+  btn.disabled = true;
+  btn.textContent = '提交中…';
+  document.getElementById('gate-feedback').textContent = '';
+
+  fetch('/api/prototype/runs/' + runId + '/approve', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nodeId: currentGateNodeId }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      document.getElementById('gate-feedback').textContent = '审批已通过，下一阶段启动中…';
+      document.getElementById('gate-feedback').style.color = 'var(--done)';
+      document.getElementById('gate-panel').classList.add('hidden');
+      loadRun();
+    } else {
+      document.getElementById('gate-feedback').textContent = '错误: ' + (data.error || '未知错误');
+      document.getElementById('gate-feedback').style.color = 'var(--halt)';
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 通过 · 进入下一阶段';
+    }
+  })
+  .catch(function(err) {
+    document.getElementById('gate-feedback').textContent = '请求失败: ' + err.message;
+    document.getElementById('gate-feedback').style.color = 'var(--halt)';
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> 通过 · 进入下一阶段';
+  });
+});
+
+document.getElementById('btn-show-reject').addEventListener('click', function() {
+  document.getElementById('gate-approve-area').classList.add('hidden');
+  document.getElementById('gate-reject-area').classList.remove('hidden');
+});
+document.getElementById('btn-reject-cancel').addEventListener('click', function() {
+  document.getElementById('gate-reject-area').classList.add('hidden');
+  document.getElementById('gate-approve-area').classList.remove('hidden');
+});
+document.getElementById('btn-reject-submit').addEventListener('click', function() {
+  var reason = document.getElementById('reject-reason').value.trim();
+  if (!reason) { document.getElementById('gate-feedback').textContent = '请填写拒绝原因'; document.getElementById('gate-feedback').style.color = 'var(--halt)'; return; }
+
+  fetch('/api/prototype/runs/' + runId + '/reject', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nodeId: currentGateNodeId, reason: reason }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      document.getElementById('gate-panel').classList.add('hidden');
+      loadRun();
+    } else {
+      document.getElementById('gate-feedback').textContent = '错误: ' + (data.error || '未知');
+      document.getElementById('gate-feedback').style.color = 'var(--halt)';
+    }
+  });
+});
+
+// ── SSE subscription ──────────────────────────────────────────────────────────
+function startSSE() {
+  if (sseSource) sseSource.close();
+  sseSource = new EventSource('/api/runs/' + runId + '/stream');
+  sseSource.onmessage = function(evt) {
+    try {
+      var msg = JSON.parse(evt.data);
+      if (msg.type === 'run_status' || msg.type === 'node_status' || msg.type === 'run_completed') {
+        loadRun();
+      }
+      // Terminal live: if current node matches, just poll
+      if (msg.type === 'node_status' && msg.nodeId && msg.nodeId === terminalCurrentNodeId) {
+        // poll is already running; nothing extra needed
+      }
+    } catch(e) {}
+  };
+  sseSource.onerror = function() {
+    // Reconnect on error (browser does this automatically for EventSource)
+  };
+}
+
+// ── Stop polling when completed/failed ───────────────────────────────────────
+var pollInterval = setInterval(function() {
+  if (currentRunStatus === 'completed' || currentRunStatus === 'failed' || currentRunStatus === 'cancelled') {
+    clearInterval(pollInterval);
+    if (sseSource) sseSource.close();
+  } else {
+    loadRun();
+  }
+}, 5000);
+
+// ── Initial load ──────────────────────────────────────────────────────────────
+loadRun();
+startSSE();
+
+// ── Rerun node ────────────────────────────────────────────────────────────────
+function rerunNode(nodeId, btn) {
+  if (!nodeId || !runId) return;
+  btn.disabled = true;
+  btn.textContent = '提交中…';
+
+  fetch('/api/prototype/runs/' + runId + '/nodes/' + nodeId + '/rerun', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) {
+        btn.textContent = '已重新排队';
+        setTimeout(loadRun, 800);
+      } else {
+        var msg = {
+          RUN_IS_RUNNING: '运行中，请稍候',
+          NODE_IS_RUNNING: '节点运行中，请稍候',
+          REDIS_NOT_CONFIGURED: '队列未配置',
+        }[data.error] || (data.error || '失败');
+        btn.textContent = msg;
+        btn.disabled = false;
+      }
+    })
+    .catch(function() {
+      btn.textContent = '网络错误';
+      btn.disabled = false;
+    });
+}
+</script>
+
+<!-- ── Interrupt Modal ──────────────────────────────────────────────────────── -->
+<div id="interrupt-modal" style="display:none">
+  <div class="interrupt-backdrop" id="interrupt-backdrop"></div>
+  <div class="interrupt-modal">
+    <div class="interrupt-card">
+
+      <!-- header -->
+      <div class="px-6 pt-5 pb-4 border-b flex items-start justify-between" style="border-color:var(--border-soft)">
+        <div class="flex items-start gap-3.5">
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background:var(--halt-soft);color:var(--halt)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+          </div>
+          <div>
+            <div style="font-size:15.5px;font-weight:600;color:var(--text-strong);line-height:1.3">中断 · 补充上下文</div>
+            <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px">向运行中的 Agent 注入上下文或修正指令</div>
+          </div>
+        </div>
+        <button onclick="closeInterruptModal()" style="width:28px;height:28px;border-radius:6px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted)" onmouseover="this.style.background='var(--bg-elev)'" onmouseout="this.style.background='none'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- body -->
+      <div class="px-6 py-5" style="display:flex;flex-direction:column;gap:20px">
+
+        <!-- input section -->
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:500;color:var(--text-muted)">输入方式</div>
+            <div style="font-size:10.5px;color:var(--text-faint);font-family:'JetBrains Mono',monospace">Ctrl + Enter 提交</div>
+          </div>
+          <div class="intr-seg" style="margin-bottom:12px">
+            <button class="active" data-target="text" onclick="switchIntrSegTab(this)">文本</button>
+            <button data-target="file" onclick="switchIntrSegTab(this)">文件</button>
+            <button data-target="ref" onclick="switchIntrSegTab(this)">引用代码</button>
+          </div>
+          <div id="intr-seg-text" class="intr-seg-content" data-type="text">
+            <div style="border:1px solid var(--border-soft);border-radius:12px;padding:12px;background:var(--bg-elev)">
+              <textarea id="intr-context-text" rows="4" style="width:100%;background:transparent;border:none;outline:none;font-size:13px;line-height:1.65;color:var(--text-strong);resize:none;font-family:'Inter',system-ui,sans-serif" placeholder="补充约束、修正方向或贴入相关上下文…"></textarea>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px dashed var(--border-mid)">
+                <div style="font-size:11px;color:var(--text-muted)">上下文说明</div>
+                <span id="intr-char-count" style="font-size:10.5px;font-family:'JetBrains Mono',monospace;color:var(--text-faint)">0 / 4000 字符</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px">
+              <span style="font-size:10.5px;color:var(--text-faint);margin-right:4px;line-height:1.8">示例:</span>
+              <button class="intr-chip" onclick="setIntrText(this.textContent)">改用 Redisson 限流器</button>
+              <button class="intr-chip" onclick="setIntrText(this.textContent)">复用现有事件总线</button>
+              <button class="intr-chip" onclick="setIntrText(this.textContent)">补充压测目标</button>
+            </div>
+          </div>
+          <div id="intr-seg-file" class="intr-seg-content" data-type="file" style="display:none">
+            <div style="border:1px dashed var(--border-mid);border-radius:12px;padding:24px;text-align:center;color:var(--text-muted);font-size:13px">
+              文件上传暂不支持（原型演示）
+            </div>
+          </div>
+          <div id="intr-seg-ref" class="intr-seg-content" data-type="ref" style="display:none">
+            <div style="border:1px dashed var(--border-mid);border-radius:12px;padding:24px;text-align:center;color:var(--text-muted);font-size:13px">
+              引用代码暂不支持（原型演示）
+            </div>
+          </div>
+        </div>
+
+        <!-- scope -->
+        <div>
+          <div style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:500;color:var(--text-muted);margin-bottom:10px">影响范围</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+            <div class="intr-radio-card checked" data-scope="task" onclick="selectIntrScope(this)">
+              <span class="intr-ring"></span>
+              <div>
+                <div style="font-size:12.5px;font-weight:600;color:var(--text-strong)">当前任务</div>
+                <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px;line-height:1.4">仅当前节点</div>
+              </div>
+            </div>
+            <div class="intr-radio-card" data-scope="stage" onclick="selectIntrScope(this)">
+              <span class="intr-ring"></span>
+              <div>
+                <div style="font-size:12.5px;font-weight:600;color:var(--text-strong)">当前阶段</div>
+                <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px;line-height:1.4">当前 Stage 全部子任务</div>
+              </div>
+            </div>
+            <div class="intr-radio-card" data-scope="run" onclick="selectIntrScope(this)">
+              <span class="intr-ring"></span>
+              <div>
+                <div style="font-size:12.5px;font-weight:600;color:var(--text-strong)">整个运行</div>
+                <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px;line-height:1.4">写入运行级 system prompt</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- post-action -->
+        <div>
+          <div style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:500;color:var(--text-muted);margin-bottom:10px">提交后行为</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="intr-radio-card checked" data-action="continue" onclick="selectIntrAction(this)">
+              <span class="intr-ring"></span>
+              <div style="flex:1">
+                <div style="display:flex;align-items:baseline;justify-content:space-between">
+                  <span style="font-size:12.5px;font-weight:600;color:var(--text-strong)">从当前位置继续</span>
+                  <span style="font-size:10.5px;color:var(--text-faint);font-family:'JetBrains Mono',monospace">默认</span>
+                </div>
+                <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px">将上下文注入正在执行的 Agent · 保留已生成内容</div>
+              </div>
+            </div>
+            <div class="intr-radio-card" data-action="rollback-task" onclick="selectIntrAction(this)">
+              <span class="intr-ring"></span>
+              <div style="flex:1">
+                <div style="display:flex;align-items:baseline;justify-content:space-between">
+                  <span style="font-size:12.5px;font-weight:600;color:var(--text-strong)">回滚到任务起点</span>
+                  <span style="font-size:10.5px;font-family:'JetBrains Mono',monospace" style="color:var(--run)">≈ 重跑 4-6 分钟</span>
+                </div>
+                <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px">放弃当前节点的已生成代码，从头开始</div>
+              </div>
+            </div>
+            <div class="intr-radio-card" data-action="rollback-stage" onclick="selectIntrAction(this)">
+              <span class="intr-ring"></span>
+              <div style="flex:1">
+                <div style="display:flex;align-items:baseline;justify-content:space-between">
+                  <span style="font-size:12.5px;font-weight:600;color:var(--text-strong)">回到架构阶段重新规划</span>
+                  <span style="font-size:10.5px;font-family:'JetBrains Mono',monospace" style="color:var(--halt)">≈ 重跑 15+ 分钟</span>
+                </div>
+                <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px">影响 Stage 02 输出 · 评审需重做</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- cost estimate -->
+        <div style="padding:12px;border-radius:10px;display:flex;align-items:center;justify-content:space-between;background:oklch(98% 0.012 245);border:1px solid oklch(90% 0.05 245 / 0.4)">
+          <div style="display:flex;align-items:center;gap:10px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--review)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span style="font-size:12px;color:var(--text-body)">预计追加 <span style="font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--text-strong)">+2.4k tokens</span> · <span style="font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--text-strong)">¥ 0.62</span> · 延迟 +18s</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- footer -->
+      <div style="padding:16px 24px;border-top:1px solid var(--border-soft);background:var(--bg-elev);display:flex;align-items:center;justify-content:space-between">
+        <label style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--text-muted);cursor:pointer">
+          <input type="checkbox" style="accent-color:var(--text-strong)"/>
+          记录为该 Agent 的长期偏好
+        </label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="intr-btn" onclick="closeInterruptModal()">取消</button>
+          <button class="intr-btn intr-btn-primary" onclick="submitInterrupt()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            提交并继续
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

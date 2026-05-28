@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Skills 库 · DevPipeline</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-base: oklch(98% 0.006 85);
+      --bg-card: #ffffff;
+      --bg-elev: oklch(99% 0.004 85);
+      --bg-deep: oklch(15% 0.018 260);
+
+      --border-soft: oklch(93% 0.005 85);
+      --border-mid: oklch(88% 0.008 85);
+
+      --text-strong: oklch(22% 0.03 260);
+      --text-body: oklch(38% 0.02 260);
+      --text-muted: oklch(56% 0.015 260);
+      --text-faint: oklch(72% 0.01 260);
+
+      --done: oklch(62% 0.13 150);
+      --done-soft: oklch(94% 0.04 150);
+      --run: oklch(70% 0.15 65);
+      --run-soft: oklch(95% 0.05 75);
+      --review: oklch(58% 0.18 290);
+      --review-soft: oklch(95% 0.04 290);
+      --idle-soft: oklch(96% 0.005 260);
+      --halt: oklch(60% 0.21 25);
+
+      --s1-color: oklch(58% 0.14 245);
+      --s1-soft:  oklch(93% 0.04 245);
+      --s2-color: oklch(58% 0.18 280);
+      --s2-soft:  oklch(93% 0.04 280);
+      --s3-color: oklch(62% 0.13 150);
+      --s3-soft:  oklch(93% 0.04 150);
+
+      --shadow-sm: 0 1px 2px oklch(20% 0.02 260 / 0.04);
+      --shadow-md: 0 2px 6px oklch(20% 0.02 260 / 0.04), 0 1px 2px oklch(20% 0.02 260 / 0.06);
+      --shadow-lg: 0 12px 28px oklch(20% 0.02 260 / 0.07), 0 2px 6px oklch(20% 0.02 260 / 0.04);
+    }
+
+    * { -webkit-font-smoothing: antialiased; box-sizing: border-box; }
+    html, body { font-family: 'Inter', system-ui, sans-serif; }
+    body { background: var(--bg-base); color: var(--text-body); font-feature-settings: 'cv02','cv03','cv04','cv11'; }
+    .font-display { font-family: 'Instrument Serif','Songti SC',serif; letter-spacing: -0.01em; }
+    .font-mono    { font-family: 'JetBrains Mono', monospace; }
+
+    .bg-atmosphere {
+      background:
+        radial-gradient(900px 460px at 8% -8%,  oklch(93% 0.05 245 / 0.45), transparent 60%),
+        radial-gradient(700px 340px at 105% 0%,  oklch(93% 0.04 280 / 0.35), transparent 60%),
+        radial-gradient(600px 360px at 50% 110%, oklch(94% 0.05 150 / 0.30), transparent 60%),
+        var(--bg-base);
+    }
+    .grain::before {
+      content:''; position: fixed; inset: 0; pointer-events: none;
+      opacity: .03; mix-blend-mode: multiply; z-index: 100;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 9px; border-radius: 999px;
+      font-size: 11px; font-weight: 500;
+      border: 1px solid transparent;
+    }
+
+    .caps {
+      font-size: 10.5px; letter-spacing: .14em;
+      text-transform: uppercase; font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 12px; border-radius: 9px;
+      font-size: 12.5px; font-weight: 500;
+      border: 1px solid var(--border-mid);
+      background: var(--bg-card); color: var(--text-body);
+      transition: all .15s; cursor: pointer;
+    }
+    .btn:hover { background: var(--bg-elev); color: var(--text-strong); }
+    .btn-primary { background: var(--text-strong); color: white; border-color: var(--text-strong); }
+    .btn-primary:hover { background: oklch(28% 0.06 265); color: white; }
+
+    /* sidebar nav */
+    .side-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px; border-radius: 10px; cursor: pointer;
+      color: var(--text-body); font-size: 13px;
+      transition: all .15s;
+    }
+    .side-item:hover { background: var(--bg-elev); color: var(--text-strong); }
+    .side-item.active { background: var(--text-strong); color: white; }
+    .side-item .swatch { width: 8px; height: 8px; border-radius: 3px; }
+    .side-item .count { margin-left: auto; font-size: 10.5px; font-family: 'JetBrains Mono', monospace; opacity: .65; }
+
+    .skill-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow .2s, border-color .2s;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .skill-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--border-mid);
+    }
+
+    .skill-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 11px; font-weight: 700;
+      letter-spacing: -.01em;
+      flex-shrink: 0;
+      box-shadow: inset 0 -4px 8px rgba(0,0,0,.18);
+    }
+
+    .stage-badge {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px; border-radius: 999px;
+      font-size: 10.5px; font-weight: 600;
+    }
+
+    .source-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 7px; border-radius: 4px;
+      font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .04em;
+    }
+    .source-builtin { background: oklch(93% 0.03 260); color: oklch(44% 0.02 260); }
+    .source-custom  { background: oklch(93% 0.05 290); color: oklch(40% 0.14 290); }
+
+    .toast {
+      position: fixed; bottom: 28px; right: 28px;
+      background: var(--text-strong); color: white;
+      padding: 12px 20px; border-radius: 12px;
+      font-size: 13px; font-weight: 500;
+      box-shadow: var(--shadow-lg);
+      display: flex; align-items: center; gap: 10px;
+      transform: translateY(0); opacity: 1;
+      transition: opacity .25s, transform .25s;
+      z-index: 9999;
+    }
+    .toast.hidden { opacity: 0; transform: translateY(8px); pointer-events: none; }
+
+    /* Import modal */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: oklch(15% 0.018 260 / 0.55);
+      backdrop-filter: blur(4px);
+      z-index: 500;
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px;
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: 20px;
+      box-shadow: var(--shadow-lg);
+      padding: 28px;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 999px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+  </style>
+</head>
+<body class="bg-atmosphere grain min-h-screen">
+
+  <!-- ==================== TOP BAR ==================== -->
+  <header class="border-b border-[var(--border-soft)] bg-white/65 backdrop-blur-xl sticky top-0 z-50">
+    <div class="max-w-[1480px] mx-auto px-8 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-10">
+        <a href="index.html" class="flex items-center gap-2.5 hover:opacity-80 transition">
+          <div class="w-8 h-8 rounded-lg bg-[var(--text-strong)] flex items-center justify-center text-white text-[11px] font-bold tracking-tight">DP</div>
+          <div>
+            <div class="text-[14.5px] font-semibold text-[var(--text-strong)] leading-tight">DevPipeline</div>
+            <div class="text-[10px] text-[var(--text-muted)] tracking-[.14em] uppercase">AI 研发流水线 · 驾驶舱</div>
+          </div>
+        </a>
+        <nav class="flex items-center gap-1 text-[13px]">
+          <a href="index.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">运行中</a>
+          <a href="runs-list.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">历史</a>
+          <a href="agent-detail.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">Agents</a>
+          <a href="rules-library.html" class="px-3 py-1.5 rounded-md bg-[var(--bg-elev)] text-[var(--text-strong)] font-medium">Skills 库</a>
+          <a href="knowledge-graph.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">知识图谱</a>
+          <a href="operations.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">AI 资产</a>
+          <a href="people-ops.html" class="px-3 py-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-strong)]">人员运营</a>
+        </nav>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="btn" onclick="openSearchModal()">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="17" y2="17"/></svg>
+          搜索 Skills
+        </button>
+        <button class="btn btn-primary" onclick="openImportModal()">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          导入 Skills
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-[1480px] mx-auto px-8 py-8">
+
+    <!-- ==================== HEADER ==================== -->
+    <section class="mb-7 flex items-end justify-between">
+      <div>
+        <div class="caps mb-2">Skills Library · Skills 库</div>
+        <h1 class="font-display text-[42px] leading-none text-[var(--text-strong)]">
+          Skills 库 <span class="italic font-light text-[var(--text-muted)]">— Agent 能力积木</span>
+        </h1>
+        <div class="text-[13px] text-[var(--text-muted)] mt-2 max-w-[720px]">
+          每个 Skill 封装一段可复用的 Agent 能力，注入到对应 Stage 的提示词链。内置 9 个覆盖全流程，团队可自定义扩展。
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="chip" style="background:var(--done-soft); color:var(--done)">
+          <span style="width:6px;height:6px;border-radius:999px;background:var(--done);display:inline-block;"></span>
+          本月调用率 <span class="font-mono ml-1" id="kpi-call-rate">98.1%</span>
+        </span>
+        <button class="btn" onclick="exportSkillsJSON()">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          导出 JSON
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== KPI ROW ==================== -->
+    <section class="grid grid-cols-12 gap-4 mb-7">
+      <div class="col-span-3 card p-5">
+        <div class="caps mb-2">Skills 总数</div>
+        <div class="flex items-baseline gap-2">
+          <span class="font-display text-[40px] text-[var(--text-strong)] leading-none" id="kpi-total">9</span>
+          <span class="text-[11px] text-[var(--text-muted)]" id="kpi-total-sub">内置</span>
+        </div>
+        <div class="text-[11px] text-[var(--text-muted)] mt-2" id="kpi-total-desc">覆盖 3 个 Stage · 全流程自动化</div>
+      </div>
+      <div class="col-span-3 card p-5">
+        <div class="caps mb-2" style="color:var(--s1-color)">Stage 1 · 需求分析</div>
+        <div class="flex items-baseline gap-2">
+          <span class="font-display text-[40px] text-[var(--text-strong)] leading-none">3</span>
+          <span class="text-[11px] text-[var(--text-muted)]">个 Skills</span>
+        </div>
+        <div class="text-[11px] text-[var(--text-muted)] mt-2">需求富化 · 上下文提取 · AC 生成</div>
+      </div>
+      <div class="col-span-3 card p-5">
+        <div class="caps mb-2" style="color:var(--s2-color)">Stage 2 · 设计拆解</div>
+        <div class="flex items-baseline gap-2">
+          <span class="font-display text-[40px] text-[var(--text-strong)] leading-none">3</span>
+          <span class="text-[11px] text-[var(--text-muted)]">个 Skills</span>
+        </div>
+        <div class="text-[11px] text-[var(--text-muted)] mt-2">API 设计 · 数据库设计 · 任务拆解</div>
+      </div>
+      <div class="col-span-3 card p-5">
+        <div class="caps mb-2" style="color:var(--s3-color)">Stage 3 · 编码+UT</div>
+        <div class="flex items-baseline gap-2">
+          <span class="font-display text-[40px] text-[var(--text-strong)] leading-none" id="kpi-s3">3</span>
+          <span class="text-[11px] text-[var(--text-muted)]" id="kpi-s3-sub">个 Skills</span>
+        </div>
+        <div class="text-[11px] text-[var(--text-muted)] mt-2">代码生成 · UT 编写 · 代码自审</div>
+      </div>
+    </section>
+
+    <!-- ==================== MAIN: SIDEBAR + SKILLS GRID ==================== -->
+    <section class="grid grid-cols-12 gap-5 mb-7">
+
+      <!-- Sidebar -->
+      <aside class="col-span-3 card p-4 self-start sticky top-[88px]">
+        <div class="caps mb-3 px-2">按阶段</div>
+        <div class="space-y-1" id="sidebar-nav">
+          <div class="side-item active" data-filter="all" onclick="filterSkills('all', this)">
+            <span class="swatch" style="background: white; box-shadow:inset 0 0 0 2px rgba(180,180,200,.5)"></span>
+            <span>全部</span>
+            <span class="count" id="filter-count-all">9</span>
+          </div>
+          <div class="side-item" data-filter="1" onclick="filterSkills('1', this)">
+            <span class="swatch" style="background: var(--s1-color)"></span>
+            <span>Stage 1 · 需求富化</span>
+            <span class="count">3</span>
+          </div>
+          <div class="side-item" data-filter="2" onclick="filterSkills('2', this)">
+            <span class="swatch" style="background: var(--s2-color)"></span>
+            <span>Stage 2 · 设计拆解</span>
+            <span class="count">3</span>
+          </div>
+          <div class="side-item" data-filter="3" onclick="filterSkills('3', this)">
+            <span class="swatch" style="background: var(--s3-color)"></span>
+            <span>Stage 3 · 编码+UT</span>
+            <span class="count" id="filter-count-3">3</span>
+          </div>
+          <div class="side-item" data-filter="custom" onclick="filterSkills('custom', this)">
+            <span class="swatch" style="background: var(--review)"></span>
+            <span>自定义 Skills</span>
+            <span class="count" id="filter-count-custom">0</span>
+          </div>
+        </div>
+
+        <div class="my-4 h-px bg-[var(--border-soft)]"></div>
+
+        <div class="caps mb-2 px-2">快速操作</div>
+        <div class="space-y-1">
+          <button onclick="openImportModal()" class="side-item w-full text-left" style="color: var(--text-body);">
+            <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span>导入自定义 Skill</span>
+          </button>
+          <a href="setup.html" class="side-item block">
+            <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 0-14.14 0M4.93 19.07a10 10 0 0 0 14.14 0"/></svg>
+            <span>回到系统设置</span>
+          </a>
+        </div>
+      </aside>
+
+      <!-- Skills grid -->
+      <div class="col-span-9">
+        <!-- Toolbar -->
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <div class="caps" id="grid-label">全部 Skills · 9</div>
+          </div>
+          <div class="relative">
+            <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-faint)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="17" y2="17"/></svg>
+            <input
+              type="text"
+              id="search-input"
+              placeholder="搜索 Skill 名称或描述..."
+              oninput="onSearchInput(this.value)"
+              class="text-[12px] rounded-lg border bg-white pl-8 pr-3 py-1.5 w-[260px] focus:outline-none focus:border-[oklch(70%_0.18_290)]"
+              style="border-color:var(--border-mid)"
+            >
+          </div>
+        </div>
+
+        <!-- Grid -->
+        <div class="grid grid-cols-3 gap-4" id="skills-grid">
+          <!-- rendered by JS -->
+        </div>
+
+        <!-- Empty state -->
+        <div id="empty-state" class="hidden col-span-3 py-16 text-center">
+          <div class="text-[var(--text-faint)] mb-2">
+            <svg class="w-10 h-10 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="17" y2="17"/></svg>
+          </div>
+          <div class="text-[14px] font-medium text-[var(--text-muted)]">无匹配的 Skills</div>
+          <div class="text-[12px] text-[var(--text-faint)] mt-1">尝试修改搜索词或切换筛选条件</div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="mt-10 mb-6 text-center text-[11px] text-[var(--text-faint)]">
+      DevPipeline · Skills 库 · prototype v0.3
+    </footer>
+  </main>
+
+  <!-- ==================== IMPORT MODAL ==================== -->
+  <div id="import-modal" class="modal-overlay hidden" onclick="closeImportModalIfBg(event)">
+    <div class="modal-box">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <div class="text-[16px] font-semibold text-[var(--text-strong)]">导入自定义 Skills</div>
+          <div class="text-[12px] text-[var(--text-muted)] mt-0.5">粘贴 JSON 数组，每项需包含 id、name、stage、description</div>
+        </div>
+        <button onclick="closeImportModal()" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[var(--bg-elev)] text-[var(--text-muted)] hover:text-[var(--text-strong)] transition-colors">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <textarea
+        id="modal-json-input"
+        rows="8"
+        class="w-full rounded-lg border p-3 text-[12px] font-mono text-[var(--text-strong)] resize-none focus:outline-none focus:border-[oklch(70%_0.18_290)] focus:shadow-[0_0_0_4px_oklch(70%_0.18_290_/_0.12)] transition-all mb-3"
+        style="border-color:var(--border-mid); background: var(--bg-elev);"
+        placeholder='[
+  {
+    "id": "my-api-standards",
+    "name": "我们的 API 规范",
+    "stage": 2,
+    "description": "公司内部 REST API 设计规范，统一响应格式、错误码规范、分页格式"
+  }
+]'
+      ></textarea>
+
+      <div class="rounded-lg px-3 py-2 text-[11.5px] mb-4" style="background: oklch(96% 0.007 260); border: 1px solid var(--border-soft); color: var(--text-muted);">
+        <span class="font-medium" style="color: var(--text-body)">格式提示：</span>
+        JSON 数组，每项必须包含
+        <span class="font-mono">id</span>（唯一标识）、
+        <span class="font-mono">name</span>（显示名称）、
+        <span class="font-mono">stage</span>（1/2/3）、
+        <span class="font-mono">description</span>（描述）
+      </div>
+
+      <div class="flex items-center gap-2 justify-end">
+        <button onclick="closeImportModal()" class="btn">取消</button>
+        <button onclick="importFromModal()" class="btn btn-primary">
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          导入
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TOAST ==================== -->
+  <div id="toast" class="toast hidden">
+    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    <span id="toast-msg">操作成功</span>
+  </div>
+
+  <script>
+    // ── Data ──────────────────────────────────────────────────────────────────
+    var DEFAULT_SKILLS = [
+      { id: 'requirement-enrichment', name: '需求富化', abbr: 'RE', stage: 1, color: 'oklch(58% 0.14 245)', desc: '将模糊需求转化为结构化规格说明', calls: 127, rate: '98.4%' },
+      { id: 'context-extractor',      name: '上下文提取', abbr: 'CE', stage: 1, color: 'oklch(58% 0.16 220)', desc: '从 JIRA/Git 历史提取项目上下文', calls: 98,  rate: '96.9%' },
+      { id: 'acceptance-criteria',    name: 'AC 生成',   abbr: 'AC', stage: 1, color: 'oklch(58% 0.12 250)', desc: '自动生成验收标准清单', calls: 114, rate: '99.1%' },
+      { id: 'api-design',             name: 'API 设计',  abbr: 'AD', stage: 2, color: 'oklch(58% 0.13 200)', desc: '生成 REST API 规范与接口定义', calls: 89,  rate: '97.8%' },
+      { id: 'db-schema-design',       name: '数据库设计', abbr: 'DB', stage: 2, color: 'oklch(58% 0.16 190)', desc: '生成 ER 图与数据表结构设计', calls: 72,  rate: '95.8%' },
+      { id: 'task-breakdown',         name: '任务拆解',  abbr: 'TB', stage: 2, color: 'oklch(58% 0.18 280)', desc: '将设计拆解为可执行的编码任务', calls: 103, rate: '98.1%' },
+      { id: 'code-generation',        name: '代码生成',  abbr: 'CG', stage: 3, color: 'oklch(62% 0.13 150)', desc: '根据设计 IR 生成完整代码实现', calls: 211, rate: '97.2%' },
+      { id: 'unit-test-writer',       name: 'UT 编写',   abbr: 'UT', stage: 3, color: 'oklch(56% 0.17 270)', desc: 'TDD 模式生成完整单元测试套件', calls: 189, rate: '96.3%' },
+      { id: 'code-review-prep',       name: '代码自审',  abbr: 'CR', stage: 3, color: 'oklch(60% 0.20 25)',  desc: '提交前自动 lint 与安全漏洞检查', calls: 195, rate: '99.5%' },
+    ];
+
+    var STAGE_LABELS = { 1: 'Stage 1', 2: 'Stage 2', 3: 'Stage 3' };
+    var STAGE_COLORS = {
+      1: { bg: 'var(--s1-soft)', text: 'var(--s1-color)' },
+      2: { bg: 'var(--s2-soft)', text: 'var(--s2-color)' },
+      3: { bg: 'var(--s3-soft)', text: 'var(--s3-color)' },
+    };
+
+    var currentFilter = 'all';
+    var currentSearch = '';
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function showToast(msg, isError) {
+      var el = document.getElementById('toast');
+      var msgEl = document.getElementById('toast-msg');
+      msgEl.textContent = msg;
+      el.style.background = isError ? 'oklch(45% 0.18 25)' : 'oklch(22% 0.03 260)';
+      el.classList.remove('hidden');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(function() { el.classList.add('hidden'); }, 3000);
+    }
+
+    function loadCustomSkills() {
+      try {
+        var raw = localStorage.getItem('honeyai_skills_custom');
+        return raw ? JSON.parse(raw) : [];
+      } catch(e) { return []; }
+    }
+
+    function saveCustomSkills(arr) {
+      localStorage.setItem('honeyai_skills_custom', JSON.stringify(arr));
+    }
+
+    function getAllSkills() {
+      var customs = loadCustomSkills().map(function(s) {
+        return Object.assign({ abbr: (s.name || 'CU').slice(0, 2).toUpperCase(), color: 'oklch(58% 0.18 290)', calls: 0, rate: 'N/A', isCustom: true }, s);
+      });
+      return DEFAULT_SKILLS.concat(customs);
+    }
+
+    function skillMatchesFilter(s, filter) {
+      if (filter === 'all') return true;
+      if (filter === 'custom') return !!s.isCustom;
+      return String(s.stage) === filter;
+    }
+
+    function skillMatchesSearch(s, query) {
+      if (!query) return true;
+      var q = query.toLowerCase();
+      return (s.name || '').toLowerCase().includes(q) ||
+             (s.desc || s.description || '').toLowerCase().includes(q) ||
+             (s.id || '').toLowerCase().includes(q);
+    }
+
+    // ── Render ────────────────────────────────────────────────────────────────
+    function renderGrid() {
+      var all = getAllSkills();
+      var visible = all.filter(function(s) {
+        return skillMatchesFilter(s, currentFilter) && skillMatchesSearch(s, currentSearch);
+      });
+
+      var grid = document.getElementById('skills-grid');
+      var empty = document.getElementById('empty-state');
+      var label = document.getElementById('grid-label');
+
+      var filterLabel = currentFilter === 'all' ? '全部 Skills' :
+                        currentFilter === 'custom' ? '自定义 Skills' :
+                        'Stage ' + currentFilter + ' Skills';
+      label.textContent = filterLabel + ' · ' + visible.length;
+
+      if (visible.length === 0) {
+        grid.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+
+      grid.innerHTML = visible.map(function(s) {
+        var sc = STAGE_COLORS[s.stage] || { bg: 'oklch(93% 0.03 290)', text: 'oklch(40% 0.14 290)' };
+        var desc = s.desc || s.description || '';
+        var isCustom = !!s.isCustom;
+        var callsText = s.calls > 0 ? ('本月调用 ' + s.calls + ' 次 · 成功率 ' + s.rate) : '暂无调用数据';
+        return '<div class="skill-card">' +
+          '<div class="flex items-start gap-3">' +
+            '<div class="skill-icon" style="background:' + s.color + ';">' + s.abbr + '</div>' +
+            '<div class="flex-1 min-w-0">' +
+              '<div class="flex items-center gap-1.5 flex-wrap mb-0.5">' +
+                '<span class="text-[14px] font-semibold text-[var(--text-strong)]">' + s.name + '</span>' +
+              '</div>' +
+              '<div class="flex items-center gap-1.5">' +
+                '<span class="stage-badge" style="background:' + sc.bg + '; color:' + sc.text + ';">' + STAGE_LABELS[s.stage] + '</span>' +
+                '<span class="source-badge ' + (isCustom ? 'source-custom' : 'source-builtin') + '">' + (isCustom ? '自定义' : '内置') + '</span>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<p class="text-[12.5px] text-[var(--text-muted)] leading-relaxed">' + desc + '</p>' +
+          '<div class="flex items-center justify-between pt-1 border-t border-[var(--border-soft)]">' +
+            '<span class="text-[11px] font-mono text-[var(--text-faint)]">' + callsText + '</span>' +
+            (isCustom ? '<button onclick="removeCustomSkill(\'' + (s.id || '') + '\')" class="text-[11px] text-[var(--text-faint)] hover:text-red-500 transition-colors px-1">移除</button>' : '') +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function updateCounters() {
+      var customs = loadCustomSkills();
+      var total = 9 + customs.length;
+      var s3extra = customs.filter(function(s) { return String(s.stage) === '3'; }).length;
+
+      document.getElementById('kpi-total').textContent = total;
+      if (customs.length > 0) {
+        document.getElementById('kpi-total-sub').textContent = '内置 + ' + customs.length + ' 自定义';
+        document.getElementById('kpi-total-desc').textContent = '覆盖 3 个 Stage · 含 ' + customs.length + ' 个团队 Skill';
+      } else {
+        document.getElementById('kpi-total-sub').textContent = '内置';
+        document.getElementById('kpi-total-desc').textContent = '覆盖 3 个 Stage · 全流程自动化';
+      }
+      document.getElementById('kpi-s3').textContent = 3 + s3extra;
+      if (s3extra > 0) document.getElementById('kpi-s3-sub').textContent = '个 Skills (+' + s3extra + ')';
+
+      document.getElementById('filter-count-all').textContent = total;
+      document.getElementById('filter-count-3').textContent = 3 + s3extra;
+      document.getElementById('filter-count-custom').textContent = customs.length;
+    }
+
+    // ── Filter & Search ───────────────────────────────────────────────────────
+    function filterSkills(filter, el) {
+      currentFilter = filter;
+      document.querySelectorAll('#sidebar-nav .side-item').forEach(function(item) {
+        item.classList.remove('active');
+      });
+      el.classList.add('active');
+      renderGrid();
+    }
+
+    function onSearchInput(val) {
+      currentSearch = val.trim();
+      renderGrid();
+    }
+
+    function openSearchModal() {
+      document.getElementById('search-input').focus();
+    }
+
+    // ── Import modal ──────────────────────────────────────────────────────────
+    function openImportModal() {
+      document.getElementById('import-modal').classList.remove('hidden');
+    }
+
+    function closeImportModal() {
+      document.getElementById('import-modal').classList.add('hidden');
+      document.getElementById('modal-json-input').value = '';
+    }
+
+    function closeImportModalIfBg(e) {
+      if (e.target === document.getElementById('import-modal')) closeImportModal();
+    }
+
+    function importFromModal() {
+      var raw = document.getElementById('modal-json-input').value.trim();
+      if (!raw) { showToast('请粘贴 JSON 内容', true); return; }
+      var parsed;
+      try { parsed = JSON.parse(raw); } catch(e) { showToast('JSON 格式错误：' + e.message, true); return; }
+      if (!Array.isArray(parsed)) { showToast('格式错误：顶层必须是 JSON 数组 [...]', true); return; }
+      var invalid = [];
+      parsed.forEach(function(item, i) {
+        if (!item.id || !item.name || !item.stage || !item.description) invalid.push(i + 1);
+      });
+      if (invalid.length > 0) { showToast('第 ' + invalid.join(', ') + ' 项缺少必填字段 (id/name/stage/description)', true); return; }
+
+      var existing = loadCustomSkills();
+      var added = 0;
+      parsed.forEach(function(item) {
+        var dup = existing.some(function(e) { return e.id === item.id; });
+        if (!dup) { existing.push(item); added++; }
+      });
+      saveCustomSkills(existing);
+      closeImportModal();
+      updateCounters();
+      renderGrid();
+      showToast(added > 0 ? ('已导入 ' + added + ' 个自定义 Skill') : '全部 Skill 已存在，无新增');
+    }
+
+    // ── Remove custom skill ───────────────────────────────────────────────────
+    function removeCustomSkill(id) {
+      var existing = loadCustomSkills().filter(function(s) { return s.id !== id; });
+      saveCustomSkills(existing);
+      updateCounters();
+      renderGrid();
+      showToast('已移除自定义 Skill');
+    }
+
+    // ── Export JSON ───────────────────────────────────────────────────────────
+    function exportSkillsJSON() {
+      var all = getAllSkills().map(function(s) {
+        return { id: s.id, name: s.name, stage: s.stage, description: s.desc || s.description || '', source: s.isCustom ? 'custom' : 'builtin' };
+      });
+      var blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'devpipeline-skills.json'; a.click();
+      URL.revokeObjectURL(url);
+      showToast('Skills 已导出为 JSON');
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    updateCounters();
+    renderGrid();
+  </script>
+</body>
+</html>
