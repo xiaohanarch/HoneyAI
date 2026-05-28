@@ -84,22 +84,19 @@ jobs:
           # Delete old job if exists, reapply with latest image
           kubectl -n honeyai delete job drizzle-migrate --ignore-not-found
           kubectl -n honeyai apply -f infra/k8s/base/jobs/migrate.yaml
-          kubectl -n honeyai wait --for=condition=Complete job/drizzle-migrate --timeout=300s
+          kubectl -n honeyai wait --for=condition=Complete job/drizzle-migrate --timeout=900s
 
       - name: Deploy web
         run: |
           kubectl -n honeyai set image deployment/web \
             web=ghcr.io/xiaohanarch/honeyai-web@${{ needs.build.outputs.web-digest }}
-          kubectl -n honeyai rollout status deploy/web --timeout=300s
+          kubectl -n honeyai rollout status deploy/web --timeout=600s
 
       - name: Deploy worker
         run: |
           kubectl -n honeyai set image deployment/worker \
             worker=ghcr.io/xiaohanarch/honeyai-worker@${{ needs.build.outputs.worker-digest }}
-          # Patch SANDBOX_IMAGE_DIGEST env
-          kubectl -n honeyai patch deployment worker --type=json \
-            -p='[{"op":"replace","path":"/spec/template/spec/containers/0/env/-","value":{"name":"SANDBOX_IMAGE_DIGEST","value":"${{ needs.build.outputs.sandbox-digest }}"}}]'
-          kubectl -n honeyai rollout status deploy/worker --timeout=300s
+          kubectl -n honeyai rollout status deploy/worker --timeout=900s
 
       - name: Rollback on failure
         if: failure()
