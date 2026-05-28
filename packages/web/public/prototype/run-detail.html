@@ -82,6 +82,15 @@
   .tl-content { flex: 1; padding-top: 2px; }
   .tl-name { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; color: var(--text-strong); }
   .tl-meta { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+  .btn-rerun {
+    display: inline-flex; align-items: center; gap: 4px;
+    margin-top: 6px; padding: 4px 10px;
+    border-radius: 7px; font-size: 11px; font-weight: 500;
+    background: oklch(96% 0.01 260); border: 1px solid var(--border-mid);
+    color: var(--text-muted); cursor: pointer; transition: all 0.12s;
+  }
+  .btn-rerun:hover { background: oklch(94% 0.05 25); border-color: oklch(72% 0.15 25); color: var(--halt); }
+  .btn-rerun:disabled { opacity: 0.4; cursor: not-allowed; }
 
   /* Gate panel */
   .gate-panel { background: oklch(97% 0.04 290); border: 1.5px solid oklch(85% 0.08 290); border-radius: 16px; padding: 24px; }
@@ -541,11 +550,17 @@ function renderTimeline(nodes) {
     var icon = nodeDotIcon(n.status, n.kind);
     var nameColor = n.status === 'success' ? 'color:var(--done)' : (n.status === 'running' ? 'color:oklch(46% 0.16 65)' : (n.status === 'pending' ? 'color:var(--review)' : (n.status === 'failed' ? 'color:var(--halt)' : '')));
     var kindLabel = n.kind === 'gate' ? '人工评审' : ('Stage ' + n.stage);
+    var canRerun = n.status !== 'running' && n.status !== 'pending';
     html += '<div class="tl-item">';
     html += '<div class="tl-dot ' + dotCls + '">' + icon + '</div>';
     html += '<div class="tl-content">';
     html += '<div class="tl-name" style="' + nameColor + '">' + n.name + '</div>';
     html += '<div class="tl-meta">' + kindLabel + ' · ' + (STATUS_LABEL[n.status] || n.status) + '</div>';
+    if (canRerun) {
+      html += '<button class="btn-rerun" onclick="rerunNode(\'' + n.id + '\',this)">';
+      html += '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.88"/></svg>';
+      html += '重跑此步骤及后续</button>';
+    }
     html += '</div></div>';
   });
   el.innerHTML = html;
@@ -1671,6 +1686,37 @@ var pollInterval = setInterval(function() {
 // ── Initial load ──────────────────────────────────────────────────────────────
 loadRun();
 startSSE();
+
+// ── Rerun node ────────────────────────────────────────────────────────────────
+function rerunNode(nodeId, btn) {
+  if (!nodeId || !runId) return;
+  btn.disabled = true;
+  btn.textContent = '提交中…';
+
+  fetch('/api/prototype/runs/' + runId + '/nodes/' + nodeId + '/rerun', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) {
+        btn.textContent = '已重新排队';
+        setTimeout(loadRun, 800);
+      } else {
+        var msg = {
+          RUN_IS_RUNNING: '运行中，请稍候',
+          NODE_IS_RUNNING: '节点运行中，请稍候',
+          REDIS_NOT_CONFIGURED: '队列未配置',
+        }[data.error] || (data.error || '失败');
+        btn.textContent = msg;
+        btn.disabled = false;
+      }
+    })
+    .catch(function() {
+      btn.textContent = '网络错误';
+      btn.disabled = false;
+    });
+}
 </script>
 </body>
 </html>
