@@ -28,3 +28,4 @@ coverage/
 
 # Git worktrees
 .worktrees/
+create-secrets.sh
