@@ -7,6 +7,7 @@ import { getDb } from '@honeyai/db'
 import { startReconcileLoop } from '@honeyai/orchestrator'
 import type { PodChecker } from '@honeyai/orchestrator'
 import { ClaudeCodeAdapter } from '@honeyai/adapter-claude'
+import { OpenCodeAdapter } from '@honeyai/adapter-opencode'
 import { initGitHubApp } from '@honeyai/github'
 import { handleScheduleRun } from './handlers/schedule-run.js'
 import { handleAdvanceRun } from './handlers/advance-run.js'
@@ -22,9 +23,16 @@ const DATABASE_URL = process.env['DATABASE_URL']
 const REDIS_URL = process.env['REDIS_URL']
 // Optional: if absent the claude CLI falls back to its own OAuth auth (Claude Code subscription)
 const ANTHROPIC_API_KEY = process.env['ANTHROPIC_API_KEY'] ?? ''
+// LLM engine selection: 'claude' (default) or 'opencode'
+const LLM_ENGINE = process.env['LLM_ENGINE'] ?? 'claude'
+// Optional model override (defaults depend on the chosen engine)
+const LLM_MODEL = process.env['LLM_MODEL']
 
 if (!DATABASE_URL) throw new Error('DATABASE_URL is required')
 if (!REDIS_URL) throw new Error('REDIS_URL is required')
+if (LLM_ENGINE !== 'claude' && LLM_ENGINE !== 'opencode') {
+  throw new Error(`LLM_ENGINE must be 'claude' or 'opencode', got: '${LLM_ENGINE}'`)
+}
 
 // ─── Optional GitHub App configuration ───────────────────────────────────────
 
@@ -56,9 +64,16 @@ if (githubConfigured) {
 const redisOpts = { url: REDIS_URL, maxRetriesPerRequest: null } as const
 const db = getDb()
 
-// ─── BullMQ Workers ───────────────────────────────────────────────────────────
+// ─── Adapter selection ────────────────────────────────────────────────────────
 
-const claudeAdapter = new ClaudeCodeAdapter()
+const activeAdapter =
+  LLM_ENGINE === 'opencode'
+    ? new OpenCodeAdapter(LLM_MODEL ?? 'anthropic/claude-sonnet-4-6')
+    : new ClaudeCodeAdapter()
+
+console.log('[worker] LLM engine: %s%s', LLM_ENGINE, LLM_MODEL ? ` model=${LLM_MODEL}` : '')
+
+// ─── BullMQ Workers ───────────────────────────────────────────────────────────
 
 const scheduleWorker = new Worker<ScheduleRunJob>(
   SCHEDULE_RUN_QUEUE,
@@ -67,7 +82,7 @@ const scheduleWorker = new Worker<ScheduleRunJob>(
     await handleScheduleRun(
       {
         db,
-        adapter: claudeAdapter,
+        adapter: activeAdapter,
         anthropicKey: ANTHROPIC_API_KEY,
       },
       job.data,
@@ -92,7 +107,7 @@ const advanceWorker = new Worker<AdvanceRunJob>(
     await handleAdvanceRun(
       {
         db,
-        adapter: claudeAdapter,
+        adapter: activeAdapter,
         anthropicKey: ANTHROPIC_API_KEY,
         createPR: async (params) => {
           if (!githubConfigured) {

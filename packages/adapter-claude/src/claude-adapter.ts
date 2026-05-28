@@ -23,10 +23,12 @@ export class ClaudeCodeAdapter implements RuntimeAdapter {
       args.push('--resume', sessionId)
     }
 
-    // Only set ANTHROPIC_API_KEY when non-empty; if empty, remove it so the
+    // Only set ANTHROPIC_API_KEY when non-empty; if empty, omit it so the
     // claude CLI falls back to its own OAuth auth (Claude Code subscription).
-    const spawnEnv = { ...process.env, ANTHROPIC_API_KEY: anthropicKey }
-    if (!anthropicKey) delete spawnEnv['ANTHROPIC_API_KEY']
+    const spawnEnv: NodeJS.ProcessEnv = {
+      ...process.env,
+      ANTHROPIC_API_KEY: anthropicKey || undefined,
+    }
 
     console.log('[claude-adapter] spawning claude, kind=%s, args=%s', kind, args.join(' '))
     const proc = spawn('claude', args, { env: spawnEnv, stdio: ['ignore', 'pipe', 'pipe'] })
