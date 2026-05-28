@@ -33,7 +33,11 @@ export async function GET() {
     .orderBy(desc(runs.createdAt))
     .limit(50)
 
-  return NextResponse.json({ runs: runRows })
+  const runsJson = runRows.map((r) => ({
+    ...r,
+    totalCostMicroUsd: r.totalCostMicroUsd != null ? Number(r.totalCostMicroUsd) : null,
+  }))
+  return NextResponse.json({ runs: runsJson })
 }
 
 export async function POST(req: NextRequest) {

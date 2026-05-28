@@ -108,7 +108,7 @@ export async function GET(
   for (const ev of toolEvents) {
     if (ev.stage !== null) {
       if (!byStage[ev.stage]) byStage[ev.stage] = []
-      byStage[ev.stage].push(ev)
+      byStage[ev.stage]!.push(ev)
     } else {
       noStage.push(ev)
     }
