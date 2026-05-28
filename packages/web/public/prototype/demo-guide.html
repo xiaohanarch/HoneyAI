@@ -524,6 +524,39 @@ html, body {
   content: ''; flex: 1; max-width: 120px; height: 1px;
   background: linear-gradient(90deg, transparent, var(--faint), transparent);
 }
+
+/* ─── CLICKABLE / CTA ─────────────────────────────── */
+.story-act { cursor: pointer; }
+.story-act:hover { transform: translateY(-2px); }
+.story-act:hover .act-arrow { color: var(--amber); border-color: oklch(78% 0.19 78 / .4); }
+.story-act:hover .url-chip  { border-color: oklch(78% 0.19 78 / .5); color: var(--amber); }
+.story-act:hover .url-chip span { color: var(--amber); }
+
+.km-card.clickable { cursor: pointer; transition: transform .15s, border-color .15s; }
+.km-card.clickable:hover { transform: translateY(-2px); border-color: var(--border2); background: #18253d; }
+
+.ir-node.clickable { cursor: pointer; }
+.ir-node.clickable:hover { transform: translateY(-3px) !important; }
+
+.cost-total-card.clickable { cursor: pointer; }
+.cost-total-card.clickable:hover { box-shadow: 0 20px 48px rgba(0,0,0,.5); border-color: oklch(78% 0.19 78 / .5) !important; }
+
+.url-chip.clickable { cursor: pointer; transition: border-color .15s, color .15s; }
+.url-chip.clickable:hover { border-color: var(--amber); color: var(--amber); }
+.url-chip.clickable:hover span { color: var(--amber); }
+
+.cta-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 20px;
+  border: 1px solid var(--amber-s); background: var(--amber-s);
+  color: var(--amber); font-size: 12px; font-weight: 600; letter-spacing: .04em;
+  cursor: pointer; text-decoration: none; transition: all .15s;
+  align-self: flex-start;
+}
+.cta-btn:hover { background: oklch(78% 0.19 78 / .22); border-color: var(--amber); }
+.cta-btn.purple { border-color: var(--purp-s); background: var(--purp-s); color: var(--purple); }
+.cta-btn.purple:hover { background: oklch(68% 0.22 290 / .22); border-color: var(--purple); }
+.cta-btn.center { align-self: center; }
 </style>
 </head>
 <body>
@@ -568,7 +601,7 @@ html, body {
   </div>
 
   <div class="story-map">
-    <div class="story-act">
+    <div class="story-act" onclick="window.open('runs-list.html','_blank')" title="点击进入 → 全局看板">
       <div class="act-num">第一幕</div>
       <div class="act-icon">🗂️</div>
       <div class="act-name">全局管线视图</div>
@@ -576,7 +609,7 @@ html, body {
       <div class="act-url"><div class="url-chip"><span>runs-list.html</span></div></div>
       <div class="act-arrow">→</div>
     </div>
-    <div class="story-act">
+    <div class="story-act" onclick="window.open('run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79','_blank')" title="点击进入 → Run 详情">
       <div class="act-num">第二幕</div>
       <div class="act-icon">🔍</div>
       <div class="act-name">Run 全链路解析</div>
@@ -584,7 +617,7 @@ html, body {
       <div class="act-url"><div class="url-chip" style="font-size:9.5px"><span>run-detail.html?runId=019e6a51…</span></div></div>
       <div class="act-arrow">→</div>
     </div>
-    <div class="story-act">
+    <div class="story-act" onclick="window.open('run-detail.html?runId=019e6a3e-6d7c-7359-b1f6-68fa7b24821b','_blank')" title="点击进入 → Gate 审查 Run">
       <div class="act-num">第三幕</div>
       <div class="act-icon">🚦</div>
       <div class="act-name">Gate 审查时刻</div>
@@ -602,7 +635,7 @@ html, body {
 
   <div class="s3-left">
     <div>
-      <div class="tag">🗂 runs-list.html</div>
+      <div class="tag" onclick="window.open('runs-list.html','_blank')" style="cursor:pointer" title="点击前往全局看板">🗂 runs-list.html ↗</div>
     </div>
     <div class="slide-h" style="text-align:left">像管 Scrum 看板<br/>一样管理 AI 任务</div>
     <div style="font-size:13.5px; color:var(--muted); line-height:1.8">
@@ -623,6 +656,7 @@ html, body {
         <span class="pill pill-fail">状态颜色编码</span>
       </div>
     </div>
+    <a class="cta-btn" href="runs-list.html" target="_blank">前往全局看板 →</a>
   </div>
 
   <div class="s3-right">
@@ -648,9 +682,9 @@ html, body {
       <div class="km-col km-purp">
         <div class="km-col-hd">待人工审批<div class="cnt">4</div></div>
         <div class="km-col-body">
-          <div class="km-card">
+          <div class="km-card clickable" onclick="window.open('run-detail.html?runId=019e6a3e-6d7c-7359-b1f6-68fa7b24821b','_blank')" title="点击查看 Gate 审查 Run">
             <div class="km-card-t">Final validation<br/>run</div>
-            <div class="km-card-m">S1 · —</div>
+            <div class="km-card-m">S1 · — · ⏸ 待审批</div>
           </div>
           <div class="km-card">
             <div class="km-card-t">Cancel test run</div>
@@ -663,9 +697,9 @@ html, body {
       <div class="km-col km-grn">
         <div class="km-col-hd">已完成 ✓<div class="cnt">2</div></div>
         <div class="km-col-body">
-          <div class="km-card">
+          <div class="km-card clickable" onclick="window.open('run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79','_blank')" title="点击查看已完成 Run">
             <div class="km-card-t">在 login 页面增加<br/>阿童木动画</div>
-            <div class="km-card-m">S3 · $1.32</div>
+            <div class="km-card-m">S3 · $1.32 · ✓ 完成</div>
           </div>
           <div class="km-card">
             <div class="km-card-t">Test run after<br/>CLAUDECODE fix</div>
@@ -755,8 +789,8 @@ html, body {
     </div>
   </div>
 
-  <div class="url-chip" style="align-self:center">
-    访问：<span>run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79</span>
+  <div class="url-chip clickable" style="align-self:center" onclick="window.open('run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79','_blank')" title="点击前往 Run 详情">
+    访问：<span>run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79 ↗</span>
   </div>
 </div>
 
@@ -773,7 +807,7 @@ html, body {
 
   <div class="ir-chain">
 
-    <div class="ir-node ir-v0">
+    <div class="ir-node ir-v0 clickable" onclick="window.open('run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79','_blank')" title="点击查看 IR 链">
       <div class="ir-stage-tag">v0 · 原始输入</div>
       <div class="ir-name">requirement_ir</div>
       <div class="ir-desc">用户一句话<br/>原封不动落库</div>
@@ -781,7 +815,7 @@ html, body {
       <div class="ir-arrow-sep">→</div>
     </div>
 
-    <div class="ir-node ir-v1">
+    <div class="ir-node ir-v1 clickable" onclick="window.open('run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79','_blank')" title="点击查看 IR 链">
       <div class="ir-stage-tag">v1 · AI 富化</div>
       <div class="ir-name">requirement_ir</div>
       <div class="ir-desc">Stage 1 enrich 产出<br/>结构化验收标准</div>
@@ -789,7 +823,7 @@ html, body {
       <div class="ir-arrow-sep">→</div>
     </div>
 
-    <div class="ir-node ir-d">
+    <div class="ir-node ir-d clickable" onclick="window.open('run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79','_blank')" title="点击查看 IR 链">
       <div class="ir-stage-tag">Stage 2 · 设计</div>
       <div class="ir-name">design_ir</div>
       <div class="ir-desc">模块拆解<br/>接口定义<br/>组件关系图</div>
@@ -797,7 +831,7 @@ html, body {
       <div class="ir-arrow-sep">→</div>
     </div>
 
-    <div class="ir-node ir-i">
+    <div class="ir-node ir-i clickable" onclick="window.open('run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79','_blank')" title="点击查看 IR 链">
       <div class="ir-stage-tag">Stage 3 · 实现</div>
       <div class="ir-name">impl_ir</div>
       <div class="ir-desc">具体实现任务<br/>可执行 checklist<br/>测试覆盖计划</div>
@@ -808,8 +842,10 @@ html, body {
 
   <div style="font-size:12px; color:var(--muted); text-align:center; max-width:600px; line-height:1.8">
     页面 <strong style="color:var(--text)">Section 5「IR 文档演化链」</strong>——点击每个节点可展开原始 Markdown 内容，
-    <em style="color:var(--emerald)">全程可追溯</em>。
+    <em style="color:var(--emerald)">全程可追溯</em>。<br/>
+    <span style="color:var(--faint)">↑ 上方节点可点击，直接跳转系统 ↑</span>
   </div>
+  <a class="cta-btn center" href="run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79" target="_blank">查看完整 IR 链 →</a>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -866,7 +902,7 @@ html, body {
   </div>
 
   <div class="s6-right">
-    <div class="cost-total-card">
+    <div class="cost-total-card clickable" onclick="window.open('run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79','_blank')" title="点击查看成本明细">
       <div class="cost-total-label">完成一个功能特性</div>
       <div class="cost-total-val">$1.32</div>
       <div class="cost-total-sub">3 阶段 · 全自动 · 含 PR 产出</div>
@@ -929,6 +965,7 @@ html, body {
             019e6a3e-6d7c-7359-b1f6-68fa7b24821b<br/>
             <span style="color:var(--purple)">paused_at_gate</span> · enrich ✓ · Gate1 ⏸
           </div>
+          <a class="cta-btn purple" href="run-detail.html?runId=019e6a3e-6d7c-7359-b1f6-68fa7b24821b" target="_blank" style="margin-top:8px">前往 Gate 审查 →</a>
         </div>
       </div>
     </div>
@@ -958,9 +995,9 @@ html, body {
           核心功能范围已对齐原始需求。建议继续进入 Stage 2 设计阶段。
         </div>
         <div class="gate-actions">
-          <button class="gate-btn gate-btn-pass">✓ 通过，继续</button>
-          <button class="gate-btn gate-btn-rej">✗ 拒绝</button>
-          <button class="gate-btn gate-btn-mod">✏ 修改意见</button>
+          <button class="gate-btn gate-btn-pass" onclick="window.open('run-detail.html?runId=019e6a3e-6d7c-7359-b1f6-68fa7b24821b','_blank')">✓ 通过，继续 ↗</button>
+          <button class="gate-btn gate-btn-rej" onclick="window.open('run-detail.html?runId=019e6a3e-6d7c-7359-b1f6-68fa7b24821b','_blank')">✗ 拒绝</button>
+          <button class="gate-btn gate-btn-mod" onclick="window.open('run-detail.html?runId=019e6a3e-6d7c-7359-b1f6-68fa7b24821b','_blank')">✏ 修改意见</button>
         </div>
       </div>
     </div>
