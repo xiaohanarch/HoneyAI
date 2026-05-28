@@ -3,8 +3,9 @@
 # because all workspace packages export TypeScript source directly.
 FROM node:22-alpine
 
-# Install opencode-ai CLI (claude-code lives in Dockerfile.sandbox, used via kubectl exec)
-RUN npm install -g opencode-ai
+# Install opencode-ai CLI + @ai-sdk/anthropic for custom bailian-token-plan provider
+# (claude-code lives in Dockerfile.sandbox, used via kubectl exec)
+RUN npm install -g opencode-ai @ai-sdk/anthropic
 
 # Install git (required by claude for repo operations inside the worker pod)
 RUN apk add --no-cache git
@@ -17,4 +18,6 @@ RUN pnpm install --frozen-lockfile
 
 ENV NODE_ENV=production
 
-CMD ["node_modules/.bin/tsx", "packages/worker/src/start.ts"]
+RUN chmod +x /app/infra/docker/worker-entrypoint.sh
+
+ENTRYPOINT ["/app/infra/docker/worker-entrypoint.sh"]

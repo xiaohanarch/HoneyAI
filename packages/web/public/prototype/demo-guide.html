@@ -1382,9 +1382,13 @@ html, body {
     cur = n;
     slides[cur].classList.remove('prev');
     slides[cur].classList.add('active');
-    // cleanup prev class after transition
+    // cleanup prev class after transition — suppress animation to avoid snap-back ghost
     setTimeout(function () {
-      slides[prevIdx].classList.remove('prev');
+      var el = slides[prevIdx];
+      el.style.transition = 'none';
+      el.classList.remove('prev');
+      void el.offsetHeight; // flush reflow before re-enabling transition
+      el.style.transition = '';
     }, 650);
     // dots
     dotsEl.querySelectorAll('.dot').forEach(function (d, i) {

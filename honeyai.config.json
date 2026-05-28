@@ -1,6 +1,6 @@
 {
   "llm": {
     "engine": "opencode",
-    "model": "alibaba/qwen3-coder-plus"
+    "model": "bailian-token-plan/qwen3.6-plus"
   }
 }
