@@ -1111,7 +1111,7 @@ function loadArtifactPreview(runId) {
       var arts = data.artifacts || [];
       var byKind = {};
       arts.forEach(function(a) {
-        if (a.status === 'ready' && a.blobSha256 && !byKind[a.kind]) byKind[a.kind] = a;
+        if (a.status === 'ok' && a.blobSha256 && !byKind[a.kind]) byKind[a.kind] = a;
       });
 
       // Pick highest-priority IR for current gate
@@ -1225,7 +1225,7 @@ function loadImplIRDiff(runId, prUrl) {
     .then(function(data) {
       var arts = data.artifacts || [];
       var implIR = null;
-      arts.forEach(function(a) { if (a.kind === 'impl_ir' && a.status === 'ready' && a.blobSha256) implIR = a; });
+      arts.forEach(function(a) { if (a.kind === 'impl_ir' && a.status === 'ok' && a.blobSha256) implIR = a; });
 
       if (implIR) {
         fetch('/api/prototype/artifacts/' + implIR.blobSha256 + '/content')
@@ -1279,13 +1279,7 @@ function loadAllArtifacts(runId) {
       // Filter: only completed artifacts with a sha, deduplicate by kind (keep latest)
       var byKind = {};
       arts.forEach(function(a) {
-        if (a.status === 'ready' && a.blobSha256 && !byKind[a.kind]) {
-          byKind[a.kind] = a;
-        }
-      });
-      // Also include any ready artifact regardless of kind
-      arts.forEach(function(a) {
-        if (a.status === 'ready' && a.blobSha256 && !byKind[a.kind]) {
+        if (a.status === 'ok' && a.blobSha256 && !byKind[a.kind]) {
           byKind[a.kind] = a;
         }
       });
@@ -1726,7 +1720,7 @@ function renderIRChain(runId, oneLiner) {
       var arts = data.artifacts || [];
       var byKind = {};
       arts.forEach(function(a) {
-        if (a.status === 'ready' && a.blobSha256) {
+        if (a.status === 'ok' && a.blobSha256) {
           if (!byKind[a.kind]) byKind[a.kind] = a;
         }
       });
