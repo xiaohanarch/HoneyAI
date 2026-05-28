@@ -557,6 +557,54 @@ html, body {
 .cta-btn.purple { border-color: var(--purp-s); background: var(--purp-s); color: var(--purple); }
 .cta-btn.purple:hover { background: oklch(68% 0.22 290 / .22); border-color: var(--purple); }
 .cta-btn.center { align-self: center; }
+
+/* ─── SETUP SLIDE ─────────────────────────────────── */
+.setup-steps { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 520px; }
+.setup-step {
+  display: flex; align-items: flex-start; gap: 16px;
+  padding: 16px 20px; border-radius: 14px;
+  background: var(--surf); border: 1px solid var(--border2);
+}
+.setup-step-num {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
+  background: var(--amber-s); color: var(--amber); border: 1px solid oklch(78% 0.19 78 / .3);
+}
+.setup-step-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+.setup-step-desc { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.setup-step-badge {
+  font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+  padding: 2px 7px; border-radius: 5px; background: var(--surf2);
+  color: var(--faint); display: inline-block; margin-top: 5px;
+}
+
+/* ─── TRANSFORM SLIDE ─────────────────────────────── */
+.transform-split {
+  display: grid; grid-template-columns: 1fr auto 1fr; gap: 0;
+  align-items: center; width: 100%; max-width: 880px;
+}
+.tx-panel {
+  padding: 22px 24px; border-radius: 16px;
+  border: 1px solid var(--border2); background: var(--surf);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.tx-label { font-size: 10px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+.tx-input-text {
+  font-family: 'Instrument Serif', serif; font-size: 22px;
+  color: var(--text); line-height: 1.4; font-style: italic;
+}
+.tx-output-item { display: flex; align-items: flex-start; gap: 8px; }
+.tx-output-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+.tx-output-text { font-size: 12px; color: var(--text); line-height: 1.6; }
+.tx-arrow-col { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0 24px; }
+.tx-arrow-label { font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--amber); font-weight: 600; writing-mode: vertical-rl; text-orientation: mixed; }
+.tx-big-arrow { font-size: 32px; color: var(--amber); line-height: 1; }
+.tx-cost-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 11px; color: var(--muted); }
+.tx-time-chip {
+  padding: 3px 9px; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
+  background: var(--amber-s); color: var(--amber); border: 1px solid oklch(78% 0.19 78 / .3);
+}
 </style>
 </head>
 <body>
@@ -590,7 +638,96 @@ html, body {
 </div>
 
 <!-- ══════════════════════════════════════
-     SLIDE 2 · STORY MAP
+     SLIDE 2 · SETUP
+══════════════════════════════════════ -->
+<div class="slide" id="s-setup">
+  <div class="slide-label">第 0 步 · 初始化配置</div>
+  <div class="slide-h">5 分钟完成配置，永久生效</div>
+  <div style="font-size:13.5px; color:var(--muted); text-align:center; max-width:540px; line-height:1.7; margin-bottom:28px">
+    第一次使用 HoneyAI，只需配置 3 件事——之后每次提需求都是一句话的事
+  </div>
+  <div class="setup-steps">
+    <div class="setup-step" style="cursor:pointer" onclick="window.open('setup.html#api-key','_blank')">
+      <div class="setup-step-num" style="background:var(--amber-s);color:var(--amber)">1</div>
+      <div>
+        <div class="setup-step-title">🔑 Anthropic API Key</div>
+        <div class="setup-step-desc">粘贴你的 Claude API Key，本地加密存储，不上传任何服务器。<br/>每次运行按实际 token 消耗计费，没有月费。</div>
+        <span class="setup-step-badge">约 30 秒</span>
+      </div>
+    </div>
+    <div class="setup-step" style="cursor:pointer" onclick="window.open('setup.html#github','_blank')">
+      <div class="setup-step-num" style="background:var(--purp-s);color:var(--purple)">2</div>
+      <div>
+        <div class="setup-step-title">🐙 GitHub 仓库授权</div>
+        <div class="setup-step-desc">安装 HoneyAI GitHub App，选择目标仓库。AI Agent 最终会向这个仓库提 PR。</div>
+        <span class="setup-step-badge">约 2 分钟</span>
+      </div>
+    </div>
+    <div class="setup-step" style="cursor:pointer" onclick="window.open('setup.html#skills','_blank')">
+      <div class="setup-step-num" style="background:var(--emld-s);color:var(--emerald)">3</div>
+      <div>
+        <div class="setup-step-title">📦 Skills 导入（可选）</div>
+        <div class="setup-step-desc">上传项目专属编码规范、架构约束或代码模板，AI 会在每次生成中遵循。</div>
+        <span class="setup-step-badge">约 2 分钟（可跳过）</span>
+      </div>
+    </div>
+  </div>
+  <a class="cta-btn" href="setup.html" target="_blank" style="margin-top:24px">前往配置页面 →</a>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 3 · TRANSFORM
+══════════════════════════════════════ -->
+<div class="slide" id="s-transform">
+  <div class="slide-label">核心魔法 · 输入 vs 输出</div>
+  <div class="slide-h" style="margin-bottom:6px">一句话 → 可执行的工程规格</div>
+  <div style="font-size:13px; color:var(--muted); text-align:center; margin-bottom:28px">
+    Stage 1 只用 <span style="color:var(--amber); font-weight:600">$0.20 · 约 3 分钟</span>，把模糊意图变成 AI 和人类都能读懂的结构化文档
+  </div>
+  <div class="transform-split">
+    <div class="tx-panel">
+      <div class="tx-label">你的输入</div>
+      <div class="tx-input-text">"给用户列表加个搜索框"</div>
+      <div style="margin-top:12px; font-size:11.5px; color:var(--muted); line-height:1.6">
+        这就是全部。不需要 PRD，不需要技术方案，不需要画原型。
+      </div>
+    </div>
+    <div class="tx-arrow-col">
+      <div class="tx-arrow-label">AI 生成</div>
+      <div class="tx-big-arrow">→</div>
+      <div class="tx-time-chip">~3 min</div>
+    </div>
+    <div class="tx-panel">
+      <div class="tx-label">Requirement IR · 结构化输出</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+        <div class="tx-output-item">
+          <div class="tx-output-dot" style="background:var(--amber)"></div>
+          <div class="tx-output-text"><strong style="color:var(--text)">验收标准 × 5 条</strong> — 含边界情况：搜索为空时显示全部 / 大小写不敏感 / 防抖 300ms</div>
+        </div>
+        <div class="tx-output-item">
+          <div class="tx-output-dot" style="background:var(--emerald)"></div>
+          <div class="tx-output-text"><strong style="color:var(--text)">技术约束</strong> — 复用现有 API endpoint，不引入新依赖，兼容移动端</div>
+        </div>
+        <div class="tx-output-item">
+          <div class="tx-output-dot" style="background:var(--purple)"></div>
+          <div class="tx-output-text"><strong style="color:var(--text)">影响范围分析</strong> — 涉及 3 个组件 / 1 个 hook / 0 个数据库改动</div>
+        </div>
+        <div class="tx-output-item">
+          <div class="tx-output-dot" style="background:var(--sky)"></div>
+          <div class="tx-output-text"><strong style="color:var(--text)">风险识别</strong> — 大数据量时性能预警，建议加服务端搜索入口</div>
+        </div>
+      </div>
+      <div class="tx-cost-row">
+        <span>成本</span>
+        <span class="tx-time-chip" style="color:var(--amber)">$0.20</span>
+        <span style="color:var(--muted)">· 用这 $0.20 确认方向对了，再投入后续 $1.12</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 4 · STORY MAP
 ══════════════════════════════════════ -->
 <div class="slide" id="s2">
   <div class="slide-label">Demo 路线图</div>
@@ -1067,7 +1204,7 @@ html, body {
 </div>
 
 <!-- ─── COUNTER ─── -->
-<div class="counter" id="counter">1 / 8</div>
+<div class="counter" id="counter">1 / 10</div>
 
 <script>
 (function () {
@@ -1075,6 +1212,9 @@ html, body {
   var dotsEl = document.getElementById('dots');
   var counterEl = document.getElementById('counter');
   var cur = 0;
+
+  // Init counter
+  counterEl.textContent = '1 / ' + slides.length;
 
   // Build dots
   slides.forEach(function (_, i) {
