@@ -7,13 +7,12 @@ mkdir -p /root/.config/opencode
 
 node -e "
 const cfg = {
-  '\$schema': 'https://opencode.ai/config.json',
   provider: {
     'bailian-token-plan': {
       npm: '@ai-sdk/anthropic',
       name: 'Alibaba Cloud Model Studio',
       options: {
-        baseURL: 'https://token-plan.cn-beijing.maas.aliyuncs.com/apps/anthropic/v1',
+        baseURL: 'https://coding.dashscope.aliyuncs.com/apps/anthropic/v1',
         apiKey: process.env.DASHSCOPE_API_KEY || ''
       },
       models: {
