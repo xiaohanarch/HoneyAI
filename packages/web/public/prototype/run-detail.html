@@ -1483,6 +1483,14 @@ function downloadArt(sha, filename) {
 // ── Skills / 工具调用明细 ─────────────────────────────────────────────────────
 var STAGE_COL_NAMES = { 1: 'Stage 1 · 需求富化', 2: 'Stage 2 · 设计与拆解', 3: 'Stage 3 · 编码+UT' };
 
+// event kind → display label + style
+var EVENT_KIND_META = {
+  tool_call: { label: null, style: null }, // tool_call → use tool name instead (handled separately)
+  text:      { label: 'LLM 输出',   style: { dot: 'oklch(55% 0.20 250)', bg: 'oklch(94% 0.05 250)', border: 'oklch(82% 0.10 250)', text: 'oklch(35% 0.20 250)' } },
+  thinking:  { label: '扩展思考',   style: { dot: 'oklch(58% 0.18 295)', bg: 'oklch(94% 0.04 295)', border: 'oklch(82% 0.09 295)', text: 'oklch(35% 0.18 295)' } },
+  finish:    { label: '完成信号',   style: { dot: 'oklch(55% 0.15 150)', bg: 'oklch(94% 0.05 150)', border: 'oklch(82% 0.10 150)', text: 'oklch(35% 0.15 150)' } },
+  error:     { label: '执行错误',   style: { dot: 'oklch(55% 0.20 25)',  bg: 'oklch(95% 0.04 25)',  border: 'oklch(84% 0.08 25)',  text: 'oklch(38% 0.20 25)'  } },
+};
 var TOOL_LABEL = {
   Read: '读文件', Write: '写文件', Edit: '编辑文件',
   Bash: '执行命令', Grep: '内容搜索', Glob: '文件查找',
@@ -1511,53 +1519,70 @@ function renderSkillsPanel(runStatus) {
   if (!showStatuses[runStatus]) { section.style.display = 'none'; return; }
   section.style.display = '';
 
-  if (skillsLoaded) return; // already rendered (once-only)
+  if (skillsLoaded) return;
   skillsLoaded = true;
 
-  if (demoMode) { renderSkillsPanelHtml({}); return; }
+  if (demoMode) { renderSkillsPanelHtml({}, {}); return; }
 
   document.getElementById('skills-grid').innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:4px 0;">加载中…</div>';
 
   fetch('/api/prototype/runs/' + runId + '/tool-events')
-    .then(function(r) { if (!r.ok) { renderSkillsPanelHtml({}); return null; } return r.json(); })
+    .then(function(r) { if (!r.ok) { renderSkillsPanelHtml({}, {}); return null; } return r.json(); })
     .then(function(data) {
       if (!data) return;
-      // Count tool calls per stage
-      var countsByStage = {};
+      // Tool call counts per stage (from byStage)
+      var toolCountsByStage = {};
       [1, 2, 3].forEach(function(s) {
         var evts = data.byStage[s] || [];
         var counts = {};
         evts.forEach(function(e) { counts[e.tool] = (counts[e.tool] || 0) + 1; });
-        countsByStage[s] = counts;
+        toolCountsByStage[s] = counts;
       });
-      renderSkillsPanelHtml(countsByStage);
+      // All event kind counts per stage (from eventCountsByStage — includes text/thinking/finish)
+      var eventCountsByStage = data.eventCountsByStage || {};
+      renderSkillsPanelHtml(toolCountsByStage, eventCountsByStage);
     })
-    .catch(function() { renderSkillsPanelHtml({}); });
+    .catch(function() { renderSkillsPanelHtml({}, {}); });
 }
 
-function renderSkillsPanelHtml(countsByStage) {
+function renderSkillsBadge(label, count, style) {
+  var s = style || TOOL_STYLE._default;
+  return '<span title="' + count + ' 次" style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:500;background:' + s.bg + ';border:1px solid ' + s.border + ';color:' + s.text + ';">'
+    + '<span style="width:6px;height:6px;border-radius:50%;background:' + s.dot + ';flex-shrink:0;"></span>'
+    + esc(label) + '<span style="opacity:.55;margin-left:1px;">×' + count + '</span>'
+    + '</span>';
+}
+
+function renderSkillsPanelHtml(toolCountsByStage, eventCountsByStage) {
   var html = '';
   [1, 2, 3].forEach(function(stageNum) {
-    var counts = countsByStage[stageNum] || {};
-    var tools = Object.keys(counts).sort(function(a, b) { return counts[b] - counts[a]; });
+    var toolCounts = toolCountsByStage[stageNum] || {};
+    var kindCounts = eventCountsByStage[stageNum] || {};
     html += '<div style="border:1px solid var(--border-soft);border-radius:14px;padding:16px 18px;background:var(--bg-card);">';
     html += '<div class="caps" style="margin-bottom:12px;">' + esc(STAGE_COL_NAMES[stageNum]) + '</div>';
     html += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
-    if (tools.length === 0) {
-      html += '<span style="font-size:12px;color:var(--text-faint);">暂无数据</span>';
-    } else {
-      tools.forEach(function(tool) {
-        var label = TOOL_LABEL[tool] || tool;
-        var s = TOOL_STYLE[tool] || TOOL_STYLE._default;
-        var count = counts[tool];
-        html += '<span title="调用 ' + count + ' 次" style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:500;background:' + s.bg + ';border:1px solid ' + s.border + ';color:' + s.text + ';">';
-        html += '<span style="width:6px;height:6px;border-radius:50%;background:' + s.dot + ';flex-shrink:0;"></span>';
-        html += esc(label) + '<span style="opacity:.55;margin-left:1px;">×' + count + '</span>';
-        html += '</span>';
-      });
-    }
+
+    var hasAny = false;
+
+    // LLM event badges (text / thinking / finish / error) — prominent in stage 1 & 2
+    ['text', 'thinking', 'finish', 'error'].forEach(function(kind) {
+      var count = kindCounts[kind];
+      if (!count) return;
+      var meta = EVENT_KIND_META[kind];
+      if (meta && meta.label) { html += renderSkillsBadge(meta.label, count, meta.style); hasAny = true; }
+    });
+
+    // Tool call badges (sorted by count desc)
+    var tools = Object.keys(toolCounts).sort(function(a, b) { return toolCounts[b] - toolCounts[a]; });
+    tools.forEach(function(tool) {
+      html += renderSkillsBadge(TOOL_LABEL[tool] || tool, toolCounts[tool], TOOL_STYLE[tool] || TOOL_STYLE._default);
+      hasAny = true;
+    });
+
+    if (!hasAny) html += '<span style="font-size:12px;color:var(--text-faint);">暂无数据</span>';
     html += '</div></div>';
   });
+
   // Stage 4 placeholder
   html += '<div style="border:1px dashed var(--border-soft);border-radius:14px;padding:16px 18px;background:var(--bg-card);opacity:.45;">';
   html += '<div class="caps" style="margin-bottom:12px;">Stage 4 · SIT 集成测试</div>';
