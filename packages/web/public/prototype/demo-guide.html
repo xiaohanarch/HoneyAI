@@ -1469,6 +1469,30 @@ html, body {
     if (Math.abs(dx) > 50) go(dx < 0 ? +1 : -1);
   }, { passive: true });
 })();
+
+// ── Smart run link: replace hardcoded demo run ID with user's latest completed run ──
+(function resolveRunLinks() {
+  var DEMO_RUN_ID = '019e6a51-40cd-71b7-a7c9-6176b1529b79';
+  fetch('/api/prototype/runs', { credentials: 'include' })
+    .then(function(r) { if (!r.ok) return null; return r.json(); })
+    .then(function(data) {
+      if (!data) return;
+      var runs = data.runs || [];
+      var completed = runs.filter(function(r) { return r.status === 'completed'; });
+      if (completed.length === 0) return; // no real runs → keep demo ID (demo fallback)
+      var latestId = completed[0].id; // already sorted desc by createdAt
+      if (latestId === DEMO_RUN_ID) return;
+      // Rewrite all run-detail links in the page
+      document.querySelectorAll('a[href*="' + DEMO_RUN_ID + '"]').forEach(function(el) {
+        el.href = el.href.replace(DEMO_RUN_ID, latestId);
+      });
+      // Rewrite onclick attributes via querySelectorAll on clickable elements
+      document.querySelectorAll('[onclick*="' + DEMO_RUN_ID + '"]').forEach(function(el) {
+        el.setAttribute('onclick', el.getAttribute('onclick').replace(new RegExp(DEMO_RUN_ID, 'g'), latestId));
+      });
+    })
+    .catch(function() {});
+})();
 </script>
 </body>
 </html>

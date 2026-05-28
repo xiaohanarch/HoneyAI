@@ -1416,7 +1416,7 @@
 <script>
 // ── Auth check ────────────────────────────────────────────────────────────────
 fetch('/api/prototype/me').then(function(r) {
-  if (r.status === 401) // demo mode: skip redirect
+  if (r.status === 401) { /* demo mode: skip redirect */ }
 });
 
 // ── Load real run stats ───────────────────────────────────────────────────────
