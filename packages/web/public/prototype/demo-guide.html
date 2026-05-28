@@ -647,7 +647,7 @@ html, body {
     第一次使用 HoneyAI，只需配置 3 件事——之后每次提需求都是一句话的事
   </div>
   <div class="setup-steps">
-    <div class="setup-step" style="cursor:pointer" onclick="window.open('setup.html#api-key','_blank')">
+    <div class="setup-step" style="cursor:pointer" onclick="window.open('setup.html#step-1','_blank')">
       <div class="setup-step-num" style="background:var(--amber-s);color:var(--amber)">1</div>
       <div>
         <div class="setup-step-title">🔑 Anthropic API Key</div>
@@ -655,7 +655,7 @@ html, body {
         <span class="setup-step-badge">约 30 秒</span>
       </div>
     </div>
-    <div class="setup-step" style="cursor:pointer" onclick="window.open('setup.html#github','_blank')">
+    <div class="setup-step" style="cursor:pointer" onclick="window.open('setup.html#step-2','_blank')">
       <div class="setup-step-num" style="background:var(--purp-s);color:var(--purple)">2</div>
       <div>
         <div class="setup-step-title">🐙 GitHub 仓库授权</div>
@@ -663,7 +663,7 @@ html, body {
         <span class="setup-step-badge">约 2 分钟</span>
       </div>
     </div>
-    <div class="setup-step" style="cursor:pointer" onclick="window.open('setup.html#skills','_blank')">
+    <div class="setup-step" style="cursor:pointer" onclick="window.open('setup.html#step-3','_blank')">
       <div class="setup-step-num" style="background:var(--emld-s);color:var(--emerald)">3</div>
       <div>
         <div class="setup-step-title">📦 Skills 导入（可选）</div>
@@ -697,8 +697,8 @@ html, body {
       <div class="tx-big-arrow">→</div>
       <div class="tx-time-chip">~3 min</div>
     </div>
-    <div class="tx-panel">
-      <div class="tx-label">Requirement IR · 结构化输出</div>
+    <div class="tx-panel clickable" style="cursor:pointer;transition:border-color .15s" onclick="window.open('run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79','_blank')" title="点击查看真实 IR 文档">
+      <div class="tx-label">Requirement IR · 结构化输出 <span style="color:var(--sky);font-size:9px;margin-left:6px">↗ 点击查看真实文档</span></div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
         <div class="tx-output-item">
           <div class="tx-output-dot" style="background:var(--amber)"></div>
@@ -724,6 +724,7 @@ html, body {
       </div>
     </div>
   </div>
+  <a class="cta-btn center" href="run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79" target="_blank" style="margin-top:20px">查看完整 Run · IR 链 →</a>
 </div>
 
 <!-- ══════════════════════════════════════
