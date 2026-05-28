@@ -560,7 +560,11 @@
   function escK(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
   function renderKanban() {
-    fetch('/api/prototype/runs').then(function(r) { return r.json(); }).then(function(data) {
+    fetch('/api/prototype/runs').then(function(r) {
+      if (!r.ok) return null;
+      return r.json();
+    }).then(function(data) {
+      if (!data) { buildKanbanBoard(cachedRuns || []); return; }
       cachedRuns = data.runs || [];
       buildKanbanBoard(cachedRuns);
     }).catch(function() {
@@ -677,9 +681,13 @@
   }
 
   // ── Fetch + render real runs ─────────────────────────────────────────────────
-  fetch('/api/prototype/runs').then(function(r) { return r.json(); }).then(function(data) {
+  fetch('/api/prototype/runs').then(function(r) {
+    if (!r.ok) return null; // 401/403 → skip, static demo rows stay visible
+    return r.json();
+  }).then(function(data) {
+    if (!data) return; // unauthenticated or error — keep static demo rows as-is
     var container = document.getElementById('real-runs-container');
-    if (!data.runs || data.runs.length === 0) { container.innerHTML = ''; return; }
+    if (!data.runs || data.runs.length === 0) { return; }
 
     var html = '';
     data.runs.forEach(function(run, idx) {
@@ -712,9 +720,11 @@
     });
   }).catch(function(err) { console.warn('Failed to load runs:', err); });
 
-  // make static demo rows go to index.html (existing behavior)
+  // Static demo rows → demo run-detail page
   document.querySelectorAll('.run-row:not(.real-run-row)').forEach(function (row) {
-    row.addEventListener('click', function () { window.location.href = 'index.html'; });
+    row.addEventListener('click', function () {
+      window.location.href = 'run-detail.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79';
+    });
   });
 </script>
 
