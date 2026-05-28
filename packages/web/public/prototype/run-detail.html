@@ -609,6 +609,28 @@
     </div>
   </div>
 
+<!-- ─── Artifact Viewer Modal ──────────────────────────────────────────────── -->
+<div id="artifact-viewer-modal" onclick="if(event.target===this)closeArtifactViewer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-start;justify-content:center;padding:40px 24px;overflow-y:auto;">
+  <div style="background:white;border-radius:16px;width:100%;max-width:780px;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.22);pointer-events:all;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--border-soft);flex-shrink:0;">
+      <div>
+        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:var(--text-muted);">AI 产出文档</div>
+        <div id="artifact-viewer-title" style="font-size:15px;font-weight:600;color:var(--text-strong);margin-top:2px;"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button onclick="downloadCurrentArtifact()" style="height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--border-soft);background:var(--bg-elev);font-size:12px;font-weight:500;color:var(--text-strong);cursor:pointer;display:flex;align-items:center;gap:5px;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          下载 .md
+        </button>
+        <button onclick="closeArtifactViewer()" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border-soft);background:var(--bg-elev);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="artifact-viewer-body" style="padding:28px 32px;font-size:14px;line-height:1.8;overflow-y:auto;max-height:70vh;"></div>
+  </div>
+</div>
+
 </main>
 
 <footer class="px-8 py-6 text-[10.5px] mono text-[var(--text-muted)] flex items-center gap-3">
@@ -635,6 +657,9 @@ var terminalLastSeq = 0;
 var terminalPollTimer = null;
 var terminalCurrentNodeId = null;
 var demoMode = false; // true when API is unauthenticated → use embedded demo data
+var workflowArtifacts = {}; // kind → sha256 (agent-produced only)
+var workflowArtifactsLoaded = false;
+var artifactViewerContent = ''; // content of currently-open artifact
 
 // ── Demo fallback data (used when unauthenticated) ───────────────────────────
 var DEMO_RUN_DATA = {
@@ -747,6 +772,76 @@ function renderTimeline(nodes) {
   el.innerHTML = html;
 }
 
+// ── Workflow artifact loading ─────────────────────────────────────────────────
+function loadWorkflowArtifacts(runId) {
+  if (workflowArtifactsLoaded) return;
+  workflowArtifactsLoaded = true;
+  fetch('/api/prototype/runs/' + runId + '/artifacts')
+    .then(function(r) { if (!r.ok) return null; return r.json(); })
+    .then(function(data) {
+      if (!data) return;
+      (data.artifacts || []).forEach(function(a) {
+        // Only agent-produced artifacts (nodeId != null), status 'ok', with blob
+        if (a.status === 'ok' && a.blobSha256 && a.nodeId) {
+          workflowArtifacts[a.kind] = a.blobSha256;
+        }
+      });
+      // Re-render rails so artifact cards pick up click handlers
+      if (currentRunStatus) {
+        var lastNodes = window._lastNodes || [];
+        var lastPrUrl = window._lastPrUrl || null;
+        renderThreeRail(lastNodes, currentRunStatus, lastPrUrl);
+      }
+    })
+    .catch(function() {});
+}
+
+// ── Artifact viewer modal ─────────────────────────────────────────────────────
+function openArtifactViewer(sha, kind, title) {
+  var modal = document.getElementById('artifact-viewer-modal');
+  document.getElementById('artifact-viewer-title').textContent = title || kind;
+  document.getElementById('artifact-viewer-body').innerHTML = '<div style="color:var(--text-muted);font-size:13px;">加载中…</div>';
+  artifactViewerContent = '';
+  modal.style.display = 'flex';
+
+  fetch('/api/prototype/artifacts/' + sha + '/content')
+    .then(function(r) { if (!r.ok) throw new Error('err'); return r.json(); })
+    .then(function(d) {
+      artifactViewerContent = d.content || '';
+      var body = document.getElementById('artifact-viewer-body');
+      body.innerHTML = renderMd(artifactViewerContent);
+      // Basic prose styling for markdown output
+      body.querySelectorAll('h1,h2,h3').forEach(function(el) {
+        el.style.cssText = 'font-weight:600;margin:1.2em 0 .4em;color:var(--text-strong)';
+      });
+      body.querySelectorAll('p').forEach(function(el) { el.style.margin = '.6em 0'; });
+      body.querySelectorAll('pre').forEach(function(el) {
+        el.style.cssText = 'background:var(--bg-elev);border:1px solid var(--border-soft);border-radius:8px;padding:12px 16px;overflow-x:auto;font-size:12.5px;';
+      });
+      body.querySelectorAll('code:not(pre code)').forEach(function(el) {
+        el.style.cssText = 'background:var(--bg-elev);border-radius:4px;padding:1px 5px;font-size:12.5px;';
+      });
+      body.querySelectorAll('ul,ol').forEach(function(el) { el.style.cssText = 'margin:.6em 0;padding-left:1.4em'; });
+    })
+    .catch(function() {
+      document.getElementById('artifact-viewer-body').innerHTML = '<div style="color:var(--halt);font-size:13px;">加载失败，请重试</div>';
+    });
+}
+
+function closeArtifactViewer() {
+  document.getElementById('artifact-viewer-modal').style.display = 'none';
+}
+
+function downloadCurrentArtifact() {
+  if (!artifactViewerContent) return;
+  var title = document.getElementById('artifact-viewer-title').textContent || 'artifact';
+  var blob = new Blob([artifactViewerContent], { type: 'text/markdown; charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = title.replace(/\s+/g, '_') + '.md'; a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ── Three-rail pipeline render ────────────────────────────────────────────────
 var EXEC_STAGES = [
   { stage: 1, num: '01', name: '需求富化',    desc: '原始诉求 → 语义化富化' },
@@ -764,6 +859,9 @@ var ART_INFO = [
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function renderThreeRail(nodes, runStatus, prUrl) {
+  // Cache for re-render after artifact load
+  window._lastNodes = nodes; window._lastPrUrl = prUrl;
+
   var agentByStage = {}, gateByStage = {};
   (nodes || []).forEach(function(n) {
     if (n.kind === 'agent') agentByStage[n.stage] = n;
@@ -849,18 +947,29 @@ function renderThreeRail(nodes, runStatus, prUrl) {
       border = 'var(--border-soft)'; iconCol = 'var(--text-faint)';
       statusLabel = 'PENDING'; connStyle = 'background:var(--border-soft)';
     }
+    var artKind = info.label; // 'requirement_ir' / 'design_ir' / 'impl_ir'
+    var artSha = done ? workflowArtifacts[artKind] : null;
+    var clickable = done && !!artSha;
+
     var docIcon = done
       ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>'
       : '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
 
+    var clickAttr = clickable
+      ? ' onclick="openArtifactViewer(\'' + artSha + '\',\'' + artKind + '\',\'' + esc(info.desc) + '\')" style="cursor:pointer;transition:box-shadow .15s;" onmouseenter="this.style.boxShadow=\'0 4px 16px rgba(0,0,0,.1)\'" onmouseleave="this.style.boxShadow=\'\'"'
+      : '';
+
     artHtml += '<div class="relative' + (isLast ? '' : ' pr-6') + '">';
     if (!isLast) artHtml += '<div class="absolute top-[13px] left-[26px] right-0 h-[2px]" style="' + connStyle + '"></div>';
-    artHtml += '<div class="relative rounded-xl border p-2.5 bg-white" style="border-color:' + border + '">';
+    artHtml += '<div class="relative rounded-xl border p-2.5 bg-white"' + clickAttr + ' style="border-color:' + border + '">';
     artHtml += '<div class="flex items-start gap-2">';
     artHtml += '<div class="w-[26px] h-[26px] rounded-lg border-2 flex-shrink-0 flex items-center justify-center" style="border-color:' + iconCol + ';color:' + iconCol + '">' + docIcon + '</div>';
     artHtml += '<div class="min-w-0 flex-1">';
-    artHtml += '<div class="text-[10px] tracking-[.10em] uppercase font-semibold" style="color:' + iconCol + '">' + statusLabel + ' · ' + esc(info.label) + '</div>';
+    artHtml += '<div class="text-[10px] tracking-[.10em] uppercase font-semibold" style="color:' + iconCol + '">' + statusLabel + ' · ' + esc(artKind) + '</div>';
     artHtml += '<div class="text-[12px] font-medium text-[var(--text-strong)] mt-0.5">' + esc(info.desc) + '</div>';
+    if (clickable) {
+      artHtml += '<div class="text-[10.5px] mt-1.5 font-medium" style="color:var(--done)">点击查看 / 下载 →</div>';
+    }
     artHtml += '</div></div></div></div>';
   });
   document.getElementById('rail-artifacts').innerHTML = artHtml;
@@ -1978,6 +2087,7 @@ function loadRun() {
       renderSkillsPanel(run.status);
       if (run.status === 'completed' || run.status === 'running' || run.status === 'paused_at_gate') {
         renderAgentTrace(runId);
+        loadWorkflowArtifacts(runId); // populate workflowArtifacts → re-renders rail cards clickable
       }
       if (run.status === 'completed') {
         renderReqCompare(runId, run.oneLiner);
