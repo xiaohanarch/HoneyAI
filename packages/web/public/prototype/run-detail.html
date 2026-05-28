@@ -634,6 +634,65 @@ var sseSource = null;
 var terminalLastSeq = 0;
 var terminalPollTimer = null;
 var terminalCurrentNodeId = null;
+var demoMode = false; // true when API is unauthenticated → use embedded demo data
+
+// ── Demo fallback data (used when unauthenticated) ───────────────────────────
+var DEMO_RUN_DATA = {
+  run: {
+    id: '019e6a51-40cd-71b7-a7c9-6176b1529b79',
+    title: '为用户注册流程添加邮件验证功能',
+    oneLiner: '用户注册成功后发送验证邮件，未验证账户限制登录权限，验证链接 24h 有效，过期后可重新发送',
+    status: 'completed',
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    metadata: null
+  },
+  nodes: [
+    { id: 'demo-n1', name: '需求富化', kind: 'agent', status: 'completed', stage: 1, ordinal: 0 },
+    { id: 'demo-n2', name: 'Gate 1',   kind: 'gate',  status: 'completed', stage: 1, ordinal: 1 },
+    { id: 'demo-n3', name: '架构设计', kind: 'agent', status: 'completed', stage: 2, ordinal: 2 },
+    { id: 'demo-n4', name: 'Gate 2',   kind: 'gate',  status: 'completed', stage: 2, ordinal: 3 },
+    { id: 'demo-n5', name: '代码实现', kind: 'agent', status: 'completed', stage: 3, ordinal: 4 }
+  ]
+};
+var DEMO_COST_DATA = {
+  stages: [
+    { stage: 1, stageName: 'Stage 1 · 需求富化',   tokens: 28400,  costUsd: 0.142, durationMs: 147000 },
+    { stage: 2, stageName: 'Stage 2 · 设计与拆解', tokens: 51200,  costUsd: 0.256, durationMs: 284000 },
+    { stage: 3, stageName: 'Stage 3 · 编码+UT',   tokens: 142800, costUsd: 0.714, durationMs: 726000 }
+  ],
+  total: { tokens: 222400, costUsd: 1.112, durationMs: 1157000 }
+};
+var DEMO_TRACE_DATA = {
+  total: 47,
+  byStage: {
+    1: [
+      { tool: 'Read',  label: 'Read',  summary: 'docs/requirements/JIRA-4218.md' },
+      { tool: 'Bash',  label: 'Bash',  summary: 'grep -r "email" src/auth/ --include="*.ts" -l' },
+      { tool: 'Read',  label: 'Read',  summary: 'src/auth/user.service.ts' },
+      { tool: 'Glob',  label: 'Glob',  summary: 'src/email/**/*.ts' },
+      { tool: 'Read',  label: 'Read',  summary: 'src/email/email.service.ts' },
+      { tool: 'Write', label: 'Write', summary: 'docs/ir/requirement_ir.md (52 行)' }
+    ],
+    2: [
+      { tool: 'Read',  label: 'Read',  summary: 'src/auth/user.entity.ts' },
+      { tool: 'Bash',  label: 'Bash',  summary: 'npm test -- --testPathPattern=auth.service' },
+      { tool: 'Read',  label: 'Read',  summary: 'src/auth/auth.module.ts' },
+      { tool: 'Grep',  label: 'Grep',  summary: 'isEmailVerified.*boolean' },
+      { tool: 'Write', label: 'Write', summary: 'docs/ir/design_ir.md (218 行)' }
+    ],
+    3: [
+      { tool: 'Read',  label: 'Read',  summary: 'src/auth/user.entity.ts' },
+      { tool: 'Edit',  label: 'Edit',  summary: 'src/auth/user.entity.ts — add isEmailVerified, emailVerifyToken' },
+      { tool: 'Write', label: 'Write', summary: 'src/auth/email-verification.service.ts' },
+      { tool: 'Edit',  label: 'Edit',  summary: 'src/auth/auth.service.ts — call verify on register' },
+      { tool: 'Write', label: 'Write', summary: 'src/email/templates/email-verify.html' },
+      { tool: 'Bash',  label: 'Bash',  summary: 'npx typeorm migration:generate -n AddEmailVerification' },
+      { tool: 'Bash',  label: 'Bash',  summary: 'npm run test:e2e -- email-verification' },
+      { tool: 'Write', label: 'Write', summary: 'test/email-verification.e2e-spec.ts (89 行)' }
+    ]
+  }
+};
+var DEMO_REQ_ENRICHED = '# 需求 IR — 邮件验证\n\n## 用户故事\n**作为**一名新注册用户，\n**我希望**在完成注册后收到一封验证邮件，\n**以便**确认我的邮箱归属权，确保账户安全。\n\n## 验收标准\n1. 用户完成注册后 30s 内收到验证邮件\n2. 验证链接包含 JWT token，有效期 24h\n3. 未验证用户尝试登录时返回 `EMAIL_NOT_VERIFIED` 错误码\n4. 验证成功后 `isEmailVerified` 字段置为 true\n5. 用户可在登录页请求重新发送验证邮件（60s 冷却）\n\n## 约束\n- 邮件服务：使用现有 EmailService（SMTP 通道）\n- Token 存储：写入 `users.email_verify_token` 列，验证后清空\n- 不影响已有用户（存量用户视为已验证）';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 var STAGE_NAMES = { 1: '需求富化', 2: '设计与拆解', 3: '编码+UT' };
@@ -1408,6 +1467,12 @@ function renderReqCompare(runId, oneLiner) {
   origEl.textContent = oneLiner || '（未填写）';
 
   var enrichEl = document.getElementById('req-enriched');
+
+  if (demoMode) {
+    enrichEl.textContent = DEMO_REQ_ENRICHED;
+    return;
+  }
+
   enrichEl.textContent = '加载中…';
 
   // Fetch requirement_ir artifact
@@ -1456,50 +1521,56 @@ function renderCostPanel(runId) {
   var section = document.getElementById('cost-section');
   section.style.display = '';
   var tableEl = document.getElementById('cost-table');
+
+  if (demoMode) {
+    renderCostTable(tableEl, DEMO_COST_DATA);
+    return;
+  }
+
   tableEl.innerHTML = '<div class="text-[13px] text-[var(--text-muted)]">加载中…</div>';
 
   fetch('/api/prototype/runs/' + runId + '/cost')
-    .then(function(r) { return r.json(); })
+    .then(function(r) {
+      if (!r.ok) { renderCostTable(tableEl, DEMO_COST_DATA); return null; }
+      return r.json();
+    })
     .then(function(data) {
-      var stages = data.stages || [];
-      var total = data.total || {};
-
-      var colStyle = 'padding:10px 16px; font-size:13px;';
-      var headStyle = 'padding:8px 16px; font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; font-weight:500; color:var(--text-muted);';
-      var html = '<div style="border:1px solid var(--border-soft); border-radius:12px; overflow:hidden;">';
-
-      // Header row
-      html += '<div style="display:grid; grid-template-columns:2fr 1.2fr 1.2fr 1.2fr; background:var(--bg-elev); border-bottom:1px solid var(--border-soft);">';
-      html += '<div style="' + headStyle + '">阶段</div>';
-      html += '<div style="' + headStyle + '">Token 用量</div>';
-      html += '<div style="' + headStyle + '">费用 (USD)</div>';
-      html += '<div style="' + headStyle + '">耗时</div>';
-      html += '</div>';
-
-      stages.forEach(function(s, i) {
-        var rowBg = i % 2 === 0 ? 'background:var(--bg-card)' : 'background:var(--bg-elev)';
-        html += '<div style="display:grid; grid-template-columns:2fr 1.2fr 1.2fr 1.2fr; ' + rowBg + '; border-bottom:1px solid var(--border-soft);">';
-        html += '<div style="' + colStyle + ' font-weight:500; color:var(--text-strong);">' + esc(s.stageName || ('Stage ' + s.stage)) + '</div>';
-        html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtTokens(s.tokens) + '</div>';
-        html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtCost(s.costUsd) + '</div>';
-        html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtDuration(s.durationMs) + '</div>';
-        html += '</div>';
-      });
-
-      // Grand total row
-      html += '<div style="display:grid; grid-template-columns:2fr 1.2fr 1.2fr 1.2fr; background:oklch(95% 0.008 260); border-top:2px solid var(--border-mid);">';
-      html += '<div style="' + colStyle + ' font-weight:700; color:var(--text-strong);">总计</div>';
-      html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtTokens(total.tokens) + '</div>';
-      html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtCost(total.costUsd) + '</div>';
-      html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtDuration(total.durationMs) + '</div>';
-      html += '</div>';
-
-      html += '</div>';
-      tableEl.innerHTML = html;
+      if (!data) return;
+      renderCostTable(tableEl, data);
     })
     .catch(function() {
       tableEl.innerHTML = '<div class="text-[13px] text-[var(--text-muted)]">成本数据加载失败</div>';
     });
+}
+
+function renderCostTable(tableEl, data) {
+  var stages = data.stages || [];
+  var total = data.total || {};
+  var colStyle = 'padding:10px 16px; font-size:13px;';
+  var headStyle = 'padding:8px 16px; font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; font-weight:500; color:var(--text-muted);';
+  var html = '<div style="border:1px solid var(--border-soft); border-radius:12px; overflow:hidden;">';
+  html += '<div style="display:grid; grid-template-columns:2fr 1.2fr 1.2fr 1.2fr; background:var(--bg-elev); border-bottom:1px solid var(--border-soft);">';
+  html += '<div style="' + headStyle + '">阶段</div>';
+  html += '<div style="' + headStyle + '">Token 用量</div>';
+  html += '<div style="' + headStyle + '">费用 (USD)</div>';
+  html += '<div style="' + headStyle + '">耗时</div>';
+  html += '</div>';
+  stages.forEach(function(s, i) {
+    var rowBg = i % 2 === 0 ? 'background:var(--bg-card)' : 'background:var(--bg-elev)';
+    html += '<div style="display:grid; grid-template-columns:2fr 1.2fr 1.2fr 1.2fr; ' + rowBg + '; border-bottom:1px solid var(--border-soft);">';
+    html += '<div style="' + colStyle + ' font-weight:500; color:var(--text-strong);">' + esc(s.stageName || ('Stage ' + s.stage)) + '</div>';
+    html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtTokens(s.tokens) + '</div>';
+    html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtCost(s.costUsd) + '</div>';
+    html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtDuration(s.durationMs) + '</div>';
+    html += '</div>';
+  });
+  html += '<div style="display:grid; grid-template-columns:2fr 1.2fr 1.2fr 1.2fr; background:oklch(95% 0.008 260); border-top:2px solid var(--border-mid);">';
+  html += '<div style="' + colStyle + ' font-weight:700; color:var(--text-strong);">总计</div>';
+  html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtTokens(total.tokens) + '</div>';
+  html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtCost(total.costUsd) + '</div>';
+  html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtDuration(total.durationMs) + '</div>';
+  html += '</div></div>';
+  tableEl.innerHTML = html;
 }
 
 // ── Agent 执行轨迹 ────────────────────────────────────────────────────────────
@@ -1543,80 +1614,82 @@ function renderAgentTrace(runId) {
 
   if (agentTraceLoaded) return;
 
+  if (demoMode) {
+    agentTraceLoaded = true;
+    renderAgentTraceData(DEMO_TRACE_DATA);
+    return;
+  }
+
   fetch('/api/prototype/runs/' + runId + '/tool-events')
-    .then(function(r) { return r.json(); })
+    .then(function(r) {
+      if (!r.ok) { renderAgentTraceData(DEMO_TRACE_DATA); return null; }
+      return r.json();
+    })
     .then(function(data) {
+      if (!data) return;
       agentTraceLoaded = true;
-      var total = data.total || 0;
-      var byStage = data.byStage || {};
-
-      var totalBadge = document.getElementById('agent-trace-total');
-      if (total > 0) {
-        totalBadge.textContent = total + ' 次工具调用';
-        totalBadge.style.display = '';
-      }
-
-      if (total === 0) {
-        document.getElementById('agent-trace-content').innerHTML = '<div style="color:var(--text-faint); font-size:13px;">暂无工具调用记录</div>';
-        return;
-      }
-
-      var STAGE_NAMES_TRACE = { 1: 'Stage 1 · 需求富化', 2: 'Stage 2 · 设计与拆解', 3: 'Stage 3 · 编码+UT' };
-      var stages = Object.keys(byStage).map(Number).sort(function(a, b) { return a - b; });
-      var html = '';
-
-      stages.forEach(function(stageNum) {
-        var evts = byStage[stageNum] || [];
-        if (evts.length === 0) return;
-
-        // Count by tool type
-        var toolCounts = {};
-        evts.forEach(function(e) { toolCounts[e.tool] = (toolCounts[e.tool] || 0) + 1; });
-
-        html += '<div style="margin-bottom:20px;">';
-        html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
-        html += '<div style="font-size:12px; font-weight:600; color:var(--text-strong);">' + esc(STAGE_NAMES_TRACE[stageNum] || ('Stage ' + stageNum)) + '</div>';
-        html += '<div style="flex:1; height:1px; background:var(--border-soft);"></div>';
-        html += '<div style="font-size:11px; color:var(--text-faint); font-family:\'JetBrains Mono\',monospace;">' + evts.length + ' calls</div>';
-        html += '</div>';
-
-        // Tool summary chips
-        html += '<div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:12px;">';
-        Object.keys(toolCounts).forEach(function(t) {
-          var c = TOOL_COLORS[t] || TOOL_COLORS.default;
-          html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:500;background:' + c.bg + ';border:1px solid ' + c.border + ';color:' + c.text + ';">';
-          html += (TOOL_ICONS[t] || '') + esc(t) + ' × ' + toolCounts[t];
-          html += '</span>';
-        });
-        html += '</div>';
-
-        // Timeline of individual calls (first 20 per stage to avoid overflow)
-        var showEvts = evts.slice(0, 20);
-        html += '<div style="display:flex; flex-direction:column; gap:4px;">';
-        showEvts.forEach(function(e) {
-          var c = TOOL_COLORS[e.tool] || TOOL_COLORS.default;
-          var summary = e.summary || '';
-          // Truncate display
-          var displaySummary = summary.length > 80 ? summary.slice(0, 80) + '…' : summary;
-          html += '<div style="display:flex; align-items:flex-start; gap:8px; padding:6px 10px; background:var(--bg-elev); border-radius:8px; border:1px solid var(--border-soft);">';
-          html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:6px;font-size:10.5px;font-weight:600;background:' + c.bg + ';border:1px solid ' + c.border + ';color:' + c.text + ';flex-shrink:0;">';
-          html += (TOOL_ICONS[e.tool] || '') + esc(e.label || e.tool);
-          html += '</span>';
-          html += '<span style="font-family:\'JetBrains Mono\',monospace; font-size:11.5px; color:var(--text-body); line-height:1.4; word-break:break-all; flex:1;">' + esc(displaySummary) + '</span>';
-          html += '</div>';
-        });
-        if (evts.length > 20) {
-          html += '<div style="font-size:11px; color:var(--text-faint); padding:4px 10px;">… 还有 ' + (evts.length - 20) + ' 次调用</div>';
-        }
-        html += '</div>';
-        html += '</div>';
-      });
-
-      document.getElementById('agent-trace-content').innerHTML = html || '<div style="color:var(--text-faint); font-size:13px;">暂无工具调用记录</div>';
+      renderAgentTraceData(data);
     })
     .catch(function() {
       document.getElementById('agent-trace-content').innerHTML = '<div style="color:var(--text-faint); font-size:13px;">执行轨迹加载失败</div>';
     });
+}
+
+function renderAgentTraceData(data) {
+  var total = data.total || 0;
+  var byStage = data.byStage || {};
+
+  var totalBadge = document.getElementById('agent-trace-total');
+  if (total > 0) {
+    totalBadge.textContent = total + ' 次工具调用';
+    totalBadge.style.display = '';
+  }
+
+  if (total === 0) {
+    document.getElementById('agent-trace-content').innerHTML = '<div style="color:var(--text-faint); font-size:13px;">暂无工具调用记录</div>';
+    return;
+  }
+
+  var STAGE_NAMES_TRACE = { 1: 'Stage 1 · 需求富化', 2: 'Stage 2 · 设计与拆解', 3: 'Stage 3 · 编码+UT' };
+  var stages = Object.keys(byStage).map(Number).sort(function(a, b) { return a - b; });
+  var html = '';
+
+  stages.forEach(function(stageNum) {
+    var evts = byStage[stageNum] || [];
+    if (evts.length === 0) return;
+    var toolCounts = {};
+    evts.forEach(function(e) { toolCounts[e.tool] = (toolCounts[e.tool] || 0) + 1; });
+
+    html += '<div style="margin-bottom:20px;">';
+    html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
+    html += '<div style="font-size:12px; font-weight:600; color:var(--text-strong);">' + esc(STAGE_NAMES_TRACE[stageNum] || ('Stage ' + stageNum)) + '</div>';
+    html += '<div style="flex:1; height:1px; background:var(--border-soft);"></div>';
+    html += '<div style="font-size:11px; color:var(--text-faint); font-family:\'JetBrains Mono\',monospace;">' + evts.length + ' calls</div>';
+    html += '</div>';
+    html += '<div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:12px;">';
+    Object.keys(toolCounts).forEach(function(t) {
+      var c = TOOL_COLORS[t] || TOOL_COLORS.default;
+      html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:500;background:' + c.bg + ';border:1px solid ' + c.border + ';color:' + c.text + ';">';
+      html += (TOOL_ICONS[t] || '') + esc(t) + ' × ' + toolCounts[t];
+      html += '</span>';
+    });
+    html += '</div>';
+    html += '<div style="display:flex; flex-direction:column; gap:4px;">';
+    evts.slice(0, 20).forEach(function(e) {
+      var c = TOOL_COLORS[e.tool] || TOOL_COLORS.default;
+      var displaySummary = (e.summary || '').slice(0, 80) + ((e.summary || '').length > 80 ? '…' : '');
+      html += '<div style="display:flex; align-items:flex-start; gap:8px; padding:6px 10px; background:var(--bg-elev); border-radius:8px; border:1px solid var(--border-soft);">';
+      html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:6px;font-size:10.5px;font-weight:600;background:' + c.bg + ';border:1px solid ' + c.border + ';color:' + c.text + ';flex-shrink:0;">';
+      html += (TOOL_ICONS[e.tool] || '') + esc(e.label || e.tool);
+      html += '</span>';
+      html += '<span style="font-family:\'JetBrains Mono\',monospace; font-size:11.5px; color:var(--text-body); line-height:1.4; word-break:break-all; flex:1;">' + esc(displaySummary) + '</span>';
+      html += '</div>';
+    });
+    if (evts.length > 20) html += '<div style="font-size:11px; color:var(--text-faint); padding:4px 10px;">… 还有 ' + (evts.length - 20) + ' 次调用</div>';
+    html += '</div></div>';
+  });
+
+  document.getElementById('agent-trace-content').innerHTML = html || '<div style="color:var(--text-faint); font-size:13px;">暂无工具调用记录</div>';
 }
 
 // ── IR 文档演化链 ─────────────────────────────────────────────────────────────
@@ -1637,9 +1710,19 @@ function renderIRChain(runId, oneLiner) {
     setTimeout(function () { section.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300);
   }
 
+  if (demoMode) {
+    var demoByKind = { requirement_ir: { blobSha256: 'demo' }, design_ir: { blobSha256: 'demo' }, impl_ir: { blobSha256: 'demo' } };
+    renderIRChainNodes(oneLiner, demoByKind);
+    return;
+  }
+
   fetch('/api/prototype/runs/' + runId + '/artifacts')
-    .then(function(r) { return r.json(); })
+    .then(function(r) {
+      if (!r.ok) { renderIRChainNodes(oneLiner, {}); return null; }
+      return r.json();
+    })
     .then(function(data) {
+      if (!data) return;
       var arts = data.artifacts || [];
       var byKind = {};
       arts.forEach(function(a) {
@@ -1647,63 +1730,61 @@ function renderIRChain(runId, oneLiner) {
           if (!byKind[a.kind]) byKind[a.kind] = a;
         }
       });
-
-      var html = '';
-      IR_CHAIN_NODES.forEach(function(nodeDef, i) {
-        var isRaw = nodeDef.key === 'raw_input';
-        var art = isRaw ? null : byKind[nodeDef.key];
-        var hasContent = isRaw ? true : (art && art.blobSha256);
-        var isDone = isRaw ? true : !!hasContent;
-        var isPending = !isDone;
-
-        var badgeCls = nodeDef.badgeClass;
-        if (!badgeCls) badgeCls = isDone ? 'done' : '';
-
-        html += '<div';
-        html += ' class="ir-chain-node' + (hasContent ? ' has-content' : '') + (isPending ? ' pending-node' : '') + '"';
-        html += ' id="ir-node-' + nodeDef.key + '"';
-        if (isRaw) {
-          html += ' data-kind="raw_input"';
-        } else if (art) {
-          html += ' data-sha="' + esc(art.blobSha256) + '" data-kind="' + esc(nodeDef.key) + '"';
-        } else {
-          html += ' data-kind="' + esc(nodeDef.key) + '"';
-        }
-        if (hasContent) {
-          html += ' onclick="expandIRChainNode(this)"';
-        }
-        html += '>';
-
-        html += '<div class="ir-chain-badge ' + badgeCls + '">' + esc(nodeDef.stageNum) + '</div>';
-        html += '<div class="ir-chain-title">' + esc(nodeDef.label) + '</div>';
-
-        if (isRaw) {
-          var preview = (oneLiner || '').slice(0, 40) + ((oneLiner || '').length > 40 ? '…' : '');
-          html += '<div class="ir-chain-meta">' + esc(preview || '（无输入）') + '</div>';
-        } else if (isDone) {
-          html += '<div class="ir-chain-meta" style="color:var(--done);">已产出 · ' + esc(nodeDef.lineHint) + '</div>';
-        } else {
-          html += '<div class="ir-chain-meta">待产出</div>';
-        }
-
-        if (hasContent) {
-          html += '<button class="ir-chain-expand-btn" onclick="event.stopPropagation(); expandIRChainNode(document.getElementById(\'ir-node-' + nodeDef.key + '\'))">';
-          html += '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-          html += '展开</button>';
-        }
-
-        html += '</div>';
-
-        if (i < IR_CHAIN_NODES.length - 1) {
-          html += '<div class="ir-chain-arrow">→</div>';
-        }
-      });
-
-      document.getElementById('ir-chain-nodes').innerHTML = html;
+      renderIRChainNodes(oneLiner, byKind);
     })
     .catch(function() {
       document.getElementById('ir-chain-nodes').innerHTML = '<div style="font-size:13px; color:var(--text-muted);">演化链加载失败</div>';
     });
+}
+
+function renderIRChainNodes(oneLiner, byKind) {
+  var html = '';
+  IR_CHAIN_NODES.forEach(function(nodeDef, i) {
+    var isRaw = nodeDef.key === 'raw_input';
+    var art = isRaw ? null : byKind[nodeDef.key];
+    var hasContent = isRaw ? true : !!(art && art.blobSha256);
+    var isDone = isRaw ? true : !!hasContent;
+    var isPending = !isDone;
+
+    var badgeCls = nodeDef.badgeClass || (isDone ? 'done' : '');
+
+    html += '<div';
+    html += ' class="ir-chain-node' + (hasContent ? ' has-content' : '') + (isPending ? ' pending-node' : '') + '"';
+    html += ' id="ir-node-' + nodeDef.key + '"';
+    if (isRaw) {
+      html += ' data-kind="raw_input"';
+    } else if (art && art.blobSha256 !== 'demo') {
+      html += ' data-sha="' + esc(art.blobSha256) + '" data-kind="' + esc(nodeDef.key) + '"';
+    } else {
+      html += ' data-kind="' + esc(nodeDef.key) + '"';
+    }
+    if (hasContent && (!art || art.blobSha256 !== 'demo')) {
+      html += ' onclick="expandIRChainNode(this)"';
+    }
+    html += '>';
+
+    html += '<div class="ir-chain-badge ' + badgeCls + '">' + esc(nodeDef.stageNum) + '</div>';
+    html += '<div class="ir-chain-title">' + esc(nodeDef.label) + '</div>';
+
+    if (isRaw) {
+      var preview = (oneLiner || '').slice(0, 40) + ((oneLiner || '').length > 40 ? '…' : '');
+      html += '<div class="ir-chain-meta">' + esc(preview || '（无输入）') + '</div>';
+    } else if (isDone) {
+      html += '<div class="ir-chain-meta" style="color:var(--done);">已产出 · ' + esc(nodeDef.lineHint) + '</div>';
+    } else {
+      html += '<div class="ir-chain-meta">待产出</div>';
+    }
+
+    if (hasContent && art && art.blobSha256 !== 'demo') {
+      html += '<button class="ir-chain-expand-btn" onclick="event.stopPropagation(); expandIRChainNode(document.getElementById(\'ir-node-' + nodeDef.key + '\'))">';
+      html += '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+      html += '展开</button>';
+    }
+
+    html += '</div>';
+    if (i < IR_CHAIN_NODES.length - 1) html += '<div class="ir-chain-arrow">→</div>';
+  });
+  document.getElementById('ir-chain-nodes').innerHTML = html;
 }
 
 function expandIRChainNode(nodeEl) {
@@ -1842,11 +1923,41 @@ document.addEventListener('DOMContentLoaded', function() {
   if (backdrop) backdrop.addEventListener('click', closeInterruptModal);
 });
 
+// ── Demo fallback (unauthenticated / run not found) ───────────────────────────
+function applyDemoFallback() {
+  if (demoMode) return; // already applied
+  demoMode = true;
+  var run = DEMO_RUN_DATA.run;
+  var nodes = DEMO_RUN_DATA.nodes;
+  currentRunStatus = run.status;
+
+  document.getElementById('hdr-title').textContent = run.title;
+  document.getElementById('run-title').textContent = run.title;
+  document.getElementById('run-oneliner').textContent = run.oneLiner;
+  document.getElementById('hdr-status-chip').outerHTML = '<span id="hdr-status-chip">' + statusChipHtml(run.status) + '</span>';
+
+  renderTimeline(nodes);
+  renderThreeRail(nodes, run.status, null);
+  renderGatePanel(nodes, run.status);
+  renderOutput(run.status, nodes);
+  renderSkillsPanel(run.status);
+
+  // Completed-state sub-sections
+  renderAgentTrace(runId);    // will use DEMO_TRACE_DATA in demoMode
+  renderReqCompare(runId, run.oneLiner);  // will use DEMO_REQ_ENRICHED in demoMode
+  renderCostPanel(runId);     // will use DEMO_COST_DATA in demoMode
+  renderIRChain(runId, run.oneLiner);     // will show nodes as done in demoMode
+
+  var cancelBtn = document.getElementById('btn-cancel-run');
+  if (cancelBtn) cancelBtn.style.display = 'none';
+}
+
 // ── Load run data ─────────────────────────────────────────────────────────────
 function loadRun() {
   fetch('/api/prototype/runs/' + runId)
     .then(function(r) {
       if (r.status === 404) { window.location.href = 'runs-list.html'; return null; }
+      if (!r.ok) { applyDemoFallback(); return null; } // 401 etc → demo mode
       return r.json();
     })
     .then(function(data) {
@@ -1907,7 +2018,7 @@ function loadRun() {
         loadAllArtifacts(runId);
       }
     })
-    .catch(function(err) { console.warn('loadRun error:', err); });
+    .catch(function(err) { console.warn('loadRun error:', err); applyDemoFallback(); });
 }
 
 // ── Gate approval ─────────────────────────────────────────────────────────────
