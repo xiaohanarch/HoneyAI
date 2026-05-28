@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: worker
-          image: ghcr.io/xiaohanarch/honeyai-worker:latest
+          image: registry.cn-hangzhou.aliyuncs.com/honeyai/honeyai-worker:latest
           env:
             - name: NODE_ENV
               value: production
@@ -49,9 +49,15 @@ spec:
                 secretKeyRef:
                   name: honeyai-secrets
                   key: kek_base64
+            - name: DASHSCOPE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: honeyai-secrets
+                  key: dashscope_api_key
+                  optional: true
             # Set by kustomize patch in deploy workflow (sandbox image digest)
             - name: SANDBOX_IMAGE_REPO
-              value: ghcr.io/xiaohanarch/honeyai-sandbox
+              value: registry.cn-hangzhou.aliyuncs.com/honeyai/honeyai-sandbox
             - name: SANDBOX_IMAGE_DIGEST
               value: ''
           resources:

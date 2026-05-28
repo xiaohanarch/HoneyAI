@@ -1,11 +1,10 @@
 // packages/web/lib/auth/dev-credentials.ts
-// Dev-only fixture users for NextAuth v5 Credentials provider (ADR-029).
-// GUARD: this module throws at import time outside development.
-// In production, NODE_ENV=production + DEV_AUTH_ENABLED absent ensures this
-// module is NEVER imported — the auth config conditionally omits the provider.
+// Dev/demo fixture users for NextAuth v5 Credentials provider (ADR-029).
+// GUARD: this module throws at import time when DEV_AUTH_ENABLED is absent.
+// Only imported when DEV_AUTH_ENABLED=true is explicitly set (dev or demo deployments).
 
-if (process.env['NODE_ENV'] !== 'development' || process.env['DEV_AUTH_ENABLED'] !== 'true') {
-  throw new Error('DEV_CREDENTIALS: only available in development with DEV_AUTH_ENABLED=true')
+if (process.env['DEV_AUTH_ENABLED'] !== 'true') {
+  throw new Error('DEV_CREDENTIALS: only available with DEV_AUTH_ENABLED=true')
 }
 
 export type DevUser = {

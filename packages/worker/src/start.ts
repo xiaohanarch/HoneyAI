@@ -7,6 +7,7 @@ import { getDb } from '@honeyai/db'
 import { startReconcileLoop } from '@honeyai/orchestrator'
 import type { PodChecker } from '@honeyai/orchestrator'
 import { ClaudeCodeAdapter } from '@honeyai/adapter-claude'
+import { OpenCodeAdapter } from '@honeyai/adapter-opencode'
 import { initGitHubApp } from '@honeyai/github'
 import { handleScheduleRun } from './handlers/schedule-run.js'
 import { handleAdvanceRun } from './handlers/advance-run.js'
@@ -14,6 +15,7 @@ import { getArtifactContent } from './handlers/artifact-content.js'
 import { resolveAndCreatePR } from './handlers/github-pr.js'
 import { SCHEDULE_RUN_QUEUE, ADVANCE_RUN_QUEUE } from './queues.js'
 import { runCostRollup } from './cost-rollup.js'
+import { loadWorkerConfig } from './worker-config.js'
 import type { ScheduleRunJob, AdvanceRunJob } from './queues.js'
 
 // ─── Fail-fast env check ──────────────────────────────────────────────────────
@@ -56,9 +58,21 @@ if (githubConfigured) {
 const redisOpts = { url: REDIS_URL, maxRetriesPerRequest: null } as const
 const db = getDb()
 
-// ─── BullMQ Workers ───────────────────────────────────────────────────────────
+// ─── LLM engine config (honeyai.config.json, overridable via env) ─────────────
 
-const claudeAdapter = new ClaudeCodeAdapter()
+const llmConfig = loadWorkerConfig()
+const activeAdapter =
+  llmConfig.engine === 'opencode'
+    ? new OpenCodeAdapter(llmConfig.model ?? 'anthropic/claude-sonnet-4-6')
+    : new ClaudeCodeAdapter()
+
+console.log(
+  '[worker] LLM engine: %s%s',
+  llmConfig.engine,
+  llmConfig.model ? ` model=${llmConfig.model}` : '',
+)
+
+// ─── BullMQ Workers ───────────────────────────────────────────────────────────
 
 const scheduleWorker = new Worker<ScheduleRunJob>(
   SCHEDULE_RUN_QUEUE,
@@ -67,7 +81,7 @@ const scheduleWorker = new Worker<ScheduleRunJob>(
     await handleScheduleRun(
       {
         db,
-        adapter: claudeAdapter,
+        adapter: activeAdapter,
         anthropicKey: ANTHROPIC_API_KEY,
       },
       job.data,
@@ -92,7 +106,7 @@ const advanceWorker = new Worker<AdvanceRunJob>(
     await handleAdvanceRun(
       {
         db,
-        adapter: claudeAdapter,
+        adapter: activeAdapter,
         anthropicKey: ANTHROPIC_API_KEY,
         createPR: async (params) => {
           const fallbackUrl = `https://github.com/${params.owner}/${params.repo}/compare/${params.headBranch}`

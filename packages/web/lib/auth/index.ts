@@ -8,11 +8,11 @@ import NextAuth from 'next-auth'
 import type { NextAuthConfig } from 'next-auth'
 import './types'
 
-// Conditionally load dev credentials — throws in production (guard in dev-credentials.ts)
+// Conditionally load dev credentials — only when DEV_AUTH_ENABLED=true
 async function buildProviders() {
   const providers = []
 
-  if (process.env['NODE_ENV'] === 'development' && process.env['DEV_AUTH_ENABLED'] === 'true') {
+  if (process.env['DEV_AUTH_ENABLED'] === 'true') {
     const Credentials = (await import('next-auth/providers/credentials')).default
     const { authorizeDevCredentials } = await import('./dev-credentials')
     providers.push(
@@ -98,7 +98,7 @@ const config: NextAuthConfig = {
       if (account?.provider === 'github' && profile) {
         const { upsertGitHubUser } = await import('./github-profile')
         // GitHub profile fields (id is numeric, login is the handle, avatar_url from OAuth)
-         
+
         const ghProfile = profile as unknown as {
           id: number
           login: string

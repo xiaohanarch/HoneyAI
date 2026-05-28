@@ -15,14 +15,14 @@ spec:
     spec:
       containers:
         - name: web
-          image: ghcr.io/xiaohanarch/honeyai-web:latest
+          image: registry.cn-hangzhou.aliyuncs.com/honeyai/honeyai-web:latest
           ports:
             - containerPort: 3000
           env:
             - name: NODE_ENV
               value: production
             - name: NEXTAUTH_URL
-              value: 'http://8.130.95.169'
+              value: 'http://8.130.95.169:17777'
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
@@ -58,6 +58,14 @@ spec:
                 secretKeyRef:
                   name: honeyai-secrets
                   key: kek_base64
+            - name: DEV_AUTH_ENABLED
+              valueFrom:
+                secretKeyRef:
+                  name: honeyai-secrets
+                  key: dev_auth_enabled
+                  optional: true
+            - name: AUTH_TRUST_HOST
+              value: 'true'
           resources:
             requests:
               cpu: '500m'
@@ -84,8 +92,9 @@ metadata:
   name: web
   namespace: honeyai
 spec:
+  type: LoadBalancer
   selector:
     app: web
   ports:
-    - port: 3000
+    - port: 17777
       targetPort: 3000

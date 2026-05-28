@@ -1,4 +1,1 @@
-// @honeyai/adapter-opencode — opencode adapter (V1 build-time, not online).
-// Phase 1: placeholder only (see ADR-008 + CLAUDE.md Phase 1 Scope).
-// Implementation lands in Phase 2.
-export {}
+export { OpenCodeAdapter } from './opencode-adapter.js'

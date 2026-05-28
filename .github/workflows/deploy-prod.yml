@@ -29,13 +29,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
       - name: Build & push web
         id: web
         uses: docker/build-push-action@v6
         with:
           context: .
           file: infra/docker/Dockerfile.web
-          tags: ghcr.io/xiaohanarch/honeyai-web:latest,ghcr.io/xiaohanarch/honeyai-web:${{ github.sha }}
+          tags: |
+            ghcr.io/xiaohanarch/honeyai-web:latest
+            ghcr.io/xiaohanarch/honeyai-web:${{ github.sha }}
+            ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/honeyai-web:latest
+            ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/honeyai-web:${{ github.sha }}
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -46,7 +56,11 @@ jobs:
         with:
           context: .
           file: infra/docker/Dockerfile.worker
-          tags: ghcr.io/xiaohanarch/honeyai-worker:latest,ghcr.io/xiaohanarch/honeyai-worker:${{ github.sha }}
+          tags: |
+            ghcr.io/xiaohanarch/honeyai-worker:latest
+            ghcr.io/xiaohanarch/honeyai-worker:${{ github.sha }}
+            ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/honeyai-worker:latest
+            ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/honeyai-worker:${{ github.sha }}
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -57,7 +71,11 @@ jobs:
         with:
           context: .
           file: infra/docker/Dockerfile.sandbox
-          tags: ghcr.io/xiaohanarch/honeyai-sandbox:latest,ghcr.io/xiaohanarch/honeyai-sandbox:${{ github.sha }}
+          tags: |
+            ghcr.io/xiaohanarch/honeyai-sandbox:latest
+            ghcr.io/xiaohanarch/honeyai-sandbox:${{ github.sha }}
+            ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/honeyai-sandbox:latest
+            ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/honeyai-sandbox:${{ github.sha }}
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -73,32 +91,28 @@ jobs:
       - name: Set kubeconfig
         run: |
           mkdir -p ~/.kube
-          sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
-          sudo chown $USER ~/.kube/config
+          # k3s.yaml was copied to ubuntu's home during host bootstrap (01-host.sh / setup-runner.sh)
+          [ -f ~/.kube/config ] || cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+          kubectl get nodes
 
       - name: Run drizzle migrate
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
-          # Delete old job if exists, reapply with latest image
           kubectl -n honeyai delete job drizzle-migrate --ignore-not-found
-          kubectl -n honeyai apply -f infra/k8s/base/jobs/migrate.yaml
-          kubectl -n honeyai wait --for=condition=Complete job/drizzle-migrate --timeout=300s
+          sed "s|registry.cn-hangzhou.aliyuncs.com/honeyai/honeyai-worker:latest|${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/honeyai-worker:${{ github.sha }}|g" \
+            infra/k8s/base/jobs/migrate.yaml | kubectl -n honeyai apply -f -
+          kubectl -n honeyai wait --for=condition=Complete job/drizzle-migrate --timeout=900s
 
       - name: Deploy web
         run: |
           kubectl -n honeyai set image deployment/web \
-            web=ghcr.io/xiaohanarch/honeyai-web@${{ needs.build.outputs.web-digest }}
-          kubectl -n honeyai rollout status deploy/web --timeout=300s
+            web=${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/honeyai-web:${{ github.sha }}
+          kubectl -n honeyai rollout status deploy/web --timeout=600s
 
       - name: Deploy worker
         run: |
           kubectl -n honeyai set image deployment/worker \
-            worker=ghcr.io/xiaohanarch/honeyai-worker@${{ needs.build.outputs.worker-digest }}
-          # Patch SANDBOX_IMAGE_DIGEST env
-          kubectl -n honeyai patch deployment worker --type=json \
-            -p='[{"op":"replace","path":"/spec/template/spec/containers/0/env/-","value":{"name":"SANDBOX_IMAGE_DIGEST","value":"${{ needs.build.outputs.sandbox-digest }}"}}]'
-          kubectl -n honeyai rollout status deploy/worker --timeout=300s
+            worker=${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/honeyai-worker:${{ github.sha }}
+          kubectl -n honeyai rollout status deploy/worker --timeout=900s
 
       - name: Rollback on failure
         if: failure()
