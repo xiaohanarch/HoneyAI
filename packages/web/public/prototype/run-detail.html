@@ -131,6 +131,71 @@
   .btn-reject:hover { background: var(--halt-soft); }
   .btn-cancel { background: var(--bg-card); border-color: var(--border-mid); color: var(--text-muted); }
 
+  /* ── Interrupt Modal ──────────────────────────────────────────────────────── */
+  .interrupt-backdrop {
+    position: fixed; inset: 0; z-index: 1000;
+    background: oklch(15% 0.02 260 / 0.45);
+    backdrop-filter: blur(6px);
+  }
+  .interrupt-modal {
+    position: fixed; inset: 0; z-index: 1001;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 32px; overflow-y: auto;
+  }
+  .interrupt-card {
+    width: 640px; max-width: calc(100vw - 48px);
+    background: white; border-radius: 18px;
+    box-shadow: 0 30px 60px oklch(20% 0.05 260 / 0.18), 0 8px 20px oklch(20% 0.05 260 / 0.10);
+    border: 1px solid var(--border-soft);
+    overflow: hidden;
+    margin: 32px auto;
+  }
+  .intr-seg {
+    display: inline-flex; padding: 3px; background: var(--bg-elev);
+    border-radius: 9px; gap: 2px;
+  }
+  .intr-seg button {
+    padding: 6px 11px; border-radius: 7px; font-size: 12px;
+    color: var(--text-muted); transition: .15s; cursor: pointer; background: none; border: none;
+  }
+  .intr-seg button:hover { color: var(--text-strong); }
+  .intr-seg button.active { background: white; color: var(--text-strong); box-shadow: 0 1px 2px rgba(0,0,0,.05); font-weight: 500; }
+  .intr-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 9px; border-radius: 999px;
+    font-size: 11px; font-weight: 500; border: 1px solid transparent;
+    background: var(--bg-elev); color: var(--text-muted); border-color: var(--border-soft);
+    cursor: pointer;
+  }
+  .intr-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 9px;
+    font-size: 12.5px; font-weight: 500;
+    border: 1px solid var(--border-mid);
+    background: white; color: var(--text-body); cursor: pointer;
+    transition: .15s;
+  }
+  .intr-btn:hover { background: var(--bg-elev); color: var(--text-strong); }
+  .intr-btn-primary { background: var(--text-strong); color: white; border-color: var(--text-strong); }
+  .intr-btn-primary:hover { background: oklch(28% 0.06 265); color: white; }
+  .intr-radio-card {
+    display: flex; gap: 10px; padding: 10px 12px;
+    border: 1px solid var(--border-soft); border-radius: 10px;
+    cursor: pointer; transition: .15s;
+  }
+  .intr-radio-card:hover { border-color: var(--text-faint); background: var(--bg-elev); }
+  .intr-radio-card.checked { border-color: var(--text-strong); background: oklch(99% 0.005 260); }
+  .intr-radio-card .intr-ring {
+    width: 16px; height: 16px; border-radius: 999px;
+    border: 2px solid var(--border-mid); flex-shrink: 0; margin-top: 2px;
+    position: relative;
+  }
+  .intr-radio-card.checked .intr-ring { border-color: var(--text-strong); }
+  .intr-radio-card.checked .intr-ring::after {
+    content:''; position: absolute; inset: 3px;
+    background: var(--text-strong); border-radius: 999px;
+  }
+
   /* Status chips */
   .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 500; border: 1px solid transparent; }
   .chip-dot { width: 6px; height: 6px; border-radius: 999px; }
@@ -1699,19 +1764,66 @@ function closeIRChainPanel() {
   }
 }
 
-// ── Cancel run ────────────────────────────────────────────────────────────────
+// ── Cancel run / Interrupt modal ──────────────────────────────────────────────
 function cancelRun() {
-  if (!confirm('确认中断此运行？')) return;
-  fetch('/api/prototype/runs/' + runId + '/cancel', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    if (data.ok) loadRun();
-    else alert('中断失败: ' + (data.error || '未知错误'));
-  });
+  document.getElementById('interrupt-modal').style.display = '';
 }
+
+function closeInterruptModal() {
+  document.getElementById('interrupt-modal').style.display = 'none';
+}
+
+function submitInterrupt() {
+  closeInterruptModal();
+  fetch('/api/prototype/runs/' + runId + '/cancel', { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function() { loadRun(); })
+    .catch(function(err) { console.error('Cancel failed:', err); });
+}
+
+function selectIntrScope(card) {
+  var cards = document.querySelectorAll('#interrupt-modal .intr-radio-card[data-scope]');
+  for (var i = 0; i < cards.length; i++) cards[i].classList.remove('checked');
+  card.classList.add('checked');
+}
+
+function selectIntrAction(card) {
+  var cards = document.querySelectorAll('#interrupt-modal .intr-radio-card[data-action]');
+  for (var i = 0; i < cards.length; i++) cards[i].classList.remove('checked');
+  card.classList.add('checked');
+}
+
+function switchIntrSegTab(btn) {
+  var segs = btn.parentElement.querySelectorAll('button');
+  for (var i = 0; i < segs.length; i++) segs[i].classList.remove('active');
+  btn.classList.add('active');
+  var target = btn.getAttribute('data-target');
+  var modal = document.getElementById('interrupt-modal');
+  var contents = modal.querySelectorAll('.intr-seg-content');
+  for (var j = 0; j < contents.length; j++) {
+    contents[j].style.display = contents[j].getAttribute('data-type') === target ? '' : 'none';
+  }
+}
+
+function setIntrText(text) {
+  var ta = document.getElementById('intr-context-text');
+  if (ta) { ta.value = text; ta.focus(); updateIntrCharCount(); }
+}
+
+function updateIntrCharCount() {
+  var ta = document.getElementById('intr-context-text');
+  var counter = document.getElementById('intr-char-count');
+  if (ta && counter) counter.textContent = ta.value.length + ' / 4000 字符';
+}
+
+// Wire char counter after DOM ready
+document.addEventListener('DOMContentLoaded', function() {
+  var ta = document.getElementById('intr-context-text');
+  if (ta) ta.addEventListener('input', updateIntrCharCount);
+  // Close modal when clicking backdrop
+  var backdrop = document.getElementById('interrupt-backdrop');
+  if (backdrop) backdrop.addEventListener('click', closeInterruptModal);
+});
 
 // ── Load run data ─────────────────────────────────────────────────────────────
 function loadRun() {
@@ -1911,5 +2023,162 @@ function rerunNode(nodeId, btn) {
     });
 }
 </script>
+
+<!-- ── Interrupt Modal ──────────────────────────────────────────────────────── -->
+<div id="interrupt-modal" style="display:none">
+  <div class="interrupt-backdrop" id="interrupt-backdrop"></div>
+  <div class="interrupt-modal">
+    <div class="interrupt-card">
+
+      <!-- header -->
+      <div class="px-6 pt-5 pb-4 border-b flex items-start justify-between" style="border-color:var(--border-soft)">
+        <div class="flex items-start gap-3.5">
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background:var(--halt-soft);color:var(--halt)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+          </div>
+          <div>
+            <div style="font-size:15.5px;font-weight:600;color:var(--text-strong);line-height:1.3">中断 · 补充上下文</div>
+            <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px">向运行中的 Agent 注入上下文或修正指令</div>
+          </div>
+        </div>
+        <button onclick="closeInterruptModal()" style="width:28px;height:28px;border-radius:6px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted)" onmouseover="this.style.background='var(--bg-elev)'" onmouseout="this.style.background='none'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- body -->
+      <div class="px-6 py-5" style="display:flex;flex-direction:column;gap:20px">
+
+        <!-- input section -->
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:500;color:var(--text-muted)">输入方式</div>
+            <div style="font-size:10.5px;color:var(--text-faint);font-family:'JetBrains Mono',monospace">Ctrl + Enter 提交</div>
+          </div>
+          <div class="intr-seg" style="margin-bottom:12px">
+            <button class="active" data-target="text" onclick="switchIntrSegTab(this)">文本</button>
+            <button data-target="file" onclick="switchIntrSegTab(this)">文件</button>
+            <button data-target="ref" onclick="switchIntrSegTab(this)">引用代码</button>
+          </div>
+          <div id="intr-seg-text" class="intr-seg-content" data-type="text">
+            <div style="border:1px solid var(--border-soft);border-radius:12px;padding:12px;background:var(--bg-elev)">
+              <textarea id="intr-context-text" rows="4" style="width:100%;background:transparent;border:none;outline:none;font-size:13px;line-height:1.65;color:var(--text-strong);resize:none;font-family:'Inter',system-ui,sans-serif" placeholder="补充约束、修正方向或贴入相关上下文…"></textarea>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px dashed var(--border-mid)">
+                <div style="font-size:11px;color:var(--text-muted)">上下文说明</div>
+                <span id="intr-char-count" style="font-size:10.5px;font-family:'JetBrains Mono',monospace;color:var(--text-faint)">0 / 4000 字符</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px">
+              <span style="font-size:10.5px;color:var(--text-faint);margin-right:4px;line-height:1.8">示例:</span>
+              <button class="intr-chip" onclick="setIntrText(this.textContent)">改用 Redisson 限流器</button>
+              <button class="intr-chip" onclick="setIntrText(this.textContent)">复用现有事件总线</button>
+              <button class="intr-chip" onclick="setIntrText(this.textContent)">补充压测目标</button>
+            </div>
+          </div>
+          <div id="intr-seg-file" class="intr-seg-content" data-type="file" style="display:none">
+            <div style="border:1px dashed var(--border-mid);border-radius:12px;padding:24px;text-align:center;color:var(--text-muted);font-size:13px">
+              文件上传暂不支持（原型演示）
+            </div>
+          </div>
+          <div id="intr-seg-ref" class="intr-seg-content" data-type="ref" style="display:none">
+            <div style="border:1px dashed var(--border-mid);border-radius:12px;padding:24px;text-align:center;color:var(--text-muted);font-size:13px">
+              引用代码暂不支持（原型演示）
+            </div>
+          </div>
+        </div>
+
+        <!-- scope -->
+        <div>
+          <div style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:500;color:var(--text-muted);margin-bottom:10px">影响范围</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+            <div class="intr-radio-card checked" data-scope="task" onclick="selectIntrScope(this)">
+              <span class="intr-ring"></span>
+              <div>
+                <div style="font-size:12.5px;font-weight:600;color:var(--text-strong)">当前任务</div>
+                <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px;line-height:1.4">仅当前节点</div>
+              </div>
+            </div>
+            <div class="intr-radio-card" data-scope="stage" onclick="selectIntrScope(this)">
+              <span class="intr-ring"></span>
+              <div>
+                <div style="font-size:12.5px;font-weight:600;color:var(--text-strong)">当前阶段</div>
+                <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px;line-height:1.4">当前 Stage 全部子任务</div>
+              </div>
+            </div>
+            <div class="intr-radio-card" data-scope="run" onclick="selectIntrScope(this)">
+              <span class="intr-ring"></span>
+              <div>
+                <div style="font-size:12.5px;font-weight:600;color:var(--text-strong)">整个运行</div>
+                <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px;line-height:1.4">写入运行级 system prompt</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- post-action -->
+        <div>
+          <div style="font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:500;color:var(--text-muted);margin-bottom:10px">提交后行为</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="intr-radio-card checked" data-action="continue" onclick="selectIntrAction(this)">
+              <span class="intr-ring"></span>
+              <div style="flex:1">
+                <div style="display:flex;align-items:baseline;justify-content:space-between">
+                  <span style="font-size:12.5px;font-weight:600;color:var(--text-strong)">从当前位置继续</span>
+                  <span style="font-size:10.5px;color:var(--text-faint);font-family:'JetBrains Mono',monospace">默认</span>
+                </div>
+                <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px">将上下文注入正在执行的 Agent · 保留已生成内容</div>
+              </div>
+            </div>
+            <div class="intr-radio-card" data-action="rollback-task" onclick="selectIntrAction(this)">
+              <span class="intr-ring"></span>
+              <div style="flex:1">
+                <div style="display:flex;align-items:baseline;justify-content:space-between">
+                  <span style="font-size:12.5px;font-weight:600;color:var(--text-strong)">回滚到任务起点</span>
+                  <span style="font-size:10.5px;font-family:'JetBrains Mono',monospace" style="color:var(--run)">≈ 重跑 4-6 分钟</span>
+                </div>
+                <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px">放弃当前节点的已生成代码，从头开始</div>
+              </div>
+            </div>
+            <div class="intr-radio-card" data-action="rollback-stage" onclick="selectIntrAction(this)">
+              <span class="intr-ring"></span>
+              <div style="flex:1">
+                <div style="display:flex;align-items:baseline;justify-content:space-between">
+                  <span style="font-size:12.5px;font-weight:600;color:var(--text-strong)">回到架构阶段重新规划</span>
+                  <span style="font-size:10.5px;font-family:'JetBrains Mono',monospace" style="color:var(--halt)">≈ 重跑 15+ 分钟</span>
+                </div>
+                <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px">影响 Stage 02 输出 · 评审需重做</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- cost estimate -->
+        <div style="padding:12px;border-radius:10px;display:flex;align-items:center;justify-content:space-between;background:oklch(98% 0.012 245);border:1px solid oklch(90% 0.05 245 / 0.4)">
+          <div style="display:flex;align-items:center;gap:10px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--review)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span style="font-size:12px;color:var(--text-body)">预计追加 <span style="font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--text-strong)">+2.4k tokens</span> · <span style="font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--text-strong)">¥ 0.62</span> · 延迟 +18s</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- footer -->
+      <div style="padding:16px 24px;border-top:1px solid var(--border-soft);background:var(--bg-elev);display:flex;align-items:center;justify-content:space-between">
+        <label style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--text-muted);cursor:pointer">
+          <input type="checkbox" style="accent-color:var(--text-strong)"/>
+          记录为该 Agent 的长期偏好
+        </label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="intr-btn" onclick="closeInterruptModal()">取消</button>
+          <button class="intr-btn intr-btn-primary" onclick="submitInterrupt()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            提交并继续
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
