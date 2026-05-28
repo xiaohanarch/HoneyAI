@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>运行详情 · AI 数字产线</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -96,6 +97,32 @@
   .gate-panel { background: oklch(97% 0.04 290); border: 1.5px solid oklch(85% 0.08 290); border-radius: 16px; padding: 24px; }
   .gate-panel .gate-title { font-size: 16px; font-weight: 600; color: var(--text-strong); }
   .gate-panel .gate-sub { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+
+  /* Markdown render inside gate / diff */
+  .md-render h1,.md-render h2,.md-render h3 { font-weight: 600; color: var(--text-strong); margin: 12px 0 6px; }
+  .md-render h1 { font-size: 15px; } .md-render h2 { font-size: 13.5px; } .md-render h3 { font-size: 13px; }
+  .md-render p { margin: 6px 0; line-height: 1.7; }
+  .md-render ul,.md-render ol { padding-left: 18px; margin: 6px 0; }
+  .md-render li { margin: 3px 0; line-height: 1.65; }
+  .md-render code { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; background: oklch(92% 0.01 260); padding: 1px 5px; border-radius: 4px; color: oklch(40% 0.12 290); }
+  .md-render pre { background: oklch(20% 0.02 260); border-radius: 8px; padding: 12px 14px; overflow-x: auto; margin: 10px 0; }
+  .md-render pre code { background: transparent; color: oklch(90% 0.03 260); padding: 0; font-size: 12px; }
+  .md-render blockquote { border-left: 3px solid oklch(70% 0.10 290); padding-left: 10px; color: var(--text-muted); margin: 8px 0; }
+  .md-render strong { color: var(--text-strong); font-weight: 600; }
+  .md-render a { color: oklch(55% 0.15 240); text-decoration: underline; }
+  .md-render hr { border: none; border-top: 1px solid var(--border-soft); margin: 12px 0; }
+  .md-render table { border-collapse: collapse; width: 100%; font-size: 12px; margin: 8px 0; }
+  .md-render th,.md-render td { border: 1px solid var(--border-mid); padding: 5px 10px; }
+  .md-render th { background: var(--bg-elev); font-weight: 600; }
+
+  /* Diff viewer */
+  .diff-file-header { padding: 9px 14px; background: var(--bg-elev); border-bottom: 1px solid var(--border-soft); display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+  .diff-file-header:hover { background: oklch(96% 0.005 260); }
+  .diff-file-patch { display: none; overflow-x: auto; background: #1e1e2e; }
+  .diff-line { display: block; padding: 0 6px; white-space: pre; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; line-height: 1.65; color: #cdd6f4; }
+  .diff-line.add { background: rgba(166,227,161,.10); color: #a6e3a1; }
+  .diff-line.del { background: rgba(243,139,168,.10); color: #f38ba8; }
+  .diff-line.hunk { color: #89b4fa; background: rgba(137,180,250,.06); }
   .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: 1.5px solid transparent; }
   .btn-approve { background: var(--done); color: white; }
   .btn-approve:hover { background: oklch(55% 0.15 150); }
@@ -303,9 +330,17 @@
         </div>
 
         <!-- Artifact preview inline -->
-        <div id="artifact-preview" class="hidden" style="margin:16px 0; padding:16px; background:oklch(97% 0.006 260); border-radius:12px; border:1px solid oklch(90% 0.01 260); max-height:280px; overflow-y:auto;">
-          <div class="caps" style="margin-bottom:10px; color:oklch(56% 0.015 260);">AI 产出文档 · 请审阅</div>
-          <div id="artifact-preview-content" style="font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.8; color:oklch(35% 0.02 260); white-space:pre-wrap; word-break:break-word;">加载中…</div>
+        <div id="artifact-preview" class="hidden" style="margin:16px 0; border-radius:12px; border:1px solid oklch(88% 0.03 290); overflow:hidden;">
+          <div style="padding:9px 14px; background:oklch(93% 0.03 290); border-bottom:1px solid oklch(88% 0.03 290); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span id="artifact-preview-kind" class="caps" style="color:oklch(45% 0.18 290); font-size:9px; font-weight:700;">AI 产出文档</span>
+              <span id="artifact-preview-stats" style="font-size:10.5px; color:oklch(50% 0.08 290);">加载中…</span>
+            </div>
+            <span style="font-size:10.5px; color:oklch(55% 0.06 290);">↕ 请滚动阅读完整内容后再决策</span>
+          </div>
+          <div style="padding:16px 18px; background:oklch(98% 0.01 290); max-height:360px; overflow-y:auto;">
+            <div id="artifact-preview-content" class="md-render" style="font-size:13px; line-height:1.75; color:oklch(28% 0.03 260);">加载中…</div>
+          </div>
         </div>
 
         <div id="gate-approve-area">
@@ -356,6 +391,20 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
             查看代码差异 (Files Changed)
           </a>
+        </div>
+      </div>
+
+      <!-- Code diff section (shown when completed) -->
+      <div id="code-diff-section" class="hidden" style="border:1px solid var(--border-soft); border-radius:16px; overflow:hidden; background:var(--bg-card);">
+        <div style="padding:13px 16px; background:var(--bg-elev); border-bottom:1px solid var(--border-soft); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+          <div>
+            <div class="caps" style="font-size:9.5px; margin-bottom:3px;">代码变更 · Stage 3 产出</div>
+            <div id="diff-summary" style="font-size:12px; color:var(--text-muted);">加载中…</div>
+          </div>
+          <div id="diff-header-actions" style="display:flex; gap:8px; align-items:center; flex-shrink:0;"></div>
+        </div>
+        <div id="code-diff-files" style="max-height:520px; overflow-y:auto;">
+          <div style="padding:16px; font-size:13px; color:var(--text-muted);">加载中…</div>
         </div>
       </div>
 
@@ -896,35 +945,175 @@ function stopTerminalPoll() {
   document.getElementById('terminal-status-dot').style.background = 'oklch(50% 0.02 260)';
 }
 
-// ── Artifact Preview ──────────────────────────────────────────────────────────
+// ── Artifact Preview (Gate 审查时展示最新 IR 文档) ────────────────────────────
+var GATE_IR_PRIORITY = ['design_ir', 'requirement_ir'];
+var GATE_IR_LABEL = {
+  requirement_ir: 'Gate 1 审查 · 需求 IR 文档',
+  design_ir: 'Gate 2 审查 · 设计 IR 文档',
+};
+var GATE_IR_DESC = {
+  requirement_ir: '以下是 AI 对你需求的理解与拆解，请确认方向正确再进入架构设计阶段。',
+  design_ir: '以下是 AI 的架构设计方案，请确认技术路线正确再进入编码阶段。',
+};
+
+function renderMd(text) {
+  if (typeof marked !== 'undefined') {
+    return marked.parse(text);
+  }
+  return '<pre style="white-space:pre-wrap;word-break:break-word">' + esc(text) + '</pre>';
+}
+
 function loadArtifactPreview(runId) {
   fetch('/api/prototype/runs/' + runId + '/artifacts')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var arts = data.artifacts || [];
-      // Get most recent non-placeholder artifact
-      var art = null;
-      for (var i = arts.length - 1; i >= 0; i--) {
-        if (!arts[i].metadata || !arts[i].metadata.placeholder) {
-          art = arts[i];
-          break;
+      var byKind = {};
+      arts.forEach(function(a) {
+        if (a.status === 'ready' && a.blobSha256 && !byKind[a.kind]) byKind[a.kind] = a;
+      });
+
+      // Pick highest-priority IR for current gate
+      var art = null, irKind = null;
+      for (var i = 0; i < GATE_IR_PRIORITY.length; i++) {
+        if (byKind[GATE_IR_PRIORITY[i]]) { art = byKind[GATE_IR_PRIORITY[i]]; irKind = GATE_IR_PRIORITY[i]; break; }
+      }
+      // Fallback: any non-placeholder artifact
+      if (!art) {
+        for (var j = arts.length - 1; j >= 0; j--) {
+          if (arts[j].blobSha256 && (!arts[j].metadata || !arts[j].metadata.placeholder)) { art = arts[j]; irKind = arts[j].kind; break; }
         }
       }
       if (!art || !art.blobSha256) return;
 
       var preview = document.getElementById('artifact-preview');
-      var content = document.getElementById('artifact-preview-content');
       preview.classList.remove('hidden');
-      content.textContent = '加载文档中…';
+      document.getElementById('artifact-preview-kind').textContent = GATE_IR_LABEL[irKind] || 'AI 产出文档 · 请审阅';
+
+      // Update gate-stage-desc
+      var desc = document.getElementById('gate-stage-desc');
+      if (desc && GATE_IR_DESC[irKind]) desc.textContent = GATE_IR_DESC[irKind];
 
       fetch('/api/prototype/artifacts/' + art.blobSha256 + '/content')
         .then(function(r) { return r.json(); })
         .then(function(d) {
-          content.textContent = d.content || '(内容为空)';
+          var text = d.content || '（内容为空）';
+          var lines = text.split('\n').length;
+          var words = text.trim().split(/\s+/).filter(Boolean).length;
+          document.getElementById('artifact-preview-stats').textContent = lines + ' 行 · ' + words + ' 词';
+          document.getElementById('artifact-preview-content').innerHTML = renderMd(text);
         })
-        .catch(function() { content.textContent = '(文档加载失败)'; });
+        .catch(function() { document.getElementById('artifact-preview-content').textContent = '（文档加载失败）'; });
     })
     .catch(function() {});
+}
+
+// ── Code Diff (Stage 3 产出代码变更查看) ─────────────────────────────────────
+function loadCodeDiff(runId, prUrl) {
+  var section = document.getElementById('code-diff-section');
+  section.classList.remove('hidden');
+
+  var actionsEl = document.getElementById('diff-header-actions');
+  if (prUrl) {
+    actionsEl.innerHTML =
+      '<a href="' + esc(prUrl) + '/files" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:6px 12px;font-size:11.5px;background:white;border:1px solid var(--border-mid);border-radius:8px;text-decoration:none;color:var(--text-body);">'
+      + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>'
+      + 'GitHub Files Changed</a>';
+  }
+
+  // Try GitHub API for real diff
+  if (prUrl) {
+    var m = prUrl.match(/github\.com\/([^/]+\/[^/]+)\/pull\/(\d+)/);
+    if (m) {
+      fetch('https://api.github.com/repos/' + m[1] + '/pulls/' + m[2] + '/files', {
+        headers: { 'Accept': 'application/vnd.github.v3+json' },
+      })
+      .then(function(r) { if (!r.ok) throw r.status; return r.json(); })
+      .then(function(files) { renderGitHubDiff(files, prUrl); })
+      .catch(function() { loadImplIRDiff(runId, prUrl); });
+      return;
+    }
+  }
+  loadImplIRDiff(runId, prUrl);
+}
+
+function renderGitHubDiff(files, prUrl) {
+  var addTotal = 0, delTotal = 0;
+  files.forEach(function(f) { addTotal += (f.additions || 0); delTotal += (f.deletions || 0); });
+  document.getElementById('diff-summary').textContent =
+    files.length + ' 个文件 · +' + addTotal + ' 行新增 / -' + delTotal + ' 行删除';
+
+  var STATUS_LABEL = { added: '+ 新增', removed: '- 删除', modified: '± 修改', renamed: '→ 重命名', copied: '⇒ 复制' };
+  var STATUS_COLOR = { added: 'var(--done)', removed: 'var(--halt)', modified: 'oklch(65% 0.14 65)', renamed: 'oklch(60% 0.14 240)', copied: 'oklch(60% 0.14 240)' };
+
+  var html = '';
+  files.forEach(function(f, idx) {
+    var sc = STATUS_COLOR[f.status] || 'var(--text-muted)';
+    var sl = STATUS_LABEL[f.status] || f.status;
+    var pid = 'dp-' + idx;
+    html += '<div style="border-bottom:1px solid var(--border-soft);">';
+    html += '<div class="diff-file-header" onclick="var p=document.getElementById(\'' + pid + '\');p.style.display=p.style.display===\'block\'?\'none\':\'block\'">';
+    html += '<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;background:' + sc + '/0.1;color:' + sc + '">' + sl + '</span>';
+    html += '<span style="font-family:\'JetBrains Mono\',monospace;font-size:12px;color:var(--text-body);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(f.filename) + '</span>';
+    html += '<span style="font-size:10.5px;font-family:\'JetBrains Mono\',monospace;color:var(--done);flex-shrink:0">+' + (f.additions||0) + '</span>';
+    html += '<span style="font-size:10.5px;font-family:\'JetBrains Mono\',monospace;color:var(--halt);margin-left:6px;flex-shrink:0">-' + (f.deletions||0) + '</span>';
+    html += '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2.5" style="margin-left:8px;flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>';
+    html += '</div>';
+    if (f.patch) {
+      html += '<div id="' + pid + '" class="diff-file-patch">';
+      html += '<div style="padding:10px 14px">';
+      f.patch.split('\n').forEach(function(line) {
+        var cls = 'diff-line';
+        if (line.startsWith('+') && !line.startsWith('+++')) cls += ' add';
+        else if (line.startsWith('-') && !line.startsWith('---')) cls += ' del';
+        else if (line.startsWith('@')) cls += ' hunk';
+        html += '<span class="' + cls + '">' + esc(line) + '</span>';
+      });
+      html += '</div></div>';
+    } else {
+      html += '<div id="' + pid + '" class="diff-file-patch" style="padding:10px 14px"><span style="color:#6c7086;font-family:\'JetBrains Mono\',monospace;font-size:11.5px">（Binary 文件或无 patch 数据）</span></div>';
+    }
+    html += '</div>';
+  });
+  document.getElementById('code-diff-files').innerHTML = html || '<div style="padding:16px;font-size:13px;color:var(--text-muted)">无文件变更</div>';
+}
+
+function loadImplIRDiff(runId, prUrl) {
+  fetch('/api/prototype/runs/' + runId + '/artifacts')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var arts = data.artifacts || [];
+      var implIR = null;
+      arts.forEach(function(a) { if (a.kind === 'impl_ir' && a.status === 'ready' && a.blobSha256) implIR = a; });
+
+      if (implIR) {
+        fetch('/api/prototype/artifacts/' + implIR.blobSha256 + '/content')
+          .then(function(r) { return r.json(); })
+          .then(function(d) {
+            var text = d.content || '（内容为空）';
+            var lines = text.split('\n').length;
+            document.getElementById('diff-summary').textContent = '实现 IR · Stage 3 编码计划（' + lines + ' 行）';
+            document.getElementById('code-diff-files').innerHTML =
+              '<div style="padding:16px 18px;max-height:460px;overflow-y:auto">'
+              + '<div class="md-render" style="font-size:13px;line-height:1.75;color:var(--text-body)">' + renderMd(text) + '</div>'
+              + '</div>';
+          })
+          .catch(function() {
+            document.getElementById('diff-summary').textContent = '实现 IR · 内容加载失败';
+            fallbackDiffMsg(prUrl);
+          });
+      } else {
+        document.getElementById('diff-summary').textContent = '代码已提交至 GitHub PR';
+        fallbackDiffMsg(prUrl);
+      }
+    })
+    .catch(function() { fallbackDiffMsg(prUrl); });
+}
+
+function fallbackDiffMsg(prUrl) {
+  document.getElementById('code-diff-files').innerHTML = prUrl
+    ? '<div style="padding:16px;font-size:13px;color:var(--text-muted)">代码已提交至 <a href="' + esc(prUrl) + '/files" target="_blank" style="color:var(--done)">GitHub PR → Files Changed ↗</a></div>'
+    : '<div style="padding:16px;font-size:13px;color:var(--text-muted)">（暂无代码变更数据）</div>';
 }
 
 // ── All artifacts panel (completed state) ────────────────────────────────────
@@ -1584,7 +1773,8 @@ function loadRun() {
           document.getElementById('pr-link').href = prUrl;
           document.getElementById('pr-diff-link').href = prUrl + '/files';
         }
-        // Always load artifacts panel on terminal states
+        // Load code diff + artifacts panel on terminal states
+        loadCodeDiff(runId, prUrl);
         loadAllArtifacts(runId);
       }
     })
