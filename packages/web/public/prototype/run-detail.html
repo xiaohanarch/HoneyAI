@@ -522,7 +522,10 @@
   <!-- ─── SECTION 1: Skills 使用明细 (P0a) ──────────────────────────────────── -->
   <div id="skills-section" style="display:none; margin-top:24px;">
     <div class="card p-6 mb-6">
-      <div class="caps mb-4">Skills 使用明细</div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:16px;">
+        <div class="caps">工具调用明细</div>
+        <div style="font-size:11.5px;color:var(--text-muted);">每阶段 Agent 实际调用工具次数</div>
+      </div>
       <div id="skills-grid" class="grid grid-cols-3 gap-4">
         <div class="text-[13px] text-[var(--text-muted)]">加载中…</div>
       </div>
@@ -1477,77 +1480,89 @@ function downloadArt(sha, filename) {
     .catch(function() { alert('下载失败'); });
 }
 
-// ── Skills 使用明细 (P0a) ────────────────────────────────────────────────────
-var DEFAULT_SKILLS = [
-  { id: 'requirement-enrichment', name: '需求富化', stage: 1, category: 'requirement', desc: '将模糊需求转化为结构化规格' },
-  { id: 'context-extractor', name: '上下文提取', stage: 1, category: 'requirement', desc: '从 JIRA/Git 历史提取项目上下文' },
-  { id: 'acceptance-criteria', name: 'AC 生成', stage: 1, category: 'requirement', desc: '自动生成验收标准' },
-  { id: 'api-design', name: 'API 设计', stage: 2, category: 'architecture', desc: '生成 REST API 规范' },
-  { id: 'db-schema-design', name: '数据库设计', stage: 2, category: 'architecture', desc: '生成 ER 图与数据表结构' },
-  { id: 'task-breakdown', name: '任务拆解', stage: 2, category: 'architecture', desc: '将设计拆解为编码任务' },
-  { id: 'code-generation', name: '代码生成', stage: 3, category: 'coding', desc: '根据设计 IR 生成完整代码' },
-  { id: 'unit-test-writer', name: 'UT 编写', stage: 3, category: 'testing', desc: 'TDD 模式生成单元测试' },
-  { id: 'pr-description', name: 'PR 描述', stage: 3, category: 'docs', desc: '自动生成 PR 标题与描述' },
-  { id: 'code-review-prep', name: '代码自审', stage: 3, category: 'quality', desc: '提交前自动 lint 与安全检查' },
-];
+// ── Skills / 工具调用明细 ─────────────────────────────────────────────────────
+var STAGE_COL_NAMES = { 1: 'Stage 1 · 需求富化', 2: 'Stage 2 · 设计与拆解', 3: 'Stage 3 · 编码+UT' };
 
-var SKILL_CAT_STYLE = {
-  requirement:  { dot: 'oklch(55% 0.20 250)', bg: 'oklch(94% 0.05 250)', border: 'oklch(82% 0.10 250)', text: 'oklch(35% 0.20 250)' },
-  architecture: { dot: 'oklch(58% 0.18 295)', bg: 'oklch(94% 0.04 295)', border: 'oklch(82% 0.09 295)', text: 'oklch(35% 0.18 295)' },
-  coding:       { dot: 'oklch(55% 0.15 150)', bg: 'oklch(94% 0.05 150)', border: 'oklch(82% 0.10 150)', text: 'oklch(35% 0.15 150)' },
-  testing:      { dot: 'oklch(62% 0.17 55)',  bg: 'oklch(95% 0.05 65)',  border: 'oklch(84% 0.10 65)',  text: 'oklch(40% 0.17 55)'  },
-  quality:      { dot: 'oklch(55% 0.20 25)',  bg: 'oklch(95% 0.04 25)',  border: 'oklch(84% 0.08 25)',  text: 'oklch(38% 0.20 25)'  },
-  docs:         { dot: 'oklch(55% 0.01 260)', bg: 'oklch(95% 0.005 260)',border: 'oklch(84% 0.01 260)', text: 'oklch(42% 0.01 260)' },
+var TOOL_LABEL = {
+  Read: '读文件', Write: '写文件', Edit: '编辑文件',
+  Bash: '执行命令', Grep: '内容搜索', Glob: '文件查找',
+  WebFetch: '网页请求', WebSearch: '网页搜索',
+  Task: '子任务', TodoWrite: '任务规划',
+};
+var TOOL_STYLE = {
+  Read:      { dot: 'oklch(55% 0.20 250)', bg: 'oklch(94% 0.05 250)', border: 'oklch(82% 0.10 250)', text: 'oklch(35% 0.20 250)' },
+  Write:     { dot: 'oklch(58% 0.18 295)', bg: 'oklch(94% 0.04 295)', border: 'oklch(82% 0.09 295)', text: 'oklch(35% 0.18 295)' },
+  Edit:      { dot: 'oklch(58% 0.18 295)', bg: 'oklch(94% 0.04 295)', border: 'oklch(82% 0.09 295)', text: 'oklch(35% 0.18 295)' },
+  Bash:      { dot: 'oklch(55% 0.15 150)', bg: 'oklch(94% 0.05 150)', border: 'oklch(82% 0.10 150)', text: 'oklch(35% 0.15 150)' },
+  Grep:      { dot: 'oklch(62% 0.17 55)',  bg: 'oklch(95% 0.05 65)',  border: 'oklch(84% 0.10 65)',  text: 'oklch(40% 0.17 55)'  },
+  Glob:      { dot: 'oklch(62% 0.17 55)',  bg: 'oklch(95% 0.05 65)',  border: 'oklch(84% 0.10 65)',  text: 'oklch(40% 0.17 55)'  },
+  WebFetch:  { dot: 'oklch(55% 0.15 200)', bg: 'oklch(95% 0.04 200)', border: 'oklch(84% 0.08 200)', text: 'oklch(38% 0.15 200)' },
+  WebSearch: { dot: 'oklch(55% 0.15 200)', bg: 'oklch(95% 0.04 200)', border: 'oklch(84% 0.08 200)', text: 'oklch(38% 0.15 200)' },
+  Task:      { dot: 'oklch(60% 0.20 310)', bg: 'oklch(94% 0.04 310)', border: 'oklch(82% 0.09 310)', text: 'oklch(36% 0.20 310)' },
+  TodoWrite: { dot: 'oklch(55% 0.01 260)', bg: 'oklch(95% 0.005 260)',border: 'oklch(84% 0.01 260)', text: 'oklch(42% 0.01 260)' },
+  _default:  { dot: 'oklch(55% 0.01 260)', bg: 'oklch(95% 0.005 260)',border: 'oklch(84% 0.01 260)', text: 'oklch(42% 0.01 260)' },
 };
 
-var STAGE_COL_NAMES = { 1: 'Stage 1 · 需求富化', 2: 'Stage 2 · 设计与拆解', 3: 'Stage 3 · 编码+UT' };
+var skillsLoaded = false;
 
 function renderSkillsPanel(runStatus) {
   var section = document.getElementById('skills-section');
   var showStatuses = { running: true, paused_at_gate: true, completed: true };
-  if (!showStatuses[runStatus]) {
-    section.style.display = 'none';
-    return;
-  }
+  if (!showStatuses[runStatus]) { section.style.display = 'none'; return; }
   section.style.display = '';
 
-  var stored = null;
-  try { stored = JSON.parse(localStorage.getItem('honeyai_skills') || 'null'); } catch(e) {}
-  var skills = (stored && Array.isArray(stored) && stored.length > 0) ? stored : DEFAULT_SKILLS;
+  if (skillsLoaded) return; // already rendered (once-only)
+  skillsLoaded = true;
 
-  var byStage = { 1: [], 2: [], 3: [] };
-  skills.forEach(function(s) {
-    if (byStage[s.stage]) byStage[s.stage].push(s);
-  });
+  if (demoMode) { renderSkillsPanelHtml({}); return; }
 
+  document.getElementById('skills-grid').innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:4px 0;">加载中…</div>';
+
+  fetch('/api/prototype/runs/' + runId + '/tool-events')
+    .then(function(r) { if (!r.ok) { renderSkillsPanelHtml({}); return null; } return r.json(); })
+    .then(function(data) {
+      if (!data) return;
+      // Count tool calls per stage
+      var countsByStage = {};
+      [1, 2, 3].forEach(function(s) {
+        var evts = data.byStage[s] || [];
+        var counts = {};
+        evts.forEach(function(e) { counts[e.tool] = (counts[e.tool] || 0) + 1; });
+        countsByStage[s] = counts;
+      });
+      renderSkillsPanelHtml(countsByStage);
+    })
+    .catch(function() { renderSkillsPanelHtml({}); });
+}
+
+function renderSkillsPanelHtml(countsByStage) {
   var html = '';
   [1, 2, 3].forEach(function(stageNum) {
-    html += '<div style="border:1px solid var(--border-soft); border-radius:14px; padding:16px 18px; background:var(--bg-card);">';
+    var counts = countsByStage[stageNum] || {};
+    var tools = Object.keys(counts).sort(function(a, b) { return counts[b] - counts[a]; });
+    html += '<div style="border:1px solid var(--border-soft);border-radius:14px;padding:16px 18px;background:var(--bg-card);">';
     html += '<div class="caps" style="margin-bottom:12px;">' + esc(STAGE_COL_NAMES[stageNum]) + '</div>';
-    html += '<div style="display:flex; flex-wrap:wrap; gap:6px;">';
-    byStage[stageNum].forEach(function(skill) {
-      var cat = skill.category || 'docs';
-      var style = SKILL_CAT_STYLE[cat] || SKILL_CAT_STYLE.docs;
-      html += '<span title="' + esc(skill.desc) + '" style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:500;background:' + style.bg + ';border:1px solid ' + style.border + ';color:' + style.text + ';">';
-      html += '<span style="width:6px;height:6px;border-radius:50%;background:' + style.dot + ';flex-shrink:0;"></span>';
-      html += esc(skill.name);
-      html += '</span>';
-    });
-    if (byStage[stageNum].length === 0) {
-      html += '<span style="font-size:12px; color:var(--text-faint);">暂无 Skills</span>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+    if (tools.length === 0) {
+      html += '<span style="font-size:12px;color:var(--text-faint);">暂无数据</span>';
+    } else {
+      tools.forEach(function(tool) {
+        var label = TOOL_LABEL[tool] || tool;
+        var s = TOOL_STYLE[tool] || TOOL_STYLE._default;
+        var count = counts[tool];
+        html += '<span title="调用 ' + count + ' 次" style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:500;background:' + s.bg + ';border:1px solid ' + s.border + ';color:' + s.text + ';">';
+        html += '<span style="width:6px;height:6px;border-radius:50%;background:' + s.dot + ';flex-shrink:0;"></span>';
+        html += esc(label) + '<span style="opacity:.55;margin-left:1px;">×' + count + '</span>';
+        html += '</span>';
+      });
     }
     html += '</div></div>';
   });
-
-  // Stage 4 placeholder (always grayed)
-  html += '<div style="border:1px dashed var(--border-soft); border-radius:14px; padding:16px 18px; background:var(--bg-card); opacity:.45;">';
+  // Stage 4 placeholder
+  html += '<div style="border:1px dashed var(--border-soft);border-radius:14px;padding:16px 18px;background:var(--bg-card);opacity:.45;">';
   html += '<div class="caps" style="margin-bottom:12px;">Stage 4 · SIT 集成测试</div>';
-  html += '<div style="display:flex; flex-wrap:wrap; gap:6px;">';
-  html += '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:500;background:oklch(95% 0.005 260);border:1px solid var(--border-soft);color:var(--text-faint);">';
-  html += '<span style="width:6px;height:6px;border-radius:50%;background:var(--text-faint);flex-shrink:0;"></span>V2 路线图</span>';
-  html += '</div></div>';
+  html += '<div style="font-size:12px;color:var(--text-faint);">V2 路线图</div></div>';
 
-  // Wrap the 3 active + 1 placeholder in a 4-col grid
   document.getElementById('skills-grid').style.gridTemplateColumns = 'repeat(4, 1fr)';
   document.getElementById('skills-grid').innerHTML = html;
 }
