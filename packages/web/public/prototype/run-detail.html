@@ -532,31 +532,6 @@
     </div>
   </div>
 
-  <!-- ─── SECTION 2: 需求富化对比 (P0b) ────────────────────────────────────── -->
-  <div id="req-compare-section" style="display:none; margin-top:24px;">
-    <div class="card mb-6" style="overflow:hidden;">
-      <div id="req-compare-header" onclick="toggleReqCompare()" style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; cursor:pointer; user-select:none; border-bottom:1px solid var(--border-soft);">
-        <div class="caps">需求富化对比</div>
-        <div style="display:flex; align-items:center; gap:8px;">
-          <span style="font-size:11px; color:var(--text-faint);">点击展开</span>
-          <svg id="req-compare-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2" style="transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
-        </div>
-      </div>
-      <div id="req-compare-body" style="display:none; padding:0;">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0;">
-          <div style="padding:20px 24px; border-right:1px solid var(--border-soft);">
-            <div class="caps" style="margin-bottom:12px;">原始需求输入</div>
-            <div id="req-original" style="font-family:'JetBrains Mono',monospace; font-size:12.5px; line-height:1.75; color:oklch(38% 0.02 260); background:oklch(98% 0.004 85); border-radius:10px; padding:14px 16px; max-height:320px; overflow-y:auto; white-space:pre-wrap; word-break:break-word;">—</div>
-          </div>
-          <div style="padding:20px 24px;">
-            <div class="caps" style="margin-bottom:12px;">富化后 requirement_ir</div>
-            <div id="req-enriched" style="font-family:'JetBrains Mono',monospace; font-size:12.5px; line-height:1.75; color:oklch(35% 0.02 260); background:oklch(14% 0.02 260); color:oklch(82% 0.018 260); border-radius:10px; padding:14px 16px; max-height:320px; overflow-y:auto; white-space:pre-wrap; word-break:break-word;">加载中…</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- ─── SECTION 3: 成本明细 (P1a) ────────────────────────────────────────── -->
   <div id="cost-section" style="display:none; margin-top:24px;">
     <div class="card p-6 mb-6">
@@ -720,7 +695,6 @@ var DEMO_TRACE_DATA = {
     ]
   }
 };
-var DEMO_REQ_ENRICHED = '# 需求 IR — 邮件验证\n\n## 用户故事\n**作为**一名新注册用户，\n**我希望**在完成注册后收到一封验证邮件，\n**以便**确认我的邮箱归属权，确保账户安全。\n\n## 验收标准\n1. 用户完成注册后 30s 内收到验证邮件\n2. 验证链接包含 JWT token，有效期 24h\n3. 未验证用户尝试登录时返回 `EMAIL_NOT_VERIFIED` 错误码\n4. 验证成功后 `isEmailVerified` 字段置为 true\n5. 用户可在登录页请求重新发送验证邮件（60s 冷却）\n\n## 约束\n- 邮件服务：使用现有 EmailService（SMTP 通道）\n- Token 存储：写入 `users.email_verify_token` 列，验证后清空\n- 不影响已有用户（存量用户视为已验证）';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 var STAGE_NAMES = { 1: '需求富化', 2: '设计与拆解', 3: '编码+UT' };
@@ -1592,59 +1566,6 @@ function renderSkillsPanelHtml(toolCountsByStage, eventCountsByStage) {
   document.getElementById('skills-grid').innerHTML = html;
 }
 
-// ── 需求富化对比 (P0b) ───────────────────────────────────────────────────────
-var reqCompareExpanded = false;
-
-function toggleReqCompare() {
-  var body = document.getElementById('req-compare-body');
-  var chevron = document.getElementById('req-compare-chevron');
-  var hint = document.querySelector('#req-compare-header span[style*="font-size:11px"]');
-  reqCompareExpanded = !reqCompareExpanded;
-  body.style.display = reqCompareExpanded ? '' : 'none';
-  chevron.style.transform = reqCompareExpanded ? 'rotate(180deg)' : '';
-  if (hint) hint.textContent = reqCompareExpanded ? '点击收起' : '点击展开';
-}
-
-function renderReqCompare(runId, oneLiner) {
-  var section = document.getElementById('req-compare-section');
-  section.style.display = '';
-
-  var origEl = document.getElementById('req-original');
-  origEl.textContent = oneLiner || '（未填写）';
-
-  var enrichEl = document.getElementById('req-enriched');
-
-  if (demoMode) {
-    enrichEl.textContent = DEMO_REQ_ENRICHED;
-    return;
-  }
-
-  enrichEl.textContent = '加载中…';
-
-  // Fetch requirement_ir artifact
-  fetch('/api/prototype/runs/' + runId + '/artifacts')
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      var arts = data.artifacts || [];
-      var reqArt = null;
-      for (var i = 0; i < arts.length; i++) {
-        if (arts[i].kind === 'requirement_ir' && arts[i].status === 'ready' && arts[i].blobSha256) {
-          reqArt = arts[i];
-        }
-      }
-      if (!reqArt) {
-        enrichEl.textContent = '（暂无富化文档）';
-        return;
-      }
-      return fetch('/api/prototype/artifacts/' + reqArt.blobSha256 + '/content')
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          enrichEl.textContent = d.content || '（内容为空）';
-        });
-    })
-    .catch(function() { enrichEl.textContent = '（加载失败）'; });
-}
-
 // ── 成本明细 (P1a) ───────────────────────────────────────────────────────────
 function fmtTokens(n) {
   if (!n && n !== 0) return '—';
@@ -1689,9 +1610,15 @@ function renderCostPanel(runId) {
     });
 }
 
+var STAGE_COST_NAMES = { 1: 'Stage 1 · 需求富化', 2: 'Stage 2 · 设计与拆解', 3: 'Stage 3 · 编码+UT' };
+
 function renderCostTable(tableEl, data) {
+  // API returns: { stages: [{ stage, totalMicroUsd, tokenCount, durationMs, demo }], grandTotal: {...} }
+  // DEMO_COST_DATA uses: { stages: [{ stage, stageName, tokens, costUsd, durationMs }], total: {...} }
   var stages = data.stages || [];
-  var total = data.total || {};
+  // Support both API format (grandTotal) and demo format (total)
+  var grand = data.grandTotal || data.total || {};
+
   var colStyle = 'padding:10px 16px; font-size:13px;';
   var headStyle = 'padding:8px 16px; font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; font-weight:500; color:var(--text-muted);';
   var html = '<div style="border:1px solid var(--border-soft); border-radius:12px; overflow:hidden;">';
@@ -1703,18 +1630,25 @@ function renderCostTable(tableEl, data) {
   html += '</div>';
   stages.forEach(function(s, i) {
     var rowBg = i % 2 === 0 ? 'background:var(--bg-card)' : 'background:var(--bg-elev)';
+    // Normalise: API uses totalMicroUsd, demo uses costUsd; API uses tokenCount, demo uses tokens
+    var tokens = s.tokenCount != null ? s.tokenCount : s.tokens;
+    var costUsd = s.totalMicroUsd != null ? s.totalMicroUsd / 1_000_000 : s.costUsd;
+    var name = s.stageName || STAGE_COST_NAMES[s.stage] || ('Stage ' + s.stage);
     html += '<div style="display:grid; grid-template-columns:2fr 1.2fr 1.2fr 1.2fr; ' + rowBg + '; border-bottom:1px solid var(--border-soft);">';
-    html += '<div style="' + colStyle + ' font-weight:500; color:var(--text-strong);">' + esc(s.stageName || ('Stage ' + s.stage)) + '</div>';
-    html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtTokens(s.tokens) + '</div>';
-    html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtCost(s.costUsd) + '</div>';
+    html += '<div style="' + colStyle + ' font-weight:500; color:var(--text-strong);">' + esc(name) + '</div>';
+    html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtTokens(tokens) + '</div>';
+    html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtCost(costUsd) + '</div>';
     html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtDuration(s.durationMs) + '</div>';
     html += '</div>';
   });
+  // Normalise grand total
+  var grandTokens = grand.tokenCount != null ? grand.tokenCount : grand.tokens;
+  var grandCostUsd = grand.totalMicroUsd != null ? grand.totalMicroUsd / 1_000_000 : grand.costUsd;
   html += '<div style="display:grid; grid-template-columns:2fr 1.2fr 1.2fr 1.2fr; background:oklch(95% 0.008 260); border-top:2px solid var(--border-mid);">';
   html += '<div style="' + colStyle + ' font-weight:700; color:var(--text-strong);">总计</div>';
-  html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtTokens(total.tokens) + '</div>';
-  html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtCost(total.costUsd) + '</div>';
-  html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtDuration(total.durationMs) + '</div>';
+  html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtTokens(grandTokens) + '</div>';
+  html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtCost(grandCostUsd) + '</div>';
+  html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtDuration(grand.durationMs) + '</div>';
   html += '</div></div>';
   tableEl.innerHTML = html;
 }
@@ -2090,7 +2024,6 @@ function applyDemoFallback() {
 
   // Completed-state sub-sections
   renderAgentTrace(runId);    // will use DEMO_TRACE_DATA in demoMode
-  renderReqCompare(runId, run.oneLiner);  // will use DEMO_REQ_ENRICHED in demoMode
   renderCostPanel(runId);     // will use DEMO_COST_DATA in demoMode
   renderIRChain(runId, run.oneLiner);     // will show nodes as done in demoMode
 
@@ -2130,7 +2063,6 @@ function loadRun() {
         loadWorkflowArtifacts(runId); // populate workflowArtifacts → re-renders rail cards clickable
       }
       if (run.status === 'completed') {
-        renderReqCompare(runId, run.oneLiner);
         renderCostPanel(runId);
         renderIRChain(runId, run.oneLiner);
       }
