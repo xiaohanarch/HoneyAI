@@ -1362,6 +1362,9 @@ var IR_CHAIN_NODES = [
 function renderIRChain(runId, oneLiner) {
   var section = document.getElementById('ir-chain-section');
   section.style.display = '';
+  if (window.location.hash === '#ir-chain-section') {
+    setTimeout(function () { section.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 300);
+  }
 
   fetch('/api/prototype/runs/' + runId + '/artifacts')
     .then(function(r) { return r.json(); })
