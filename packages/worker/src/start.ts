@@ -15,6 +15,7 @@ import { getArtifactContent } from './handlers/artifact-content.js'
 import { resolveAndCreatePR } from './handlers/github-pr.js'
 import { SCHEDULE_RUN_QUEUE, ADVANCE_RUN_QUEUE } from './queues.js'
 import { runCostRollup } from './cost-rollup.js'
+import { loadWorkerConfig } from './worker-config.js'
 import type { ScheduleRunJob, AdvanceRunJob } from './queues.js'
 
 // ─── Fail-fast env check ──────────────────────────────────────────────────────
@@ -23,16 +24,9 @@ const DATABASE_URL = process.env['DATABASE_URL']
 const REDIS_URL = process.env['REDIS_URL']
 // Optional: if absent the claude CLI falls back to its own OAuth auth (Claude Code subscription)
 const ANTHROPIC_API_KEY = process.env['ANTHROPIC_API_KEY'] ?? ''
-// LLM engine selection: 'claude' (default) or 'opencode'
-const LLM_ENGINE = process.env['LLM_ENGINE'] ?? 'claude'
-// Optional model override (defaults depend on the chosen engine)
-const LLM_MODEL = process.env['LLM_MODEL']
 
 if (!DATABASE_URL) throw new Error('DATABASE_URL is required')
 if (!REDIS_URL) throw new Error('REDIS_URL is required')
-if (LLM_ENGINE !== 'claude' && LLM_ENGINE !== 'opencode') {
-  throw new Error(`LLM_ENGINE must be 'claude' or 'opencode', got: '${LLM_ENGINE}'`)
-}
 
 // ─── Optional GitHub App configuration ───────────────────────────────────────
 
@@ -64,14 +58,19 @@ if (githubConfigured) {
 const redisOpts = { url: REDIS_URL, maxRetriesPerRequest: null } as const
 const db = getDb()
 
-// ─── Adapter selection ────────────────────────────────────────────────────────
+// ─── LLM engine config (honeyai.config.json, overridable via env) ─────────────
 
+const llmConfig = loadWorkerConfig()
 const activeAdapter =
-  LLM_ENGINE === 'opencode'
-    ? new OpenCodeAdapter(LLM_MODEL ?? 'anthropic/claude-sonnet-4-6')
+  llmConfig.engine === 'opencode'
+    ? new OpenCodeAdapter(llmConfig.model ?? 'anthropic/claude-sonnet-4-6')
     : new ClaudeCodeAdapter()
 
-console.log('[worker] LLM engine: %s%s', LLM_ENGINE, LLM_MODEL ? ` model=${LLM_MODEL}` : '')
+console.log(
+  '[worker] LLM engine: %s%s',
+  llmConfig.engine,
+  llmConfig.model ? ` model=${llmConfig.model}` : '',
+)
 
 // ─── BullMQ Workers ───────────────────────────────────────────────────────────
 
