@@ -433,7 +433,32 @@
     </div>
   </div>
 
-  <!-- ─── SECTION 4: IR 文档演化链 ──────────────────────────────────────────── -->
+  <!-- ─── SECTION 4: Agent 执行轨迹 ─────────────────────────────────────────── -->
+  <div id="agent-trace-section" style="display:none; margin-top:24px;">
+    <div class="card mb-6" style="overflow:hidden;">
+      <div id="agent-trace-header" onclick="toggleAgentTrace()" style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; cursor:pointer; user-select:none; border-bottom:1px solid var(--border-soft);">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:28px;height:28px;border-radius:8px;background:oklch(94% 0.05 250);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="oklch(42% 0.18 250)" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          </div>
+          <div>
+            <div class="caps">Agent 执行轨迹</div>
+            <div style="font-size:11.5px; color:var(--text-muted); margin-top:2px;">AI 实际执行了哪些文件读取、命令、搜索</div>
+          </div>
+          <span id="agent-trace-total" style="font-family:'JetBrains Mono',monospace; font-size:11.5px; color:var(--text-muted); padding:2px 9px; background:var(--bg-elev); border:1px solid var(--border-soft); border-radius:999px; display:none;"></span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:11px; color:var(--text-faint);">点击展开</span>
+          <svg id="agent-trace-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2" style="transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div id="agent-trace-body" style="display:none; padding:20px 24px;">
+        <div id="agent-trace-content" style="color:var(--text-muted); font-size:13px;">加载中…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SECTION 5: IR 文档演化链 ──────────────────────────────────────────── -->
   <div id="ir-chain-section" style="display:none; margin-top:24px;">
     <div class="card p-6 mb-6">
       <div style="margin-bottom:18px;">
@@ -1191,6 +1216,123 @@ function renderCostPanel(runId) {
     });
 }
 
+// ── Agent 执行轨迹 ────────────────────────────────────────────────────────────
+var agentTraceExpanded = false;
+var agentTraceLoaded = false;
+
+function toggleAgentTrace() {
+  var body = document.getElementById('agent-trace-body');
+  var chevron = document.getElementById('agent-trace-chevron');
+  var hint = document.querySelector('#agent-trace-header > div:last-child > span');
+  agentTraceExpanded = !agentTraceExpanded;
+  body.style.display = agentTraceExpanded ? '' : 'none';
+  chevron.style.transform = agentTraceExpanded ? 'rotate(180deg)' : '';
+  if (hint) hint.textContent = agentTraceExpanded ? '点击收起' : '点击展开';
+}
+
+var TOOL_ICONS = {
+  Read:      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
+  Write:     '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+  Edit:      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+  Bash:      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>',
+  Grep:      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+  Glob:      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+  WebFetch:  '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+  WebSearch: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+  Task:      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+};
+var TOOL_COLORS = {
+  Read:      { bg: 'oklch(94% 0.035 250)', border: 'oklch(82% 0.08 250)', text: 'oklch(36% 0.18 250)' },
+  Write:     { bg: 'oklch(94% 0.04 150)',  border: 'oklch(82% 0.10 150)', text: 'oklch(36% 0.15 150)' },
+  Edit:      { bg: 'oklch(94% 0.04 150)',  border: 'oklch(82% 0.10 150)', text: 'oklch(36% 0.15 150)' },
+  Bash:      { bg: 'oklch(94% 0.04 65)',   border: 'oklch(82% 0.10 65)',  text: 'oklch(40% 0.18 65)'  },
+  Grep:      { bg: 'oklch(94% 0.04 290)',  border: 'oklch(82% 0.08 290)', text: 'oklch(36% 0.18 290)' },
+  Glob:      { bg: 'oklch(94% 0.04 290)',  border: 'oklch(82% 0.08 290)', text: 'oklch(36% 0.18 290)' },
+  default:   { bg: 'oklch(96% 0.005 260)', border: 'oklch(88% 0.008 260)', text: 'oklch(42% 0.02 260)' },
+};
+
+function renderAgentTrace(runId) {
+  var section = document.getElementById('agent-trace-section');
+  section.style.display = '';
+
+  if (agentTraceLoaded) return;
+
+  fetch('/api/prototype/runs/' + runId + '/tool-events')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      agentTraceLoaded = true;
+      var total = data.total || 0;
+      var byStage = data.byStage || {};
+
+      var totalBadge = document.getElementById('agent-trace-total');
+      if (total > 0) {
+        totalBadge.textContent = total + ' 次工具调用';
+        totalBadge.style.display = '';
+      }
+
+      if (total === 0) {
+        document.getElementById('agent-trace-content').innerHTML = '<div style="color:var(--text-faint); font-size:13px;">暂无工具调用记录</div>';
+        return;
+      }
+
+      var STAGE_NAMES_TRACE = { 1: 'Stage 1 · 需求富化', 2: 'Stage 2 · 设计与拆解', 3: 'Stage 3 · 编码+UT' };
+      var stages = Object.keys(byStage).map(Number).sort(function(a, b) { return a - b; });
+      var html = '';
+
+      stages.forEach(function(stageNum) {
+        var evts = byStage[stageNum] || [];
+        if (evts.length === 0) return;
+
+        // Count by tool type
+        var toolCounts = {};
+        evts.forEach(function(e) { toolCounts[e.tool] = (toolCounts[e.tool] || 0) + 1; });
+
+        html += '<div style="margin-bottom:20px;">';
+        html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
+        html += '<div style="font-size:12px; font-weight:600; color:var(--text-strong);">' + esc(STAGE_NAMES_TRACE[stageNum] || ('Stage ' + stageNum)) + '</div>';
+        html += '<div style="flex:1; height:1px; background:var(--border-soft);"></div>';
+        html += '<div style="font-size:11px; color:var(--text-faint); font-family:\'JetBrains Mono\',monospace;">' + evts.length + ' calls</div>';
+        html += '</div>';
+
+        // Tool summary chips
+        html += '<div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:12px;">';
+        Object.keys(toolCounts).forEach(function(t) {
+          var c = TOOL_COLORS[t] || TOOL_COLORS.default;
+          html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:500;background:' + c.bg + ';border:1px solid ' + c.border + ';color:' + c.text + ';">';
+          html += (TOOL_ICONS[t] || '') + esc(t) + ' × ' + toolCounts[t];
+          html += '</span>';
+        });
+        html += '</div>';
+
+        // Timeline of individual calls (first 20 per stage to avoid overflow)
+        var showEvts = evts.slice(0, 20);
+        html += '<div style="display:flex; flex-direction:column; gap:4px;">';
+        showEvts.forEach(function(e) {
+          var c = TOOL_COLORS[e.tool] || TOOL_COLORS.default;
+          var summary = e.summary || '';
+          // Truncate display
+          var displaySummary = summary.length > 80 ? summary.slice(0, 80) + '…' : summary;
+          html += '<div style="display:flex; align-items:flex-start; gap:8px; padding:6px 10px; background:var(--bg-elev); border-radius:8px; border:1px solid var(--border-soft);">';
+          html += '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:6px;font-size:10.5px;font-weight:600;background:' + c.bg + ';border:1px solid ' + c.border + ';color:' + c.text + ';flex-shrink:0;">';
+          html += (TOOL_ICONS[e.tool] || '') + esc(e.label || e.tool);
+          html += '</span>';
+          html += '<span style="font-family:\'JetBrains Mono\',monospace; font-size:11.5px; color:var(--text-body); line-height:1.4; word-break:break-all; flex:1;">' + esc(displaySummary) + '</span>';
+          html += '</div>';
+        });
+        if (evts.length > 20) {
+          html += '<div style="font-size:11px; color:var(--text-faint); padding:4px 10px;">… 还有 ' + (evts.length - 20) + ' 次调用</div>';
+        }
+        html += '</div>';
+        html += '</div>';
+      });
+
+      document.getElementById('agent-trace-content').innerHTML = html || '<div style="color:var(--text-faint); font-size:13px;">暂无工具调用记录</div>';
+    })
+    .catch(function() {
+      document.getElementById('agent-trace-content').innerHTML = '<div style="color:var(--text-faint); font-size:13px;">执行轨迹加载失败</div>';
+    });
+}
+
 // ── IR 文档演化链 ─────────────────────────────────────────────────────────────
 var irChainActiveKind = null;
 var irChainLoadedContent = {};
@@ -1390,6 +1532,9 @@ function loadRun() {
 
       // New sections
       renderSkillsPanel(run.status);
+      if (run.status === 'completed' || run.status === 'running' || run.status === 'paused_at_gate') {
+        renderAgentTrace(runId);
+      }
       if (run.status === 'completed') {
         renderReqCompare(runId, run.oneLiner);
         renderCostPanel(runId);

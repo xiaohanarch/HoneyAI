@@ -78,6 +78,19 @@
       radial-gradient(50% 40% at 100% 0%, oklch(72% 0.17 150 / .06), transparent 60%);
   }
   .kbd{ font-family:'JetBrains Mono',monospace; font-size:10.5px; padding:1.5px 5px; border-radius:4px; background: oklch(97% 0.008 260); border:1px solid var(--line); color: var(--ink-soft); }
+
+  /* ── Sprint Board / Kanban ── */
+  .kanban-board { display:flex; gap:14px; overflow-x:auto; padding-bottom:12px; min-height:480px; }
+  .kanban-col { flex:0 0 240px; display:flex; flex-direction:column; gap:10px; }
+  .kanban-col-header { padding:10px 14px; border-radius:10px; font-size:11px; font-weight:600; letter-spacing:.10em; text-transform:uppercase; display:flex; align-items:center; justify-content:space-between; }
+  .kanban-col-header .col-count { font-family:'JetBrains Mono',monospace; font-size:11.5px; padding:1px 7px; border-radius:999px; font-weight:700; }
+  .kanban-cards { display:flex; flex-direction:column; gap:8px; flex:1; }
+  .kanban-card { background:var(--surface); border:1px solid var(--line-soft); border-radius:10px; padding:12px 14px; cursor:pointer; transition:box-shadow .12s, border-color .12s; }
+  .kanban-card:hover { box-shadow:0 2px 8px oklch(15% 0 0 / .06); border-color:var(--line); }
+  .kanban-card-title { font-size:12.5px; font-weight:500; color:var(--ink); line-height:1.4; margin-bottom:6px; }
+  .kanban-card-meta { font-size:10.5px; color:var(--ink-mute); font-family:'JetBrains Mono',monospace; display:flex; flex-direction:column; gap:2px; }
+  .kanban-card-bar { height:3px; border-radius:2px; margin-top:8px; background:var(--line-soft); }
+  .kanban-empty { font-size:11px; color:var(--ink-mute); text-align:center; padding:20px 10px; }
 </style>
 </head>
 <body class="grain atmo">
@@ -146,10 +159,12 @@
       </div>
 
       <!-- View mode -->
-      <span class="seg ml-auto">
-        <span class="opt active">列表</span>
-        <span class="opt">画布</span>
-        <span class="opt">日历</span>
+      <span class="seg ml-auto" id="view-seg">
+        <span class="opt active" onclick="switchView('list')">列表</span>
+        <span class="opt" onclick="switchView('kanban')">
+          <svg style="display:inline;vertical-align:-2px;margin-right:3px;" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="11" rx="1"/></svg>看板
+        </span>
+        <span class="opt" onclick="switchView('calendar')">日历</span>
       </span>
 
       <button class="text-[11.5px] text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] flex items-center gap-1.5 ml-2">
@@ -169,7 +184,7 @@
   </section>
 
   <!-- Sort header -->
-  <div class="px-6 py-2.5 flex items-center gap-3.5 mb-0 text-[10.5px] text-[color:var(--ink-mute)] uppercase tracking-[.12em]">
+  <div id="sort-header" class="px-6 py-2.5 flex items-center gap-3.5 mb-0 text-[10.5px] text-[color:var(--ink-mute)] uppercase tracking-[.12em]">
     <div class="w-[72px]">Run</div>
     <div class="flex-1">需求 · 服务</div>
     <div class="w-[220px]">阶段进度</div>
@@ -392,8 +407,22 @@
 
   </section>
 
+  <!-- Sprint Board (Kanban) -->
+  <section id="kanban-section" style="display:none; margin-bottom:24px;">
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="11" rx="1"/></svg>
+      <span style="font-size:11px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-soft);">Sprint Board · 实时看板</span>
+      <span id="kanban-poll-indicator" style="display:flex; align-items:center; gap:4px; font-size:10.5px; color:var(--ink-mute); font-family:'JetBrains Mono',monospace;">
+        <span style="width:5px;height:5px;border-radius:50%;background:oklch(62% 0.13 150);animation:kanban-pulse 2s infinite;display:inline-block;"></span>实时
+      </span>
+    </div>
+    <div class="kanban-board" id="kanban-board">
+      <div style="color:var(--ink-mute); font-size:13px; padding:20px;">加载看板…</div>
+    </div>
+  </section>
+
   <!-- Pagination -->
-  <section class="flex items-center justify-between mt-5 px-2 text-[12px] text-[color:var(--ink-mute)]">
+  <section id="pagination-section" class="flex items-center justify-between mt-5 px-2 text-[12px] text-[color:var(--ink-mute)]">
     <div>第 <span class="mono text-[color:var(--ink)]">1</span> 页 · 共 <span class="mono">303</span> 页</div>
     <div class="flex items-center gap-1">
       <button class="w-8 h-8 rounded-md hover:bg-[color:var(--line-soft)] flex items-center justify-center disabled:opacity-30" disabled>←</button>
@@ -417,11 +446,169 @@
   Prototype · runs-list.html · 历史运行索引
 </footer>
 
+<style>
+@keyframes kanban-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+</style>
 <script>
   // ── Auth check ──────────────────────────────────────────────────────────────
   fetch('/api/prototype/me').then(function(r) {
     if (r.status === 401) window.location.href = '/login?callbackUrl=/prototype/runs-list.html';
   });
+
+  // ── View toggle ──────────────────────────────────────────────────────────────
+  var currentView = 'list';
+  var kanbanPollTimer = null;
+  var cachedRuns = null;
+
+  function switchView(view) {
+    currentView = view;
+    var listPanel = document.getElementById('runs-panel');
+    var sortHeader = document.getElementById('sort-header');
+    var kanbanSection = document.getElementById('kanban-section');
+    var paginationSection = document.getElementById('pagination-section');
+    var opts = document.querySelectorAll('#view-seg .opt');
+    var viewNames = ['list', 'kanban', 'calendar'];
+
+    opts.forEach(function(opt, i) {
+      opt.classList.toggle('active', viewNames[i] === view);
+    });
+
+    if (view === 'kanban') {
+      if (listPanel) listPanel.style.display = 'none';
+      if (sortHeader) sortHeader.style.display = 'none';
+      if (paginationSection) paginationSection.style.display = 'none';
+      kanbanSection.style.display = '';
+      renderKanban();
+      if (!kanbanPollTimer) {
+        kanbanPollTimer = setInterval(renderKanban, 5000);
+      }
+    } else {
+      if (listPanel) listPanel.style.display = '';
+      if (sortHeader) sortHeader.style.display = '';
+      if (paginationSection) paginationSection.style.display = '';
+      kanbanSection.style.display = 'none';
+      if (kanbanPollTimer) { clearInterval(kanbanPollTimer); kanbanPollTimer = null; }
+    }
+  }
+
+  // ── Kanban columns definition ─────────────────────────────────────────────────
+  var KANBAN_COLS = [
+    {
+      id: 'active',
+      label: '创建/调度中',
+      statuses: ['created', 'scheduling'],
+      headerBg: 'oklch(96% 0.008 260)',
+      headerBorder: 'oklch(90% 0.01 260)',
+      headerText: 'oklch(40% 0.02 260)',
+      barColor: 'oklch(80% 0.01 260)',
+      countBg: 'oklch(92% 0.01 260)',
+      countColor: 'oklch(40% 0.02 260)',
+    },
+    {
+      id: 'running',
+      label: '运行中',
+      statuses: ['running'],
+      headerBg: 'oklch(95% 0.05 65)',
+      headerBorder: 'oklch(86% 0.10 65)',
+      headerText: 'oklch(40% 0.18 65)',
+      barColor: 'var(--run)',
+      countBg: 'oklch(80% 0.16 65 / .15)',
+      countColor: 'oklch(40% 0.18 65)',
+    },
+    {
+      id: 'paused_at_gate',
+      label: '待人工审批',
+      statuses: ['paused_at_gate'],
+      headerBg: 'oklch(95% 0.04 290)',
+      headerBorder: 'oklch(84% 0.08 290)',
+      headerText: 'oklch(38% 0.18 290)',
+      barColor: 'var(--review)',
+      countBg: 'oklch(70% 0.16 290 / .15)',
+      countColor: 'oklch(38% 0.18 290)',
+    },
+    {
+      id: 'completed',
+      label: '已完成',
+      statuses: ['completed'],
+      headerBg: 'oklch(95% 0.04 150)',
+      headerBorder: 'oklch(85% 0.10 150)',
+      headerText: 'oklch(38% 0.15 150)',
+      barColor: 'var(--done)',
+      countBg: 'oklch(72% 0.16 150 / .15)',
+      countColor: 'oklch(38% 0.15 150)',
+    },
+    {
+      id: 'failed',
+      label: '失败/取消',
+      statuses: ['failed', 'cancelled'],
+      headerBg: 'oklch(95% 0.04 25)',
+      headerBorder: 'oklch(84% 0.08 25)',
+      headerText: 'oklch(40% 0.18 25)',
+      barColor: 'var(--halt)',
+      countBg: 'oklch(67% 0.20 25 / .15)',
+      countColor: 'oklch(40% 0.18 25)',
+    },
+  ];
+
+  function escK(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function renderKanban() {
+    fetch('/api/prototype/runs').then(function(r) { return r.json(); }).then(function(data) {
+      cachedRuns = data.runs || [];
+      buildKanbanBoard(cachedRuns);
+    }).catch(function() {
+      if (cachedRuns) buildKanbanBoard(cachedRuns);
+    });
+  }
+
+  function buildKanbanBoard(runs) {
+    var board = document.getElementById('kanban-board');
+    var html = '';
+
+    KANBAN_COLS.forEach(function(col) {
+      var colRuns = runs.filter(function(r) { return col.statuses.indexOf(r.status) !== -1; });
+
+      html += '<div class="kanban-col">';
+      html += '<div class="kanban-col-header" style="background:' + col.headerBg + '; border:1px solid ' + col.headerBorder + '; color:' + col.headerText + ';">';
+      html += '<span>' + col.label + '</span>';
+      html += '<span class="col-count" style="background:' + col.countBg + '; color:' + col.countColor + ';">' + colRuns.length + '</span>';
+      html += '</div>';
+
+      html += '<div class="kanban-cards">';
+      if (colRuns.length === 0) {
+        html += '<div class="kanban-empty">暂无</div>';
+      } else {
+        colRuns.slice(0, 20).forEach(function(run) {
+          var title = run.title || '(无标题)';
+          var shortId = (run.id || '').slice(0, 8);
+          var dur = fmtDurationMs(run.startedAt, run.finishedAt);
+          var cost = fmtCostUsd(run.totalCostMicroUsd);
+          var ago = timeAgo(run.createdAt);
+
+          html += '<div class="kanban-card" data-run-id="' + escK(run.id) + '" onclick="window.location.href=\'run-detail.html?runId=' + escK(run.id) + '\'">';
+          html += '<div class="kanban-card-title">' + escK(title) + '</div>';
+          html += '<div class="kanban-card-meta">';
+          html += '<span>' + shortId + '</span>';
+          if (dur !== '—') html += '<span>⏱ ' + dur + '</span>';
+          if (cost !== '—') html += '<span style="color:oklch(40% 0.13 150);">$ ' + cost + '</span>';
+          html += '<span style="color:oklch(70% 0.01 260);">' + ago + '</span>';
+          html += '</div>';
+          html += '<div class="kanban-card-bar" style="background:' + col.barColor + '; opacity:.5;"></div>';
+          html += '</div>';
+        });
+        if (colRuns.length > 20) {
+          html += '<div class="kanban-empty">还有 ' + (colRuns.length - 20) + ' 条…</div>';
+        }
+      }
+      html += '</div>';
+      html += '</div>';
+    });
+
+    board.innerHTML = html;
+  }
 
   // ── Status helpers ──────────────────────────────────────────────────────────
   function statusLabel(s) {
