@@ -8,7 +8,8 @@
 #   3. 以下环境变量已设置
 #
 # 用法:
-#   export ANTHROPIC_API_KEY=sk-ant-...
+#   export ANTHROPIC_API_KEY=sk-ant-...   # optional if using opencode+dashscope
+#   export DASHSCOPE_API_KEY=...           # required for opencode + dashscope/qwen3-coder-plus
 #   export GITHUB_APP_ID=...
 #   export GITHUB_APP_PRIVATE_KEY="$(cat private-key.pem)"
 #   export GITHUB_APP_WEBHOOK_SECRET=...
@@ -34,6 +35,7 @@ kubectl -n honeyai create secret generic honeyai-secrets \
   --from-literal=redis_url="redis://redis:6379" \
   --from-literal=nextauth_secret="${NEXTAUTH_SECRET:?}" \
   --from-literal=anthropic_api_key="${ANTHROPIC_API_KEY:-}" \
+  --from-literal=dashscope_api_key="${DASHSCOPE_API_KEY:-}" \
   --from-literal=github_app_id="${GITHUB_APP_ID:?}" \
   --from-literal=github_app_private_key="${GITHUB_APP_PRIVATE_KEY:?}" \
   --from-literal=github_app_webhook_secret="${GITHUB_APP_WEBHOOK_SECRET:?}" \

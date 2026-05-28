@@ -49,6 +49,12 @@ spec:
                 secretKeyRef:
                   name: honeyai-secrets
                   key: kek_base64
+            - name: DASHSCOPE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: honeyai-secrets
+                  key: dashscope_api_key
+                  optional: true
             # Set by kustomize patch in deploy workflow (sandbox image digest)
             - name: SANDBOX_IMAGE_REPO
               value: ghcr.io/xiaohanarch/honeyai-sandbox
