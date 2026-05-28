@@ -35,6 +35,8 @@ export class OpenCodeAdapter implements RuntimeAdapter {
     }
     args.push(prompt)
 
+    // Only set ANTHROPIC_API_KEY when non-empty; if empty, omit it so the
+    // opencode CLI falls back to its own auth (e.g. `opencode auth login`).
     const spawnEnv: NodeJS.ProcessEnv = {
       ...process.env,
       ANTHROPIC_API_KEY: anthropicKey || undefined,
@@ -90,7 +92,9 @@ export class OpenCodeAdapter implements RuntimeAdapter {
           // skip unparseable lines
         }
       }
-      // Attempt to parse remaining buffer (final line may arrive without trailing \n)
+      // Eager-parse the remaining buffer: some CLI implementations emit the final
+      // result JSON without a trailing newline. If parsing succeeds the buffer is
+      // cleared; if it fails the partial content stays buffered for the next chunk.
       const trimmedBuffer = buffer.trim()
       if (trimmedBuffer) {
         try {
@@ -157,11 +161,17 @@ function mapToStreamingEvents(parsed: Record<string, unknown>): StreamingNodeEve
     const tool = String(part?.['tool'] ?? '')
     const state = part?.['state'] as Record<string, unknown> | undefined
     const input = (state?.['input'] as Record<string, unknown>) ?? {}
-    const output = String(state?.['output'] ?? '')
+    const status = String(state?.['status'] ?? '')
 
-    // Emit tool_call (with input args) and tool_result (with output length)
+    // Always emit tool_call with the invocation args.
+    // Only emit tool_result when the tool has fully completed (status='completed').
+    // opencode may emit tool_use at intermediate states; guard prevents premature
+    // tool_result with outputLen=0 from in-progress tool events.
     result.push({ ts, kind: 'tool_call', tool, args: input })
-    result.push({ ts, kind: 'tool_result', tool, outputLen: output.length })
+    if (status === 'completed') {
+      const output = String(state?.['output'] ?? '')
+      result.push({ ts, kind: 'tool_result', tool, outputLen: output.length })
+    }
     return result
   }
 

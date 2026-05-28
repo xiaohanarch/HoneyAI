@@ -283,4 +283,56 @@ describe('OpenCodeAdapter', () => {
     expect(events.some((e) => e.kind === 'text')).toBe(true)
     expect(events.some((e) => e.kind === 'finish')).toBe(true)
   })
+
+  it('tool_use with non-completed status emits tool_call but NOT tool_result', async () => {
+    // opencode may emit tool_use at intermediate states (e.g. status='running')
+    const line = JSON.stringify({
+      type: 'tool_use',
+      timestamp: Date.now(),
+      sessionID: 'sess-1',
+      part: {
+        callID: 'call-1',
+        tool: 'Bash',
+        state: { status: 'running', input: { command: 'ls' }, title: 'Bash' },
+      },
+    })
+    mockSpawn.mockReturnValue(makeFakeProcess([line]))
+
+    const adapter = new OpenCodeAdapter()
+    const events: StreamingNodeEvent[] = []
+    for await (const e of adapter.executeNode(BASE_PARAMS)) {
+      events.push(e)
+    }
+
+    expect(events.find((e) => e.kind === 'tool_call')).toBeDefined()
+    expect(events.find((e) => e.kind === 'tool_result')).toBeUndefined()
+  })
+
+  it('default model appears in spawn args', async () => {
+    mockSpawn.mockReturnValue(makeFakeProcess([]))
+    const adapter = new OpenCodeAdapter() // default model
+
+    const gen = adapter.executeNode(BASE_PARAMS)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    for await (const _ of gen) {
+      /* drain */
+    }
+
+    const spawnArgs: string[] = mockSpawn.mock.calls[0]![1] as string[]
+    expect(spawnArgs).toContain('anthropic/claude-sonnet-4-6')
+  })
+
+  it('custom model passed to constructor appears in spawn args', async () => {
+    mockSpawn.mockReturnValue(makeFakeProcess([]))
+    const adapter = new OpenCodeAdapter('anthropic/claude-opus-4-6')
+
+    const gen = adapter.executeNode(BASE_PARAMS)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    for await (const _ of gen) {
+      /* drain */
+    }
+
+    const spawnArgs: string[] = mockSpawn.mock.calls[0]![1] as string[]
+    expect(spawnArgs).toContain('anthropic/claude-opus-4-6')
+  })
 })
