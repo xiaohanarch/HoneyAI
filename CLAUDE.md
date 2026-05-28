@@ -1,5 +1,9 @@
 # Project: HoneyAI
 
+## Language
+
+**所有对话和回复必须使用中文或英文。禁止使用其他语言（包括韩语、日语等）。**
+
 多智能体 AI 数字研发产线（DevPipeline）—— 一句话需求经 3 阶段 + 人在回路 Gate 自动产出 GitHub PR。当前阶段：**Phase 1**（monorepo 骨架 + db 全表落地）。
 
 ## What This System Does

@@ -161,7 +161,15 @@ html, body {
 .hero-accent { color: var(--amber); }
 .hero-arrow {
   font-size: 52px; color: var(--faint); line-height: 1;
-  margin: 16px 0; animation: bob 2.2s ease-in-out infinite;
+  margin: 10px 0; animation: bob 2.2s ease-in-out infinite;
+}
+.hero-plus {
+  font-size: 32px; color: var(--faint); line-height: 1; margin: 8px 0;
+}
+.hero-quality {
+  margin-top: 10px;
+  font-size: clamp(14px, 1.8vw, 19px); font-weight: 500;
+  color: var(--muted); letter-spacing: .06em;
 }
 @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
 .hero-sub {
@@ -675,18 +683,19 @@ html, body {
 <div class="slide active" id="s1">
   <div class="hero-eyebrow">HoneyAI &nbsp;·&nbsp; DevPipeline &nbsp;·&nbsp; Demo Guideline</div>
   <div class="hero-main">一句话需求</div>
+  <div class="hero-plus">+</div>
+  <div class="hero-main" style="color:var(--sky)">harness 工程</div>
   <div class="hero-arrow">↓</div>
-  <div class="hero-main hero-accent serif" style="font-style:italic">自动产出 PR</div>
-  <div class="hero-sub">
+  <div class="hero-main hero-accent serif" style="font-style:italic">自动产出高质量 PR</div>
+  <div class="hero-quality">全程可控 · 可观测</div>
+  <div class="hero-sub" style="margin-top:24px">
     <span>3 阶段 AI 流水线</span>
     <span class="hero-sep"></span>
     <span>人在回路 Gate</span>
     <span class="hero-sep"></span>
-    <span>全程可观测</span>
-    <span class="hero-sep"></span>
     <span>成本透明</span>
   </div>
-  <div class="hero-cta">
+  <div class="hero-cta" style="margin-top:32px">
     按 → 或点击右箭头开始
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
   </div>
