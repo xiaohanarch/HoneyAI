@@ -766,7 +766,7 @@ function renderTimeline(nodes) {
     html += '<div class="tl-name" style="' + nameColor + '">' + n.name + '</div>';
     html += '<div class="tl-meta">' + kindLabel + ' · ' + (STATUS_LABEL[n.status] || n.status) + '</div>';
     if (canRerun) {
-      html += '<button class="btn-rerun" onclick="rerunNode(\'' + n.id + '\',this)">';
+      html += '<button class="btn-rerun" onclick="openRerunModal(\'' + n.id + '\',\'' + n.name.replace(/'/g, '\\\'') + '\')">';
       html += '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.88"/></svg>';
       html += '重跑此步骤及后续</button>';
     }
@@ -2267,37 +2267,147 @@ var pollInterval = setInterval(function() {
 loadRun();
 startSSE();
 
+// ── Rerun with supplemental context modal ─────────────────────────────────────
+var _rerunNodeId = null;
+var _rerunNodeName = '';
+
+function openRerunModal(nodeId, nodeName) {
+  _rerunNodeId = nodeId;
+  _rerunNodeName = nodeName || '此步骤';
+  var modal = document.getElementById('rerun-modal');
+  var textarea = document.getElementById('rerun-context-text');
+  var charCount = document.getElementById('rerun-char-count');
+  var titleEl = document.getElementById('rerun-modal-node-name');
+  if (titleEl) titleEl.textContent = _rerunNodeName;
+  if (textarea) { textarea.value = ''; }
+  if (charCount) charCount.textContent = '0 / 4000';
+  modal.style.display = 'flex';
+  setTimeout(function() { if (textarea) textarea.focus(); }, 80);
+}
+
+function closeRerunModal() {
+  document.getElementById('rerun-modal').style.display = 'none';
+  _rerunNodeId = null;
+}
+
+function updateRerunCharCount() {
+  var ta = document.getElementById('rerun-context-text');
+  var el = document.getElementById('rerun-char-count');
+  if (ta && el) el.textContent = ta.value.length + ' / 4000';
+}
+
+function setRerunContextText(text) {
+  var ta = document.getElementById('rerun-context-text');
+  if (ta) { ta.value = text; updateRerunCharCount(); ta.focus(); }
+}
+
+function submitRerun(skipContext) {
+  if (!_rerunNodeId) return;
+  var context = '';
+  if (!skipContext) {
+    var ta = document.getElementById('rerun-context-text');
+    context = ta ? ta.value.trim() : '';
+  }
+  closeRerunModal();
+  rerunNode(_rerunNodeId, context);
+}
+
 // ── Rerun node ────────────────────────────────────────────────────────────────
-function rerunNode(nodeId, btn) {
+function rerunNode(nodeId, context) {
   if (!nodeId || !runId) return;
-  btn.disabled = true;
-  btn.textContent = '提交中…';
+
+  // Disable all rerun buttons on the page while request is in flight
+  document.querySelectorAll('.btn-rerun').forEach(function(b) { b.disabled = true; });
 
   fetch('/api/prototype/runs/' + runId + '/nodes/' + nodeId + '/rerun', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ context: context || '' }),
   })
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.ok) {
-        btn.textContent = '已重新排队';
         setTimeout(loadRun, 800);
       } else {
         var msg = {
           RUN_IS_RUNNING: '运行中，请稍候',
           NODE_IS_RUNNING: '节点运行中，请稍候',
           REDIS_NOT_CONFIGURED: '队列未配置',
-        }[data.error] || (data.error || '失败');
-        btn.textContent = msg;
-        btn.disabled = false;
+        }[data.error] || (data.error || '重跑失败');
+        alert(msg);
+        document.querySelectorAll('.btn-rerun').forEach(function(b) { b.disabled = false; });
       }
     })
     .catch(function() {
-      btn.textContent = '网络错误';
-      btn.disabled = false;
+      alert('网络错误，请重试');
+      document.querySelectorAll('.btn-rerun').forEach(function(b) { b.disabled = false; });
     });
 }
 </script>
+
+<!-- ── Rerun with Context Modal ─────────────────────────────────────────────── -->
+<div id="rerun-modal" onclick="if(event.target===this)closeRerunModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9998;align-items:center;justify-content:center;padding:24px">
+  <div style="background:white;border-radius:16px;width:100%;max-width:560px;box-shadow:0 24px 60px rgba(0,0,0,.18);overflow:hidden">
+
+    <!-- header -->
+    <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border-soft);display:flex;align-items:flex-start;justify-content:space-between">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div style="width:36px;height:36px;border-radius:10px;background:oklch(94% 0.04 65);color:oklch(48% 0.16 65);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.88"/></svg>
+        </div>
+        <div>
+          <div style="font-size:15px;font-weight:600;color:var(--text-strong);line-height:1.3">重跑前补充说明</div>
+          <div style="font-size:11.5px;color:var(--text-muted);margin-top:3px">节点：<span id="rerun-modal-node-name" style="font-weight:500;color:var(--text-body)"></span></div>
+        </div>
+      </div>
+      <button onclick="closeRerunModal()" style="width:28px;height:28px;border-radius:6px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted)" onmouseover="this.style.background='var(--bg-elev)'" onmouseout="this.style.background='none'">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- body -->
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+
+      <!-- explanation -->
+      <div style="background:oklch(97% 0.02 245);border:1px solid oklch(88% 0.06 245 / 0.5);border-radius:10px;padding:12px 14px;font-size:12px;color:oklch(38% 0.12 245);line-height:1.65">
+        可在此补充对上次结果不满意的原因、修正方向，或追加上下文。Agent 将在本次重跑时优先参考这些说明。如无需修改，可直接跳过。
+      </div>
+
+      <!-- textarea -->
+      <div>
+        <div style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:500;color:var(--text-muted);margin-bottom:8px">补充说明（可选）</div>
+        <div style="border:1px solid var(--border-soft);border-radius:12px;padding:12px;background:var(--bg-elev)">
+          <textarea id="rerun-context-text" rows="5" oninput="updateRerunCharCount()" onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter'){submitRerun(false)}" style="width:100%;background:transparent;border:none;outline:none;font-size:13px;line-height:1.65;color:var(--text-strong);resize:none;font-family:'Inter',system-ui,sans-serif" placeholder="例如：需求理解有偏差，应聚焦在核心模块，忽略日志系统；或：追加：接口需兼容 REST 与 GraphQL…"></textarea>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px dashed var(--border-mid)">
+            <div style="font-size:10.5px;color:var(--text-faint)">Ctrl + Enter 提交</div>
+            <span id="rerun-char-count" style="font-size:10.5px;font-family:'JetBrains Mono',monospace;color:var(--text-faint)">0 / 4000</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- quick chips -->
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        <span style="font-size:10.5px;color:var(--text-faint);line-height:1.8;margin-right:2px">常见原因：</span>
+        <button class="intr-chip" onclick="setRerunContextText('需求理解有偏差，请重新仔细阅读原始需求说明')">需求理解偏差</button>
+        <button class="intr-chip" onclick="setRerunContextText('输出内容不够完整，缺少关键模块，需要更完善的覆盖')">输出不完整</button>
+        <button class="intr-chip" onclick="setRerunContextText('技术方案选型有误，请改用更合适的方案')">技术方案有误</button>
+        <button class="intr-chip" onclick="setRerunContextText('代码质量不满意，需要更好的结构和注释')">代码质量不满意</button>
+        <button class="intr-chip" onclick="setRerunContextText('测试用例覆盖不足，需要更多边界条件测试')">测试覆盖不足</button>
+      </div>
+    </div>
+
+    <!-- footer -->
+    <div style="padding:14px 24px;border-top:1px solid var(--border-soft);background:var(--bg-elev);display:flex;align-items:center;justify-content:flex-end;gap:10px">
+      <button onclick="submitRerun(true)" style="height:34px;padding:0 18px;border-radius:8px;border:1px solid var(--border-soft);background:white;font-size:13px;color:var(--text-body);cursor:pointer;font-weight:500" onmouseover="this.style.background='var(--bg-wash)'" onmouseout="this.style.background='white'">
+        跳过 · 直接重跑
+      </button>
+      <button onclick="submitRerun(false)" style="height:34px;padding:0 20px;border-radius:8px;border:none;background:oklch(48% 0.16 65);color:white;font-size:13px;cursor:pointer;font-weight:500;display:flex;align-items:center;gap:6px" onmouseover="this.style.background='oklch(43% 0.18 65)'" onmouseout="this.style.background='oklch(48% 0.16 65)'">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.88"/></svg>
+        带补充说明重跑
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- ── Interrupt Modal ──────────────────────────────────────────────────────── -->
 <div id="interrupt-modal" style="display:none">

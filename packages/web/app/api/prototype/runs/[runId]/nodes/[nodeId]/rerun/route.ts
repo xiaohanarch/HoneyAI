@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server'
-import { eq, and, gte, sql } from 'drizzle-orm'
+import { eq, and, gte, sql, max } from 'drizzle-orm'
 import { Queue } from 'bullmq'
+import { v7 as uuidv7 } from 'uuid'
 import { getDb } from '@honeyai/db'
-import { runs, nodes } from '@honeyai/db/schema'
+import { runs, nodes, events } from '@honeyai/db/schema'
 import { auth } from '@/lib/auth'
 import { SCHEDULE_RUN_QUEUE } from '@honeyai/worker'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ runId: string; nodeId: string }> },
 ) {
   const session = await auth()
@@ -20,6 +21,17 @@ export async function POST(
   const { runId, nodeId } = await params
   if (!UUID_RE.test(runId) || !UUID_RE.test(nodeId)) {
     return NextResponse.json({ error: 'Invalid ID' }, { status: 400 })
+  }
+
+  // Parse optional supplemental context from request body
+  let userContext = ''
+  try {
+    const body = await req.json().catch(() => ({}))
+    if (typeof body?.context === 'string') {
+      userContext = body.context.trim().slice(0, 4000)
+    }
+  } catch {
+    // ignore parse errors — context is optional
   }
 
   const db = getDb()
@@ -73,6 +85,23 @@ export async function POST(
       .set({ status: 'running', finishedAt: null })
       .where(eq(runs.id, runId))
   })
+
+  // If user provided supplemental context, record it as a user_context event
+  if (userContext) {
+    const seqRows = await db
+      .select({ maxSeq: max(events.seq) })
+      .from(events)
+      .where(eq(events.runId, runId))
+    const nextSeq = BigInt((seqRows[0]?.maxSeq ?? BigInt(-1)) as bigint) + BigInt(1)
+    await db.insert(events).values({
+      id: uuidv7(),
+      runId,
+      nodeId,
+      seq: nextSeq,
+      kind: 'user_context',
+      payload: { text: userContext, source: 'rerun_supplement' },
+    })
+  }
 
   // Notify clients via pg_notify
   const payload = JSON.stringify({ type: 'run_status', status: 'running', ts: Date.now() })
