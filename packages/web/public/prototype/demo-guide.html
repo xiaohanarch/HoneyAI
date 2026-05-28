@@ -605,6 +605,61 @@ html, body {
   padding: 3px 9px; border-radius: 999px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
   background: var(--amber-s); color: var(--amber); border: 1px solid oklch(78% 0.19 78 / .3);
 }
+
+/* ─── CREATE-RUN SLIDE ─────────────────────────────── */
+.create-steps { display: flex; gap: 16px; width: 100%; max-width: 860px; }
+.create-step {
+  flex: 1; background: var(--surf); border: 1px solid var(--border);
+  border-radius: 14px; padding: 22px 18px; cursor: pointer;
+  transition: border-color .15s, transform .12s; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.create-step:hover { border-color: var(--border2); transform: translateY(-3px); }
+.create-step-num {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; margin-bottom: 2px;
+}
+.create-step-icon { font-size: 24px; }
+.create-step-title { font-size: 14px; font-weight: 700; }
+.create-step-desc { font-size: 12px; color: var(--muted); line-height: 1.65; }
+.create-step-badge {
+  margin-top: 6px; font-size: 10px; padding: 2px 9px;
+  border-radius: 20px; background: var(--faint); color: var(--muted);
+}
+
+/* ─── OUTPUT (REVIEW + DIFF) SLIDE ─────────────────── */
+.output-split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; max-width: 920px; }
+.output-card {
+  background: var(--surf); border: 1px solid var(--border); border-radius: 14px;
+  padding: 22px 20px; cursor: pointer; transition: border-color .15s, transform .12s;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.output-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+.output-card-tag { font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.output-card-title { font-size: 19px; font-weight: 700; line-height: 1.3; }
+.output-card-desc { font-size: 12.5px; color: var(--muted); line-height: 1.7; }
+.output-bullets { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+.output-bullet { font-size: 12px; color: var(--muted); display: flex; gap: 7px; align-items: flex-start; }
+.output-bullet-dot { width: 5px; height: 5px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+.output-card-link { font-size: 11px; color: var(--sky); font-family: 'JetBrains Mono', monospace; margin-top: 4px; }
+
+/* ─── OPS SLIDE ──────────────────────────────────────── */
+.ops-kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; width: 100%; max-width: 840px; margin-bottom: 16px; }
+.ops-kpi { background: var(--surf); border: 1px solid var(--border); border-radius: 11px; padding: 16px; text-align: center; }
+.ops-kpi-val { font-size: 24px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+.ops-kpi-label { font-size: 10.5px; color: var(--muted); margin-top: 4px; }
+.ops-kpi-delta { font-size: 10px; margin-top: 6px; }
+.ops-asset-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; max-width: 840px; }
+.ops-asset-card {
+  background: var(--surf); border: 1px solid var(--border); border-radius: 11px;
+  padding: 16px; cursor: pointer; transition: border-color .15s;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.ops-asset-card:hover { border-color: var(--border2); }
+.ops-asset-title { font-size: 13px; font-weight: 600; }
+.ops-asset-sub { font-size: 11.5px; color: var(--muted); line-height: 1.6; }
+.ops-asset-stat { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -728,7 +783,42 @@ html, body {
 </div>
 
 <!-- ══════════════════════════════════════
-     SLIDE 4 · STORY MAP
+     SLIDE 4 · CREATE RUN
+══════════════════════════════════════ -->
+<div class="slide" id="s-create">
+  <div class="slide-label">第 1 步 · 发起新任务</div>
+  <div class="slide-h" style="margin-bottom:6px">三步提需求，无需写文档</div>
+  <div style="font-size:13.5px; color:var(--muted); text-align:center; max-width:560px; line-height:1.7; margin-bottom:28px">
+    不需要 PRD，不需要拆 ticket——填一句话，确认后 AI 立刻接管，你去做别的事
+  </div>
+  <div class="create-steps">
+    <div class="create-step" onclick="window.open('create-run.html','_blank')">
+      <div class="create-step-num" style="background:var(--sky-s);color:var(--sky)">1</div>
+      <div class="create-step-icon">✍️</div>
+      <div class="create-step-title">输入需求</div>
+      <div class="create-step-desc">一句话描述要做什么。支持 JIRA / GitHub Issue / PRD 一键导入，也可手填。</div>
+      <span class="create-step-badge">< 30 秒</span>
+    </div>
+    <div class="create-step" onclick="window.open('create-run.html','_blank')">
+      <div class="create-step-num" style="background:var(--purp-s);color:var(--purple)">2</div>
+      <div class="create-step-icon">🗂️</div>
+      <div class="create-step-title">选择模板</div>
+      <div class="create-step-desc">标准 4 阶段 · 极速通道 · 安全敏感型 · 自定义 Agent 组合，4 种预设开箱即用。</div>
+      <span class="create-step-badge">4 种预设</span>
+    </div>
+    <div class="create-step" onclick="window.open('create-run.html','_blank')">
+      <div class="create-step-num" style="background:var(--emld-s);color:var(--emerald)">3</div>
+      <div class="create-step-icon">🚀</div>
+      <div class="create-step-title">确认 & 启动</div>
+      <div class="create-step-desc">预览完整 Pipeline、预估成本 & 时长。确认后 AI 接手，PR 自动提到你的仓库。</div>
+      <span class="create-step-badge">成本透明预估</span>
+    </div>
+  </div>
+  <a class="cta-btn" href="create-run.html" target="_blank" style="margin-top:8px">立即发起新任务 →</a>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE 5 · STORY MAP
 ══════════════════════════════════════ -->
 <div class="slide" id="s2">
   <div class="slide-label">Demo 路线图</div>
@@ -1104,6 +1194,16 @@ html, body {
             <span style="color:var(--purple)">paused_at_gate</span> · enrich ✓ · Gate1 ⏸
           </div>
           <a class="cta-btn purple" href="run-detail.html?runId=019e6a3e-6d7c-7359-b1f6-68fa7b24821b" target="_blank" style="margin-top:8px">前往 Gate 审查 →</a>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+            <a href="stage-1-requirement.html?runId=019e6a51-40cd-71b7-a7c9-6176b1529b79" target="_blank"
+               style="font-size:11.5px;color:var(--sky);text-decoration:none;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surf)">
+              📋 Stage 1 需求详情 ↗
+            </a>
+            <a href="review-detail.html?runId=019e6a1f-1b83-7472-9385-a31c2481ea74" target="_blank"
+               style="font-size:11.5px;color:var(--emerald);text-decoration:none;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surf)">
+              🔍 代码审查界面 ↗
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -1143,7 +1243,99 @@ html, body {
 </div>
 
 <!-- ══════════════════════════════════════
-     SLIDE 8 · KEY TAKEAWAYS
+     SLIDE · 代码审查 + DIFF
+══════════════════════════════════════ -->
+<div class="slide" id="s-review">
+  <div class="slide-label">第三幕 · 产出物审查</div>
+  <div class="slide-h" style="margin-bottom:6px">AI 审完，人再看一眼</div>
+  <div style="font-size:13px; color:var(--muted); text-align:center; max-width:620px; line-height:1.7; margin-bottom:22px">
+    编码完成后，你有两个视角——<em style="color:var(--amber)">AI 的信心报告</em> 和 <em style="color:var(--sky)">真实代码 Diff</em>——都在浏览器里，无需切 IDE
+  </div>
+  <div class="output-split">
+    <div class="output-card" onclick="window.open('review-detail.html?runId=019e6a1f-1b83-7472-9385-a31c2481ea74','_blank')">
+      <div class="output-card-tag">🔍 review-detail.html</div>
+      <div class="output-card-title" style="color:var(--emerald)">AI 代码审查<br/>置信报告</div>
+      <div class="output-card-desc">AI 对这次实现给出结构化评估——规则合规性、测试覆盖率、安全扫描——带置信分数。</div>
+      <div class="output-bullets">
+        <div class="output-bullet"><div class="output-bullet-dot" style="background:var(--emerald)"></div><span>置信度 <strong style="color:var(--text)">0.93</strong>（7 轮 Agent 辩论后收敛）</span></div>
+        <div class="output-bullet"><div class="output-bullet-dot" style="background:var(--sky)"></div><span>规则通过 <strong style="color:var(--text)">17/18</strong>，测试覆盖率 <strong style="color:var(--text)">86.4%</strong></span></div>
+        <div class="output-bullet"><div class="output-bullet-dot" style="background:var(--amber)"></div><span>安全扫描 0 个高危 / 0 个严重</span></div>
+        <div class="output-bullet"><div class="output-bullet-dot" style="background:var(--purple)"></div><span>一键 批准 / 拒绝 / 附意见</span></div>
+      </div>
+      <div class="output-card-link">review-detail.html?runId=019e6a1f… ↗</div>
+    </div>
+    <div class="output-card" onclick="window.open('artifact-diff.html?runId=019e6a1f-1b83-7472-9385-a31c2481ea74','_blank')">
+      <div class="output-card-tag">📂 artifact-diff.html</div>
+      <div class="output-card-title" style="color:var(--sky)">代码 Diff<br/>逐行查看</div>
+      <div class="output-card-desc">直接在浏览器里看 AI 改了哪些文件——不需要切 VS Code，不需要找 PR 链接。</div>
+      <div class="output-bullets">
+        <div class="output-bullet"><div class="output-bullet-dot" style="background:var(--sky)"></div><span>文件树 + 逐行 +/- diff，颜色高亮</span></div>
+        <div class="output-bullet"><div class="output-bullet-dot" style="background:var(--emerald)"></div><span>GitHub PR 真实 diff 直接对接</span></div>
+        <div class="output-bullet"><div class="output-bullet-dot" style="background:var(--amber)"></div><span>Lens 视图：变更 / 测试影响 / 语义分析</span></div>
+        <div class="output-bullet"><div class="output-bullet-dot" style="background:var(--purple)"></div><span>+148 / −22 行统计摘要</span></div>
+      </div>
+      <div class="output-card-link">artifact-diff.html?runId=019e6a1f… ↗</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:12px;margin-top:16px">
+    <a class="cta-btn" href="review-detail.html?runId=019e6a1f-1b83-7472-9385-a31c2481ea74" target="_blank" style="font-size:12.5px">查看 AI 审查报告 →</a>
+    <a class="cta-btn" href="artifact-diff.html?runId=019e6a1f-1b83-7472-9385-a31c2481ea74" target="_blank" style="font-size:12.5px;background:var(--sky-s);border-color:oklch(72% 0.18 230 / .3);color:var(--sky)">查看代码 Diff →</a>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE · 运营看板
+══════════════════════════════════════ -->
+<div class="slide" id="s-ops">
+  <div class="slide-label">彩蛋 · AI 资产运营</div>
+  <div class="slide-h" style="margin-bottom:6px">知道钱花在哪，Skill 好不好</div>
+  <div style="font-size:13px; color:var(--muted); text-align:center; max-width:620px; line-height:1.7; margin-bottom:20px">
+    不只是单条 Run 的账单——整个团队的 AI 消耗、Skill 健康度、Agent 成功率，一张看板搞定
+  </div>
+  <div class="ops-kpi-row">
+    <div class="ops-kpi">
+      <div class="ops-kpi-val" style="color:var(--sky)">28.4K</div>
+      <div class="ops-kpi-label">总调用次数</div>
+      <div class="ops-kpi-delta" style="color:var(--emerald)">↑ 12% 本周</div>
+    </div>
+    <div class="ops-kpi">
+      <div class="ops-kpi-val" style="color:var(--amber)">12.4M</div>
+      <div class="ops-kpi-label">Token 消耗</div>
+      <div class="ops-kpi-delta" style="color:var(--emerald)">¥ 3,128 本月</div>
+    </div>
+    <div class="ops-kpi">
+      <div class="ops-kpi-val" style="color:var(--purple)">1,840ms</div>
+      <div class="ops-kpi-label">P95 延迟</div>
+      <div class="ops-kpi-delta" style="color:var(--emerald)">↓ 5% 优化中</div>
+    </div>
+    <div class="ops-kpi">
+      <div class="ops-kpi-val" style="color:var(--emerald)">98.2%</div>
+      <div class="ops-kpi-label">成功率</div>
+      <div class="ops-kpi-delta" style="color:var(--muted)">512 次错误</div>
+    </div>
+  </div>
+  <div class="ops-asset-row">
+    <div class="ops-asset-card" onclick="window.open('operations.html','_blank')">
+      <div class="ops-asset-title" style="color:var(--sky)">🔧 Skill 健康</div>
+      <div class="ops-asset-stat" style="color:var(--sky)">9 个</div>
+      <div class="ops-asset-sub">requirement-decompose · code-review-guard · kg-entity-search…<br/>调用次数 / P95 / 成功率实时追踪</div>
+    </div>
+    <div class="ops-asset-card" onclick="window.open('operations.html','_blank')">
+      <div class="ops-asset-title" style="color:var(--amber)">🤖 模型用量</div>
+      <div class="ops-asset-stat" style="color:var(--amber)">4 款</div>
+      <div class="ops-asset-sub">Claude Sonnet · GPT-4o · DeepSeek · Qwen3<br/>按模型拆分成本占比与 Token 分布</div>
+    </div>
+    <div class="ops-asset-card" onclick="window.open('operations.html','_blank')">
+      <div class="ops-asset-title" style="color:var(--purple)">🏃 最近任务</div>
+      <div class="ops-asset-stat" style="color:var(--purple)" id="ops-run-count">—</div>
+      <div class="ops-asset-sub">实时拉取最近 10 条 Run，状态 · 成本 · 日期一览，点击跳转详情</div>
+    </div>
+  </div>
+  <a class="cta-btn" href="operations.html" target="_blank" style="margin-top:16px">查看运营看板 →</a>
+</div>
+
+<!-- ══════════════════════════════════════
+     SLIDE · KEY TAKEAWAYS
 ══════════════════════════════════════ -->
 <div class="slide" id="s8">
   <div class="slide-label">核心卖点</div>
@@ -1216,6 +1408,22 @@ html, body {
 
   // Init counter
   counterEl.textContent = '1 / ' + slides.length;
+
+  // Live: fetch run count for ops slide
+  (function fetchOpsRunCount() {
+    var el = document.getElementById('ops-run-count');
+    if (!el) return;
+    fetch('/api/prototype/runs', { credentials: 'include' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (data && Array.isArray(data.runs)) {
+          el.textContent = data.runs.length + ' 次运行';
+        } else if (data && Array.isArray(data)) {
+          el.textContent = data.length + ' 次运行';
+        }
+      })
+      .catch(function () { /* silently ignore */ });
+  })();
 
   // Build dots
   slides.forEach(function (_, i) {
