@@ -138,7 +138,7 @@ advanceWorker.on('failed', (job, err) => {
 
 // ─── Reconcile loop ───────────────────────────────────────────────────────────
 
-// PodChecker stub — local dev: adapter spawns directly (no pods), always report running
+// PodChecker stub — local dev: adapter spawns claude directly (no pods), always report running
 // so the reconcile loop never incorrectly kills in-progress runs.
 const podChecker: PodChecker = async (_tenantId, _runId) => ({ status: 'running' as const })
 const stopReconcile = startReconcileLoop(db, podChecker)
