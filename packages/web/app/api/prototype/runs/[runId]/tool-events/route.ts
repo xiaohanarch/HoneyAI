@@ -67,7 +67,7 @@ export async function GET(
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  // Get all tool_use events with their node stage info
+  // Query 1: tool_call events (for detailed trace)
   const toolEventRows = await db
     .select({
       id: events.id,
@@ -80,7 +80,7 @@ export async function GET(
     })
     .from(events)
     .leftJoin(nodes, eq(events.nodeId, nodes.id))
-    .where(and(eq(events.runId, runId), eq(events.kind, 'tool_use')))
+    .where(and(eq(events.runId, runId), eq(events.kind, 'tool_call')))
     .orderBy(events.seq)
     .limit(500)
 
@@ -102,7 +102,7 @@ export async function GET(
     }
   })
 
-  // Group by stage
+  // Group tool events by stage
   const byStage: Record<number, typeof toolEvents> = {}
   const noStage: typeof toolEvents = []
   for (const ev of toolEvents) {
@@ -114,10 +114,30 @@ export async function GET(
     }
   }
 
+  // Query 2: all event kinds grouped by stage (for activity summary panel)
+  // Stage 1/2 have no tool_calls — only text/thinking/finish from LLM generation
+  const allEventRows = await db
+    .select({
+      kind: events.kind,
+      stage: nodes.stage,
+    })
+    .from(events)
+    .leftJoin(nodes, eq(events.nodeId, nodes.id))
+    .where(eq(events.runId, runId))
+
+  // Build eventCountsByStage: { [stage]: { [kind]: count } }
+  const eventCountsByStage: Record<number, Record<string, number>> = {}
+  for (const row of allEventRows) {
+    const stage = row.stage ?? 0 // 0 = no stage (gate nodes etc.)
+    if (!eventCountsByStage[stage]) eventCountsByStage[stage] = {}
+    eventCountsByStage[stage][row.kind] = (eventCountsByStage[stage][row.kind] ?? 0) + 1
+  }
+
   return NextResponse.json({
     total: toolEvents.length,
     byStage,
     noStage,
     all: toolEvents,
+    eventCountsByStage, // { 1: { text:1, thinking:1, finish:1 }, 3: { tool_call:58, ... } }
   })
 }

@@ -522,34 +522,12 @@
   <!-- ─── SECTION 1: Skills 使用明细 (P0a) ──────────────────────────────────── -->
   <div id="skills-section" style="display:none; margin-top:24px;">
     <div class="card p-6 mb-6">
-      <div class="caps mb-4">Skills 使用明细</div>
+      <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:16px;">
+        <div class="caps">工具调用明细</div>
+        <div style="font-size:11.5px;color:var(--text-muted);">每阶段 Agent 实际调用工具次数</div>
+      </div>
       <div id="skills-grid" class="grid grid-cols-3 gap-4">
         <div class="text-[13px] text-[var(--text-muted)]">加载中…</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ─── SECTION 2: 需求富化对比 (P0b) ────────────────────────────────────── -->
-  <div id="req-compare-section" style="display:none; margin-top:24px;">
-    <div class="card mb-6" style="overflow:hidden;">
-      <div id="req-compare-header" onclick="toggleReqCompare()" style="display:flex; align-items:center; justify-content:space-between; padding:20px 24px; cursor:pointer; user-select:none; border-bottom:1px solid var(--border-soft);">
-        <div class="caps">需求富化对比</div>
-        <div style="display:flex; align-items:center; gap:8px;">
-          <span style="font-size:11px; color:var(--text-faint);">点击展开</span>
-          <svg id="req-compare-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2" style="transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
-        </div>
-      </div>
-      <div id="req-compare-body" style="display:none; padding:0;">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0;">
-          <div style="padding:20px 24px; border-right:1px solid var(--border-soft);">
-            <div class="caps" style="margin-bottom:12px;">原始需求输入</div>
-            <div id="req-original" style="font-family:'JetBrains Mono',monospace; font-size:12.5px; line-height:1.75; color:oklch(38% 0.02 260); background:oklch(98% 0.004 85); border-radius:10px; padding:14px 16px; max-height:320px; overflow-y:auto; white-space:pre-wrap; word-break:break-word;">—</div>
-          </div>
-          <div style="padding:20px 24px;">
-            <div class="caps" style="margin-bottom:12px;">富化后 requirement_ir</div>
-            <div id="req-enriched" style="font-family:'JetBrains Mono',monospace; font-size:12.5px; line-height:1.75; color:oklch(35% 0.02 260); background:oklch(14% 0.02 260); color:oklch(82% 0.018 260); border-radius:10px; padding:14px 16px; max-height:320px; overflow-y:auto; white-space:pre-wrap; word-break:break-word;">加载中…</div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -609,6 +587,28 @@
     </div>
   </div>
 
+<!-- ─── Artifact Viewer Modal ──────────────────────────────────────────────── -->
+<div id="artifact-viewer-modal" onclick="if(event.target===this)closeArtifactViewer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-start;justify-content:center;padding:40px 24px;overflow-y:auto;">
+  <div style="background:white;border-radius:16px;width:100%;max-width:780px;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.22);pointer-events:all;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--border-soft);flex-shrink:0;">
+      <div>
+        <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:var(--text-muted);">AI 产出文档</div>
+        <div id="artifact-viewer-title" style="font-size:15px;font-weight:600;color:var(--text-strong);margin-top:2px;"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button onclick="downloadCurrentArtifact()" style="height:30px;padding:0 12px;border-radius:8px;border:1px solid var(--border-soft);background:var(--bg-elev);font-size:12px;font-weight:500;color:var(--text-strong);cursor:pointer;display:flex;align-items:center;gap:5px;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          下载 .md
+        </button>
+        <button onclick="closeArtifactViewer()" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--border-soft);background:var(--bg-elev);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="artifact-viewer-body" style="padding:28px 32px;font-size:14px;line-height:1.8;overflow-y:auto;max-height:70vh;"></div>
+  </div>
+</div>
+
 </main>
 
 <footer class="px-8 py-6 text-[10.5px] mono text-[var(--text-muted)] flex items-center gap-3">
@@ -635,6 +635,9 @@ var terminalLastSeq = 0;
 var terminalPollTimer = null;
 var terminalCurrentNodeId = null;
 var demoMode = false; // true when API is unauthenticated → use embedded demo data
+var workflowArtifacts = {}; // kind → sha256 (agent-produced only)
+var workflowArtifactsLoaded = false;
+var artifactViewerContent = ''; // content of currently-open artifact
 
 // ── Demo fallback data (used when unauthenticated) ───────────────────────────
 var DEMO_RUN_DATA = {
@@ -692,7 +695,6 @@ var DEMO_TRACE_DATA = {
     ]
   }
 };
-var DEMO_REQ_ENRICHED = '# 需求 IR — 邮件验证\n\n## 用户故事\n**作为**一名新注册用户，\n**我希望**在完成注册后收到一封验证邮件，\n**以便**确认我的邮箱归属权，确保账户安全。\n\n## 验收标准\n1. 用户完成注册后 30s 内收到验证邮件\n2. 验证链接包含 JWT token，有效期 24h\n3. 未验证用户尝试登录时返回 `EMAIL_NOT_VERIFIED` 错误码\n4. 验证成功后 `isEmailVerified` 字段置为 true\n5. 用户可在登录页请求重新发送验证邮件（60s 冷却）\n\n## 约束\n- 邮件服务：使用现有 EmailService（SMTP 通道）\n- Token 存储：写入 `users.email_verify_token` 列，验证后清空\n- 不影响已有用户（存量用户视为已验证）';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 var STAGE_NAMES = { 1: '需求富化', 2: '设计与拆解', 3: '编码+UT' };
@@ -738,13 +740,83 @@ function renderTimeline(nodes) {
     html += '<div class="tl-name" style="' + nameColor + '">' + n.name + '</div>';
     html += '<div class="tl-meta">' + kindLabel + ' · ' + (STATUS_LABEL[n.status] || n.status) + '</div>';
     if (canRerun) {
-      html += '<button class="btn-rerun" onclick="rerunNode(\'' + n.id + '\',this)">';
+      html += '<button class="btn-rerun" onclick="openRerunModal(\'' + n.id + '\',\'' + n.name.replace(/'/g, '\\\'') + '\')">';
       html += '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.88"/></svg>';
       html += '重跑此步骤及后续</button>';
     }
     html += '</div></div>';
   });
   el.innerHTML = html;
+}
+
+// ── Workflow artifact loading ─────────────────────────────────────────────────
+function loadWorkflowArtifacts(runId) {
+  if (workflowArtifactsLoaded) return;
+  workflowArtifactsLoaded = true;
+  fetch('/api/prototype/runs/' + runId + '/artifacts')
+    .then(function(r) { if (!r.ok) return null; return r.json(); })
+    .then(function(data) {
+      if (!data) return;
+      (data.artifacts || []).forEach(function(a) {
+        // Only agent-produced artifacts (nodeId != null), status 'ok', with blob
+        if (a.status === 'ok' && a.blobSha256 && a.nodeId) {
+          workflowArtifacts[a.kind] = a.blobSha256;
+        }
+      });
+      // Re-render rails so artifact cards pick up click handlers
+      if (currentRunStatus) {
+        var lastNodes = window._lastNodes || [];
+        var lastPrUrl = window._lastPrUrl || null;
+        renderThreeRail(lastNodes, currentRunStatus, lastPrUrl);
+      }
+    })
+    .catch(function() {});
+}
+
+// ── Artifact viewer modal ─────────────────────────────────────────────────────
+function openArtifactViewer(sha, kind, title) {
+  var modal = document.getElementById('artifact-viewer-modal');
+  document.getElementById('artifact-viewer-title').textContent = title || kind;
+  document.getElementById('artifact-viewer-body').innerHTML = '<div style="color:var(--text-muted);font-size:13px;">加载中…</div>';
+  artifactViewerContent = '';
+  modal.style.display = 'flex';
+
+  fetch('/api/prototype/artifacts/' + sha + '/content')
+    .then(function(r) { if (!r.ok) throw new Error('err'); return r.json(); })
+    .then(function(d) {
+      artifactViewerContent = d.content || '';
+      var body = document.getElementById('artifact-viewer-body');
+      body.innerHTML = renderMd(artifactViewerContent);
+      // Basic prose styling for markdown output
+      body.querySelectorAll('h1,h2,h3').forEach(function(el) {
+        el.style.cssText = 'font-weight:600;margin:1.2em 0 .4em;color:var(--text-strong)';
+      });
+      body.querySelectorAll('p').forEach(function(el) { el.style.margin = '.6em 0'; });
+      body.querySelectorAll('pre').forEach(function(el) {
+        el.style.cssText = 'background:var(--bg-elev);border:1px solid var(--border-soft);border-radius:8px;padding:12px 16px;overflow-x:auto;font-size:12.5px;';
+      });
+      body.querySelectorAll('code:not(pre code)').forEach(function(el) {
+        el.style.cssText = 'background:var(--bg-elev);border-radius:4px;padding:1px 5px;font-size:12.5px;';
+      });
+      body.querySelectorAll('ul,ol').forEach(function(el) { el.style.cssText = 'margin:.6em 0;padding-left:1.4em'; });
+    })
+    .catch(function() {
+      document.getElementById('artifact-viewer-body').innerHTML = '<div style="color:var(--halt);font-size:13px;">加载失败，请重试</div>';
+    });
+}
+
+function closeArtifactViewer() {
+  document.getElementById('artifact-viewer-modal').style.display = 'none';
+}
+
+function downloadCurrentArtifact() {
+  if (!artifactViewerContent) return;
+  var title = document.getElementById('artifact-viewer-title').textContent || 'artifact';
+  var blob = new Blob([artifactViewerContent], { type: 'text/markdown; charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = title.replace(/\s+/g, '_') + '.md'; a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ── Three-rail pipeline render ────────────────────────────────────────────────
@@ -764,6 +836,9 @@ var ART_INFO = [
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function renderThreeRail(nodes, runStatus, prUrl) {
+  // Cache for re-render after artifact load
+  window._lastNodes = nodes; window._lastPrUrl = prUrl;
+
   var agentByStage = {}, gateByStage = {};
   (nodes || []).forEach(function(n) {
     if (n.kind === 'agent') agentByStage[n.stage] = n;
@@ -849,18 +924,29 @@ function renderThreeRail(nodes, runStatus, prUrl) {
       border = 'var(--border-soft)'; iconCol = 'var(--text-faint)';
       statusLabel = 'PENDING'; connStyle = 'background:var(--border-soft)';
     }
+    var artKind = info.label; // 'requirement_ir' / 'design_ir' / 'impl_ir'
+    var artSha = done ? workflowArtifacts[artKind] : null;
+    var clickable = done && !!artSha;
+
     var docIcon = done
       ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>'
       : '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
 
+    var clickAttr = clickable
+      ? ' onclick="openArtifactViewer(\'' + artSha + '\',\'' + artKind + '\',\'' + esc(info.desc) + '\')" style="cursor:pointer;transition:box-shadow .15s;" onmouseenter="this.style.boxShadow=\'0 4px 16px rgba(0,0,0,.1)\'" onmouseleave="this.style.boxShadow=\'\'"'
+      : '';
+
     artHtml += '<div class="relative' + (isLast ? '' : ' pr-6') + '">';
     if (!isLast) artHtml += '<div class="absolute top-[13px] left-[26px] right-0 h-[2px]" style="' + connStyle + '"></div>';
-    artHtml += '<div class="relative rounded-xl border p-2.5 bg-white" style="border-color:' + border + '">';
+    artHtml += '<div class="relative rounded-xl border p-2.5 bg-white"' + clickAttr + ' style="border-color:' + border + '">';
     artHtml += '<div class="flex items-start gap-2">';
     artHtml += '<div class="w-[26px] h-[26px] rounded-lg border-2 flex-shrink-0 flex items-center justify-center" style="border-color:' + iconCol + ';color:' + iconCol + '">' + docIcon + '</div>';
     artHtml += '<div class="min-w-0 flex-1">';
-    artHtml += '<div class="text-[10px] tracking-[.10em] uppercase font-semibold" style="color:' + iconCol + '">' + statusLabel + ' · ' + esc(info.label) + '</div>';
+    artHtml += '<div class="text-[10px] tracking-[.10em] uppercase font-semibold" style="color:' + iconCol + '">' + statusLabel + ' · ' + esc(artKind) + '</div>';
     artHtml += '<div class="text-[12px] font-medium text-[var(--text-strong)] mt-0.5">' + esc(info.desc) + '</div>';
+    if (clickable) {
+      artHtml += '<div class="text-[10.5px] mt-1.5 font-medium" style="color:var(--done)">点击查看 / 下载 →</div>';
+    }
     artHtml += '</div></div></div></div>';
   });
   document.getElementById('rail-artifacts').innerHTML = artHtml;
@@ -1004,7 +1090,9 @@ function appendTerminalLine(kind, content) {
 
   if (kind === 'text') {
     line.innerHTML = '<span style="color:oklch(76% 0.12 220)">' + escHtml(content) + '</span>';
-  } else if (kind === 'tool_use') {
+  } else if (kind === 'thinking') {
+    line.innerHTML = '<span style="color:oklch(60% 0.08 280);font-style:italic">[thinking] ' + escHtml(content.slice(0, 200)) + (content.length > 200 ? '…' : '') + '</span>';
+  } else if (kind === 'tool_use' || kind === 'tool_call') {
     line.innerHTML = '<span style="color:oklch(72% 0.15 65)">[tool] </span><span style="color:oklch(80% 0.08 65)">' + escHtml(content) + '</span>';
   } else if (kind === 'finish') {
     line.innerHTML = '<span style="color:oklch(62% 0.13 150)">✓ ' + escHtml(content) + '</span>';
@@ -1033,7 +1121,8 @@ function escHtml(s) {
 function extractEventContent(event) {
   var p = event.payload || {};
   if (event.kind === 'text') return p.content || p.text || '';
-  if (event.kind === 'tool_use') return (p.name || 'tool') + '(' + JSON.stringify(p.input || {}).slice(0, 120) + ')';
+  if (event.kind === 'thinking') return p.content || p.thinking || '';
+  if (event.kind === 'tool_use' || event.kind === 'tool_call') return (p.tool || p.name || 'tool') + '(' + JSON.stringify(p.args || p.input || {}).slice(0, 120) + ')';
   if (event.kind === 'finish') return 'Agent 完成 · stop_reason=' + (p.stop_reason || 'end_turn');
   if (event.kind === 'error') return p.message || p.error || 'error';
   return JSON.stringify(p).slice(0, 160);
@@ -1042,7 +1131,7 @@ function extractEventContent(event) {
 function startTerminalPoll(nodeId, nodeLabel) {
   stopTerminalPoll();
   terminalCurrentNodeId = nodeId;
-  terminalLastSeq = 0;
+  terminalLastSeq = -1; // use -1 so first poll fetches seq >= 0 (API uses gt, not gte)
 
   var termSection = document.getElementById('llm-terminal-section');
   termSection.classList.remove('hidden');
@@ -1365,132 +1454,116 @@ function downloadArt(sha, filename) {
     .catch(function() { alert('下载失败'); });
 }
 
-// ── Skills 使用明细 (P0a) ────────────────────────────────────────────────────
-var DEFAULT_SKILLS = [
-  { id: 'requirement-enrichment', name: '需求富化', stage: 1, category: 'requirement', desc: '将模糊需求转化为结构化规格' },
-  { id: 'context-extractor', name: '上下文提取', stage: 1, category: 'requirement', desc: '从 JIRA/Git 历史提取项目上下文' },
-  { id: 'acceptance-criteria', name: 'AC 生成', stage: 1, category: 'requirement', desc: '自动生成验收标准' },
-  { id: 'api-design', name: 'API 设计', stage: 2, category: 'architecture', desc: '生成 REST API 规范' },
-  { id: 'db-schema-design', name: '数据库设计', stage: 2, category: 'architecture', desc: '生成 ER 图与数据表结构' },
-  { id: 'task-breakdown', name: '任务拆解', stage: 2, category: 'architecture', desc: '将设计拆解为编码任务' },
-  { id: 'code-generation', name: '代码生成', stage: 3, category: 'coding', desc: '根据设计 IR 生成完整代码' },
-  { id: 'unit-test-writer', name: 'UT 编写', stage: 3, category: 'testing', desc: 'TDD 模式生成单元测试' },
-  { id: 'pr-description', name: 'PR 描述', stage: 3, category: 'docs', desc: '自动生成 PR 标题与描述' },
-  { id: 'code-review-prep', name: '代码自审', stage: 3, category: 'quality', desc: '提交前自动 lint 与安全检查' },
-];
+// ── Skills / 工具调用明细 ─────────────────────────────────────────────────────
+var STAGE_COL_NAMES = { 1: 'Stage 1 · 需求富化', 2: 'Stage 2 · 设计与拆解', 3: 'Stage 3 · 编码+UT' };
 
-var SKILL_CAT_STYLE = {
-  requirement:  { dot: 'oklch(55% 0.20 250)', bg: 'oklch(94% 0.05 250)', border: 'oklch(82% 0.10 250)', text: 'oklch(35% 0.20 250)' },
-  architecture: { dot: 'oklch(58% 0.18 295)', bg: 'oklch(94% 0.04 295)', border: 'oklch(82% 0.09 295)', text: 'oklch(35% 0.18 295)' },
-  coding:       { dot: 'oklch(55% 0.15 150)', bg: 'oklch(94% 0.05 150)', border: 'oklch(82% 0.10 150)', text: 'oklch(35% 0.15 150)' },
-  testing:      { dot: 'oklch(62% 0.17 55)',  bg: 'oklch(95% 0.05 65)',  border: 'oklch(84% 0.10 65)',  text: 'oklch(40% 0.17 55)'  },
-  quality:      { dot: 'oklch(55% 0.20 25)',  bg: 'oklch(95% 0.04 25)',  border: 'oklch(84% 0.08 25)',  text: 'oklch(38% 0.20 25)'  },
-  docs:         { dot: 'oklch(55% 0.01 260)', bg: 'oklch(95% 0.005 260)',border: 'oklch(84% 0.01 260)', text: 'oklch(42% 0.01 260)' },
+// event kind → display label + style
+var EVENT_KIND_META = {
+  tool_call: { label: null, style: null }, // tool_call → use tool name instead (handled separately)
+  text:      { label: 'LLM 输出',   style: { dot: 'oklch(55% 0.20 250)', bg: 'oklch(94% 0.05 250)', border: 'oklch(82% 0.10 250)', text: 'oklch(35% 0.20 250)' } },
+  thinking:  { label: '扩展思考',   style: { dot: 'oklch(58% 0.18 295)', bg: 'oklch(94% 0.04 295)', border: 'oklch(82% 0.09 295)', text: 'oklch(35% 0.18 295)' } },
+  finish:    { label: '完成信号',   style: { dot: 'oklch(55% 0.15 150)', bg: 'oklch(94% 0.05 150)', border: 'oklch(82% 0.10 150)', text: 'oklch(35% 0.15 150)' } },
+  error:     { label: '执行错误',   style: { dot: 'oklch(55% 0.20 25)',  bg: 'oklch(95% 0.04 25)',  border: 'oklch(84% 0.08 25)',  text: 'oklch(38% 0.20 25)'  } },
+};
+var TOOL_LABEL = {
+  Read: '读文件', Write: '写文件', Edit: '编辑文件',
+  Bash: '执行命令', Grep: '内容搜索', Glob: '文件查找',
+  WebFetch: '网页请求', WebSearch: '网页搜索',
+  Task: '子任务', TodoWrite: '任务规划',
+};
+var TOOL_STYLE = {
+  Read:      { dot: 'oklch(55% 0.20 250)', bg: 'oklch(94% 0.05 250)', border: 'oklch(82% 0.10 250)', text: 'oklch(35% 0.20 250)' },
+  Write:     { dot: 'oklch(58% 0.18 295)', bg: 'oklch(94% 0.04 295)', border: 'oklch(82% 0.09 295)', text: 'oklch(35% 0.18 295)' },
+  Edit:      { dot: 'oklch(58% 0.18 295)', bg: 'oklch(94% 0.04 295)', border: 'oklch(82% 0.09 295)', text: 'oklch(35% 0.18 295)' },
+  Bash:      { dot: 'oklch(55% 0.15 150)', bg: 'oklch(94% 0.05 150)', border: 'oklch(82% 0.10 150)', text: 'oklch(35% 0.15 150)' },
+  Grep:      { dot: 'oklch(62% 0.17 55)',  bg: 'oklch(95% 0.05 65)',  border: 'oklch(84% 0.10 65)',  text: 'oklch(40% 0.17 55)'  },
+  Glob:      { dot: 'oklch(62% 0.17 55)',  bg: 'oklch(95% 0.05 65)',  border: 'oklch(84% 0.10 65)',  text: 'oklch(40% 0.17 55)'  },
+  WebFetch:  { dot: 'oklch(55% 0.15 200)', bg: 'oklch(95% 0.04 200)', border: 'oklch(84% 0.08 200)', text: 'oklch(38% 0.15 200)' },
+  WebSearch: { dot: 'oklch(55% 0.15 200)', bg: 'oklch(95% 0.04 200)', border: 'oklch(84% 0.08 200)', text: 'oklch(38% 0.15 200)' },
+  Task:      { dot: 'oklch(60% 0.20 310)', bg: 'oklch(94% 0.04 310)', border: 'oklch(82% 0.09 310)', text: 'oklch(36% 0.20 310)' },
+  TodoWrite: { dot: 'oklch(55% 0.01 260)', bg: 'oklch(95% 0.005 260)',border: 'oklch(84% 0.01 260)', text: 'oklch(42% 0.01 260)' },
+  _default:  { dot: 'oklch(55% 0.01 260)', bg: 'oklch(95% 0.005 260)',border: 'oklch(84% 0.01 260)', text: 'oklch(42% 0.01 260)' },
 };
 
-var STAGE_COL_NAMES = { 1: 'Stage 1 · 需求富化', 2: 'Stage 2 · 设计与拆解', 3: 'Stage 3 · 编码+UT' };
+var skillsLoaded = false;
 
 function renderSkillsPanel(runStatus) {
   var section = document.getElementById('skills-section');
   var showStatuses = { running: true, paused_at_gate: true, completed: true };
-  if (!showStatuses[runStatus]) {
-    section.style.display = 'none';
-    return;
-  }
+  if (!showStatuses[runStatus]) { section.style.display = 'none'; return; }
   section.style.display = '';
 
-  var stored = null;
-  try { stored = JSON.parse(localStorage.getItem('honeyai_skills') || 'null'); } catch(e) {}
-  var skills = (stored && Array.isArray(stored) && stored.length > 0) ? stored : DEFAULT_SKILLS;
+  if (skillsLoaded) return;
+  skillsLoaded = true;
 
-  var byStage = { 1: [], 2: [], 3: [] };
-  skills.forEach(function(s) {
-    if (byStage[s.stage]) byStage[s.stage].push(s);
-  });
+  if (demoMode) { renderSkillsPanelHtml({}, {}); return; }
 
+  document.getElementById('skills-grid').innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:4px 0;">加载中…</div>';
+
+  fetch('/api/prototype/runs/' + runId + '/tool-events')
+    .then(function(r) { if (!r.ok) { renderSkillsPanelHtml({}, {}); return null; } return r.json(); })
+    .then(function(data) {
+      if (!data) return;
+      // Tool call counts per stage (from byStage)
+      var toolCountsByStage = {};
+      [1, 2, 3].forEach(function(s) {
+        var evts = data.byStage[s] || [];
+        var counts = {};
+        evts.forEach(function(e) { counts[e.tool] = (counts[e.tool] || 0) + 1; });
+        toolCountsByStage[s] = counts;
+      });
+      // All event kind counts per stage (from eventCountsByStage — includes text/thinking/finish)
+      var eventCountsByStage = data.eventCountsByStage || {};
+      renderSkillsPanelHtml(toolCountsByStage, eventCountsByStage);
+    })
+    .catch(function() { renderSkillsPanelHtml({}, {}); });
+}
+
+function renderSkillsBadge(label, count, style) {
+  var s = style || TOOL_STYLE._default;
+  return '<span title="' + count + ' 次" style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:500;background:' + s.bg + ';border:1px solid ' + s.border + ';color:' + s.text + ';">'
+    + '<span style="width:6px;height:6px;border-radius:50%;background:' + s.dot + ';flex-shrink:0;"></span>'
+    + esc(label) + '<span style="opacity:.55;margin-left:1px;">×' + count + '</span>'
+    + '</span>';
+}
+
+function renderSkillsPanelHtml(toolCountsByStage, eventCountsByStage) {
   var html = '';
   [1, 2, 3].forEach(function(stageNum) {
-    html += '<div style="border:1px solid var(--border-soft); border-radius:14px; padding:16px 18px; background:var(--bg-card);">';
+    var toolCounts = toolCountsByStage[stageNum] || {};
+    var kindCounts = eventCountsByStage[stageNum] || {};
+    html += '<div style="border:1px solid var(--border-soft);border-radius:14px;padding:16px 18px;background:var(--bg-card);">';
     html += '<div class="caps" style="margin-bottom:12px;">' + esc(STAGE_COL_NAMES[stageNum]) + '</div>';
-    html += '<div style="display:flex; flex-wrap:wrap; gap:6px;">';
-    byStage[stageNum].forEach(function(skill) {
-      var cat = skill.category || 'docs';
-      var style = SKILL_CAT_STYLE[cat] || SKILL_CAT_STYLE.docs;
-      html += '<span title="' + esc(skill.desc) + '" style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:500;background:' + style.bg + ';border:1px solid ' + style.border + ';color:' + style.text + ';">';
-      html += '<span style="width:6px;height:6px;border-radius:50%;background:' + style.dot + ';flex-shrink:0;"></span>';
-      html += esc(skill.name);
-      html += '</span>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+
+    var hasAny = false;
+
+    // LLM event badges (text / thinking / finish / error) — prominent in stage 1 & 2
+    ['text', 'thinking', 'finish', 'error'].forEach(function(kind) {
+      var count = kindCounts[kind];
+      if (!count) return;
+      var meta = EVENT_KIND_META[kind];
+      if (meta && meta.label) { html += renderSkillsBadge(meta.label, count, meta.style); hasAny = true; }
     });
-    if (byStage[stageNum].length === 0) {
-      html += '<span style="font-size:12px; color:var(--text-faint);">暂无 Skills</span>';
-    }
+
+    // Tool call badges (sorted by count desc)
+    var tools = Object.keys(toolCounts).sort(function(a, b) { return toolCounts[b] - toolCounts[a]; });
+    tools.forEach(function(tool) {
+      html += renderSkillsBadge(TOOL_LABEL[tool] || tool, toolCounts[tool], TOOL_STYLE[tool] || TOOL_STYLE._default);
+      hasAny = true;
+    });
+
+    if (!hasAny) html += '<span style="font-size:12px;color:var(--text-faint);">暂无数据</span>';
     html += '</div></div>';
   });
 
-  // Stage 4 placeholder (always grayed)
-  html += '<div style="border:1px dashed var(--border-soft); border-radius:14px; padding:16px 18px; background:var(--bg-card); opacity:.45;">';
+  // Stage 4 placeholder
+  html += '<div style="border:1px dashed var(--border-soft);border-radius:14px;padding:16px 18px;background:var(--bg-card);opacity:.45;">';
   html += '<div class="caps" style="margin-bottom:12px;">Stage 4 · SIT 集成测试</div>';
-  html += '<div style="display:flex; flex-wrap:wrap; gap:6px;">';
-  html += '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:500;background:oklch(95% 0.005 260);border:1px solid var(--border-soft);color:var(--text-faint);">';
-  html += '<span style="width:6px;height:6px;border-radius:50%;background:var(--text-faint);flex-shrink:0;"></span>V2 路线图</span>';
-  html += '</div></div>';
+  html += '<div style="font-size:12px;color:var(--text-faint);">V2 路线图</div></div>';
 
-  // Wrap the 3 active + 1 placeholder in a 4-col grid
   document.getElementById('skills-grid').style.gridTemplateColumns = 'repeat(4, 1fr)';
   document.getElementById('skills-grid').innerHTML = html;
-}
-
-// ── 需求富化对比 (P0b) ───────────────────────────────────────────────────────
-var reqCompareExpanded = false;
-
-function toggleReqCompare() {
-  var body = document.getElementById('req-compare-body');
-  var chevron = document.getElementById('req-compare-chevron');
-  var hint = document.querySelector('#req-compare-header span[style*="font-size:11px"]');
-  reqCompareExpanded = !reqCompareExpanded;
-  body.style.display = reqCompareExpanded ? '' : 'none';
-  chevron.style.transform = reqCompareExpanded ? 'rotate(180deg)' : '';
-  if (hint) hint.textContent = reqCompareExpanded ? '点击收起' : '点击展开';
-}
-
-function renderReqCompare(runId, oneLiner) {
-  var section = document.getElementById('req-compare-section');
-  section.style.display = '';
-
-  var origEl = document.getElementById('req-original');
-  origEl.textContent = oneLiner || '（未填写）';
-
-  var enrichEl = document.getElementById('req-enriched');
-
-  if (demoMode) {
-    enrichEl.textContent = DEMO_REQ_ENRICHED;
-    return;
-  }
-
-  enrichEl.textContent = '加载中…';
-
-  // Fetch requirement_ir artifact
-  fetch('/api/prototype/runs/' + runId + '/artifacts')
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      var arts = data.artifacts || [];
-      var reqArt = null;
-      for (var i = 0; i < arts.length; i++) {
-        if (arts[i].kind === 'requirement_ir' && arts[i].status === 'ready' && arts[i].blobSha256) {
-          reqArt = arts[i];
-        }
-      }
-      if (!reqArt) {
-        enrichEl.textContent = '（暂无富化文档）';
-        return;
-      }
-      return fetch('/api/prototype/artifacts/' + reqArt.blobSha256 + '/content')
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-          enrichEl.textContent = d.content || '（内容为空）';
-        });
-    })
-    .catch(function() { enrichEl.textContent = '（加载失败）'; });
 }
 
 // ── 成本明细 (P1a) ───────────────────────────────────────────────────────────
@@ -1537,9 +1610,15 @@ function renderCostPanel(runId) {
     });
 }
 
+var STAGE_COST_NAMES = { 1: 'Stage 1 · 需求富化', 2: 'Stage 2 · 设计与拆解', 3: 'Stage 3 · 编码+UT' };
+
 function renderCostTable(tableEl, data) {
+  // API returns: { stages: [{ stage, totalMicroUsd, tokenCount, durationMs, demo }], grandTotal: {...} }
+  // DEMO_COST_DATA uses: { stages: [{ stage, stageName, tokens, costUsd, durationMs }], total: {...} }
   var stages = data.stages || [];
-  var total = data.total || {};
+  // Support both API format (grandTotal) and demo format (total)
+  var grand = data.grandTotal || data.total || {};
+
   var colStyle = 'padding:10px 16px; font-size:13px;';
   var headStyle = 'padding:8px 16px; font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; font-weight:500; color:var(--text-muted);';
   var html = '<div style="border:1px solid var(--border-soft); border-radius:12px; overflow:hidden;">';
@@ -1551,18 +1630,25 @@ function renderCostTable(tableEl, data) {
   html += '</div>';
   stages.forEach(function(s, i) {
     var rowBg = i % 2 === 0 ? 'background:var(--bg-card)' : 'background:var(--bg-elev)';
+    // Normalise: API uses totalMicroUsd, demo uses costUsd; API uses tokenCount, demo uses tokens
+    var tokens = s.tokenCount != null ? s.tokenCount : s.tokens;
+    var costUsd = s.totalMicroUsd != null ? s.totalMicroUsd / 1_000_000 : s.costUsd;
+    var name = s.stageName || STAGE_COST_NAMES[s.stage] || ('Stage ' + s.stage);
     html += '<div style="display:grid; grid-template-columns:2fr 1.2fr 1.2fr 1.2fr; ' + rowBg + '; border-bottom:1px solid var(--border-soft);">';
-    html += '<div style="' + colStyle + ' font-weight:500; color:var(--text-strong);">' + esc(s.stageName || ('Stage ' + s.stage)) + '</div>';
-    html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtTokens(s.tokens) + '</div>';
-    html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtCost(s.costUsd) + '</div>';
+    html += '<div style="' + colStyle + ' font-weight:500; color:var(--text-strong);">' + esc(name) + '</div>';
+    html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtTokens(tokens) + '</div>';
+    html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtCost(costUsd) + '</div>';
     html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; color:var(--text-body);">' + fmtDuration(s.durationMs) + '</div>';
     html += '</div>';
   });
+  // Normalise grand total
+  var grandTokens = grand.tokenCount != null ? grand.tokenCount : grand.tokens;
+  var grandCostUsd = grand.totalMicroUsd != null ? grand.totalMicroUsd / 1_000_000 : grand.costUsd;
   html += '<div style="display:grid; grid-template-columns:2fr 1.2fr 1.2fr 1.2fr; background:oklch(95% 0.008 260); border-top:2px solid var(--border-mid);">';
   html += '<div style="' + colStyle + ' font-weight:700; color:var(--text-strong);">总计</div>';
-  html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtTokens(total.tokens) + '</div>';
-  html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtCost(total.costUsd) + '</div>';
-  html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtDuration(total.durationMs) + '</div>';
+  html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtTokens(grandTokens) + '</div>';
+  html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtCost(grandCostUsd) + '</div>';
+  html += '<div style="' + colStyle + ' font-family:\'JetBrains Mono\',monospace; font-weight:600; color:var(--text-strong);">' + fmtDuration(grand.durationMs) + '</div>';
   html += '</div></div>';
   tableEl.innerHTML = html;
 }
@@ -1938,7 +2024,6 @@ function applyDemoFallback() {
 
   // Completed-state sub-sections
   renderAgentTrace(runId);    // will use DEMO_TRACE_DATA in demoMode
-  renderReqCompare(runId, run.oneLiner);  // will use DEMO_REQ_ENRICHED in demoMode
   renderCostPanel(runId);     // will use DEMO_COST_DATA in demoMode
   renderIRChain(runId, run.oneLiner);     // will show nodes as done in demoMode
 
@@ -1975,9 +2060,9 @@ function loadRun() {
       renderSkillsPanel(run.status);
       if (run.status === 'completed' || run.status === 'running' || run.status === 'paused_at_gate') {
         renderAgentTrace(runId);
+        loadWorkflowArtifacts(runId); // populate workflowArtifacts → re-renders rail cards clickable
       }
       if (run.status === 'completed') {
-        renderReqCompare(runId, run.oneLiner);
         renderCostPanel(runId);
         renderIRChain(runId, run.oneLiner);
       }
@@ -2114,37 +2199,147 @@ var pollInterval = setInterval(function() {
 loadRun();
 startSSE();
 
+// ── Rerun with supplemental context modal ─────────────────────────────────────
+var _rerunNodeId = null;
+var _rerunNodeName = '';
+
+function openRerunModal(nodeId, nodeName) {
+  _rerunNodeId = nodeId;
+  _rerunNodeName = nodeName || '此步骤';
+  var modal = document.getElementById('rerun-modal');
+  var textarea = document.getElementById('rerun-context-text');
+  var charCount = document.getElementById('rerun-char-count');
+  var titleEl = document.getElementById('rerun-modal-node-name');
+  if (titleEl) titleEl.textContent = _rerunNodeName;
+  if (textarea) { textarea.value = ''; }
+  if (charCount) charCount.textContent = '0 / 4000';
+  modal.style.display = 'flex';
+  setTimeout(function() { if (textarea) textarea.focus(); }, 80);
+}
+
+function closeRerunModal() {
+  document.getElementById('rerun-modal').style.display = 'none';
+  _rerunNodeId = null;
+}
+
+function updateRerunCharCount() {
+  var ta = document.getElementById('rerun-context-text');
+  var el = document.getElementById('rerun-char-count');
+  if (ta && el) el.textContent = ta.value.length + ' / 4000';
+}
+
+function setRerunContextText(text) {
+  var ta = document.getElementById('rerun-context-text');
+  if (ta) { ta.value = text; updateRerunCharCount(); ta.focus(); }
+}
+
+function submitRerun(skipContext) {
+  if (!_rerunNodeId) return;
+  var context = '';
+  if (!skipContext) {
+    var ta = document.getElementById('rerun-context-text');
+    context = ta ? ta.value.trim() : '';
+  }
+  closeRerunModal();
+  rerunNode(_rerunNodeId, context);
+}
+
 // ── Rerun node ────────────────────────────────────────────────────────────────
-function rerunNode(nodeId, btn) {
+function rerunNode(nodeId, context) {
   if (!nodeId || !runId) return;
-  btn.disabled = true;
-  btn.textContent = '提交中…';
+
+  // Disable all rerun buttons on the page while request is in flight
+  document.querySelectorAll('.btn-rerun').forEach(function(b) { b.disabled = true; });
 
   fetch('/api/prototype/runs/' + runId + '/nodes/' + nodeId + '/rerun', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ context: context || '' }),
   })
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.ok) {
-        btn.textContent = '已重新排队';
         setTimeout(loadRun, 800);
       } else {
         var msg = {
           RUN_IS_RUNNING: '运行中，请稍候',
           NODE_IS_RUNNING: '节点运行中，请稍候',
           REDIS_NOT_CONFIGURED: '队列未配置',
-        }[data.error] || (data.error || '失败');
-        btn.textContent = msg;
-        btn.disabled = false;
+        }[data.error] || (data.error || '重跑失败');
+        alert(msg);
+        document.querySelectorAll('.btn-rerun').forEach(function(b) { b.disabled = false; });
       }
     })
     .catch(function() {
-      btn.textContent = '网络错误';
-      btn.disabled = false;
+      alert('网络错误，请重试');
+      document.querySelectorAll('.btn-rerun').forEach(function(b) { b.disabled = false; });
     });
 }
 </script>
+
+<!-- ── Rerun with Context Modal ─────────────────────────────────────────────── -->
+<div id="rerun-modal" onclick="if(event.target===this)closeRerunModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9998;align-items:center;justify-content:center;padding:24px">
+  <div style="background:white;border-radius:16px;width:100%;max-width:560px;box-shadow:0 24px 60px rgba(0,0,0,.18);overflow:hidden">
+
+    <!-- header -->
+    <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border-soft);display:flex;align-items:flex-start;justify-content:space-between">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div style="width:36px;height:36px;border-radius:10px;background:oklch(94% 0.04 65);color:oklch(48% 0.16 65);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.88"/></svg>
+        </div>
+        <div>
+          <div style="font-size:15px;font-weight:600;color:var(--text-strong);line-height:1.3">重跑前补充说明</div>
+          <div style="font-size:11.5px;color:var(--text-muted);margin-top:3px">节点：<span id="rerun-modal-node-name" style="font-weight:500;color:var(--text-body)"></span></div>
+        </div>
+      </div>
+      <button onclick="closeRerunModal()" style="width:28px;height:28px;border-radius:6px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-muted)" onmouseover="this.style.background='var(--bg-elev)'" onmouseout="this.style.background='none'">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- body -->
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px">
+
+      <!-- explanation -->
+      <div style="background:oklch(97% 0.02 245);border:1px solid oklch(88% 0.06 245 / 0.5);border-radius:10px;padding:12px 14px;font-size:12px;color:oklch(38% 0.12 245);line-height:1.65">
+        可在此补充对上次结果不满意的原因、修正方向，或追加上下文。Agent 将在本次重跑时优先参考这些说明。如无需修改，可直接跳过。
+      </div>
+
+      <!-- textarea -->
+      <div>
+        <div style="font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:500;color:var(--text-muted);margin-bottom:8px">补充说明（可选）</div>
+        <div style="border:1px solid var(--border-soft);border-radius:12px;padding:12px;background:var(--bg-elev)">
+          <textarea id="rerun-context-text" rows="5" oninput="updateRerunCharCount()" onkeydown="if((event.metaKey||event.ctrlKey)&&event.key==='Enter'){submitRerun(false)}" style="width:100%;background:transparent;border:none;outline:none;font-size:13px;line-height:1.65;color:var(--text-strong);resize:none;font-family:'Inter',system-ui,sans-serif" placeholder="例如：需求理解有偏差，应聚焦在核心模块，忽略日志系统；或：追加：接口需兼容 REST 与 GraphQL…"></textarea>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px dashed var(--border-mid)">
+            <div style="font-size:10.5px;color:var(--text-faint)">Ctrl + Enter 提交</div>
+            <span id="rerun-char-count" style="font-size:10.5px;font-family:'JetBrains Mono',monospace;color:var(--text-faint)">0 / 4000</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- quick chips -->
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        <span style="font-size:10.5px;color:var(--text-faint);line-height:1.8;margin-right:2px">常见原因：</span>
+        <button class="intr-chip" onclick="setRerunContextText('需求理解有偏差，请重新仔细阅读原始需求说明')">需求理解偏差</button>
+        <button class="intr-chip" onclick="setRerunContextText('输出内容不够完整，缺少关键模块，需要更完善的覆盖')">输出不完整</button>
+        <button class="intr-chip" onclick="setRerunContextText('技术方案选型有误，请改用更合适的方案')">技术方案有误</button>
+        <button class="intr-chip" onclick="setRerunContextText('代码质量不满意，需要更好的结构和注释')">代码质量不满意</button>
+        <button class="intr-chip" onclick="setRerunContextText('测试用例覆盖不足，需要更多边界条件测试')">测试覆盖不足</button>
+      </div>
+    </div>
+
+    <!-- footer -->
+    <div style="padding:14px 24px;border-top:1px solid var(--border-soft);background:var(--bg-elev);display:flex;align-items:center;justify-content:flex-end;gap:10px">
+      <button onclick="submitRerun(true)" style="height:34px;padding:0 18px;border-radius:8px;border:1px solid var(--border-soft);background:white;font-size:13px;color:var(--text-body);cursor:pointer;font-weight:500" onmouseover="this.style.background='var(--bg-wash)'" onmouseout="this.style.background='white'">
+        跳过 · 直接重跑
+      </button>
+      <button onclick="submitRerun(false)" style="height:34px;padding:0 20px;border-radius:8px;border:none;background:oklch(48% 0.16 65);color:white;font-size:13px;cursor:pointer;font-weight:500;display:flex;align-items:center;gap:6px" onmouseover="this.style.background='oklch(43% 0.18 65)'" onmouseout="this.style.background='oklch(48% 0.16 65)'">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.88"/></svg>
+        带补充说明重跑
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- ── Interrupt Modal ──────────────────────────────────────────────────────── -->
 <div id="interrupt-modal" style="display:none">
