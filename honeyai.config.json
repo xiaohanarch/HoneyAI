@@ -1,5 +1,6 @@
 {
   "llm": {
-    "engine": "claude"
+    "engine": "opencode",
+    "model": "dashscope/qwen3-coder-plus"
   }
 }
