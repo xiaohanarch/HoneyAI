@@ -388,6 +388,14 @@
             <div class="caps mb-1">人工评审 · 待审批</div>
             <div class="gate-title">请审阅 AI 产出并决策</div>
             <div id="gate-stage-desc" class="gate-sub mt-1">当前阶段已完成，请确认是否进入下一阶段</div>
+            <a id="stage1-detail-link" href="stage-1-requirement.html" target="_blank"
+               style="display:inline-block;margin-top:8px;font-size:13px;color:#7c3aed;text-decoration:underline;">
+              查看 Stage 1 详情 →
+            </a>
+            <a id="review-detail-link" href="review-detail.html" target="_blank"
+               style="display:inline-block;margin-top:8px;margin-left:12px;font-size:13px;color:#7c3aed;text-decoration:underline;">
+              查看详细代码审查 →
+            </a>
           </div>
           <span class="chip chip-review">
             <span class="chip-dot" style="background:var(--review)"></span>等待审批
@@ -897,6 +905,15 @@ function renderGatePanel(nodes, runStatus) {
   document.getElementById('gate-reject-area').classList.add('hidden');
   document.getElementById('btn-approve').disabled = false;
   document.getElementById('btn-approve').textContent = '通过 · 进入下一阶段';
+  var s1link = document.getElementById('stage1-detail-link');
+  if (s1link && runId) {
+    s1link.href = 'stage-1-requirement.html?runId=' + runId;
+    s1link.style.display = gateNode.stage === 1 ? 'inline-block' : 'none';
+  }
+  var reviewLink = document.getElementById('review-detail-link');
+  if (reviewLink && runId) {
+    reviewLink.href = 'review-detail.html?runId=' + runId;
+  }
   gatePanel.classList.remove('hidden');
 }
 

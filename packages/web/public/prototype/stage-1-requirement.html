@@ -6,6 +6,7 @@
   <title>需求富化 · Stage 1 · DevPipeline</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -158,6 +159,21 @@
     /* diff highlight */
     .diff-ins { background: oklch(95% 0.06 150 / .6); padding: 0 2px; border-radius: 3px; }
     .diff-del { background: oklch(95% 0.06 25 / .5);  padding: 0 2px; border-radius: 3px; text-decoration: line-through; }
+
+    /* markdown render */
+    .md-render h1,.md-render h2,.md-render h3{font-weight:700;margin:1em 0 .5em}
+    .md-render h1{font-size:1.4em}.md-render h2{font-size:1.2em}.md-render h3{font-size:1.05em}
+    .md-render ul,.md-render ol{padding-left:1.5em;margin:.5em 0}
+    .md-render li{margin:.25em 0;line-height:1.6}
+    .md-render code{background:#f3f4f6;border-radius:3px;padding:1px 5px;font-size:.9em}
+    .md-render pre{background:#1e1e1e;color:#d4d4d4;border-radius:6px;padding:12px;overflow-x:auto;margin:.75em 0}
+    .md-render pre code{background:none;color:inherit;padding:0}
+    .md-render blockquote{border-left:3px solid #e5e7eb;padding-left:1em;color:#6b7280;margin:.5em 0}
+    .md-render strong{font-weight:600}
+    .md-render a{color:#7c3aed;text-decoration:underline}
+    .md-render table{border-collapse:collapse;width:100%;margin:.75em 0}
+    .md-render th,.md-render td{border:1px solid #e5e7eb;padding:6px 12px;text-align:left}
+    .md-render th{background:#f9fafb;font-weight:600}
   </style>
 </head>
 <body class="bg-atmosphere grain min-h-screen">
@@ -174,7 +190,7 @@
           </div>
         </a>
         <div class="text-[12px] text-[var(--text-muted)] flex items-center gap-1.5">
-          <a href="index.html" class="hover:text-[var(--text-strong)]">运行 #2451</a>
+          <a id="run-title" href="run-detail.html" class="hover:text-[var(--text-strong)]">运行 #2451</a>
           <span class="text-[var(--text-faint)]">/</span>
           <span class="text-[var(--text-strong)] font-medium">需求富化</span>
         </div>
@@ -197,7 +213,7 @@
           <span class="text-[13px] text-[var(--text-muted)]">业务原始诉求 → 注入领域语义 / 业务约束 / 验收条件,产出富化原始需求</span>
         </div>
         <div class="flex items-center gap-2">
-          <span class="chip" style="background:var(--done-soft); color:var(--done); border-color:color-mix(in oklch, var(--done) 20%, transparent)"><span class="chip-dot" style="background:var(--done)"></span>已完成</span>
+          <span id="run-status" class="chip" style="background:var(--done-soft); color:var(--done); border-color:color-mix(in oklch, var(--done) 20%, transparent)"><span class="chip-dot" style="background:var(--done)"></span>已完成</span>
           <span class="chip" style="background:var(--review-soft); color:var(--review); border-color:color-mix(in oklch, var(--review) 20%, transparent)"><span class="chip-dot" style="background:var(--review)"></span>已评审 · 张工</span>
         </div>
       </div>
@@ -255,7 +271,7 @@
       <!-- OUTPUT -->
       <div class="col-span-7 card p-5">
         <div class="flex items-center justify-between mb-3">
-          <div class="caps">产物 · 原子需求列表</div>
+          <div class="caps">产物 · 原子需求列表<span style="font-size:11px;background:#f59e0b;color:#fff;padding:2px 6px;border-radius:4px;margin-left:8px;">DEMO 数据</span></div>
           <div class="flex items-center gap-2">
             <button class="btn btn-ghost text-[11.5px]">JSON</button>
             <button class="btn btn-ghost text-[11.5px]">Markdown</button>
@@ -263,7 +279,7 @@
           </div>
         </div>
 
-        <div class="space-y-1.5">
+        <div id="requirements-content" class="space-y-1.5">
           <!-- REQ items -->
           <div class="flex items-start gap-3 px-2.5 py-2.5 rounded-lg hover:bg-[var(--bg-elev)] group">
             <span class="font-mono text-[10.5px] text-[var(--text-faint)] mt-0.5">R1</span>
@@ -356,7 +372,7 @@
       <div class="col-span-7 card p-5">
         <div class="flex items-center justify-between mb-4">
           <div>
-            <div class="caps mb-1">多 Agent 协同 · 对话回放</div>
+            <div class="caps mb-1">多 Agent 协同 · 对话回放<span style="font-size:11px;background:#f59e0b;color:#fff;padding:2px 6px;border-radius:4px;margin-left:8px;">DEMO 数据</span></div>
             <div class="text-[13px] text-[var(--text-muted)]">3 个 Agent 协作，17 轮交互</div>
           </div>
           <div class="flex items-center gap-2">
@@ -373,7 +389,7 @@
         </div>
 
         <!-- conversation -->
-        <div class="space-y-3.5 max-h-[560px] overflow-y-auto pr-1">
+        <div id="tool-events-list" class="space-y-3.5 max-h-[560px] overflow-y-auto pr-1">
 
           <!-- system -->
           <div class="text-center">
@@ -502,7 +518,7 @@
         <div class="card p-5">
           <div class="flex items-center justify-between mb-3">
             <div>
-              <div class="caps mb-1">知识图谱命中 · 快照</div>
+              <div class="caps mb-1">知识图谱命中 · 快照<span style="font-size:11px;background:#f59e0b;color:#fff;padding:2px 6px;border-radius:4px;margin-left:8px;">DEMO 数据</span></div>
               <div class="text-[12.5px] text-[var(--text-muted)]">12 实体 · 18 关系</div>
             </div>
             <a href="#" class="text-[11.5px] text-[var(--text-strong)] hover:underline">全屏 →</a>
@@ -718,8 +734,15 @@
           </a>
           <button class="btn btn-ghost text-[11.5px]">查看 diff（v1 → v2）</button>
         </div>
-        <div class="text-[11.5px] text-[var(--text-muted)]">
-          下游已激活 · <a href="stage-2-architecture.html" class="text-[var(--text-strong)] hover:underline">进入设计与拆解 →</a>
+        <div class="flex items-center gap-2">
+          <button onclick="approveStage1()" class="btn btn-primary text-[12.5px]">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            通过 · 进入下一阶段
+          </button>
+          <button onclick="rejectStage1()" class="btn text-[12.5px]" style="border-color:var(--halt); color:var(--halt);">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            拒绝
+          </button>
         </div>
       </div>
     </section>
@@ -743,6 +766,164 @@
       DevPipeline · AI 研发流水线 · Stage 01 / 需求富化 · prototype v0.2
     </footer>
   </main>
+
+<script>
+(function() {
+  var runId = new URLSearchParams(window.location.search).get('runId');
+
+  // 1. Auth check
+  fetch('/api/prototype/me').then(function(r) {
+    if (r.status === 401) {
+      window.location.href = '/login?callbackUrl=' + encodeURIComponent('/prototype/stage-1-requirement.html' + (runId ? '?runId=' + runId : ''));
+    }
+  });
+
+  if (!runId) {
+    var main = document.querySelector('main');
+    if (main) {
+      var errDiv = document.createElement('div');
+      errDiv.style.cssText = 'margin:40px auto;max-width:480px;padding:24px;background:#fff3cd;border:1px solid #ffc107;border-radius:12px;color:#856404;font-size:14px;text-align:center;';
+      errDiv.textContent = '未指定 runId，请从运行详情页导航至此页面。';
+      main.insertBefore(errDiv, main.firstChild);
+    }
+    return;
+  }
+
+  // 2. Load run detail
+  fetch('/api/prototype/runs/' + runId)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var run = data.run || data;
+      // Update header breadcrumb with real run title
+      var titleEl = document.getElementById('run-title');
+      if (titleEl) {
+        titleEl.textContent = run.title || ('Run ' + runId.slice(0, 8));
+        titleEl.href = 'run-detail.html?runId=' + runId;
+      }
+      // Update status
+      var statusEl = document.getElementById('run-status');
+      if (statusEl && run.status) {
+        var statusMap = {
+          running: '运行中', paused_at_gate: '待审批', completed: '已完成',
+          failed: '失败', cancelled: '已取消', created: '已创建'
+        };
+        statusEl.querySelector('.chip-dot') && (statusEl.querySelector('.chip-dot').style.display = '');
+        var labelNode = statusEl.lastChild;
+        if (labelNode && labelNode.nodeType === 3) {
+          statusEl.lastChild.textContent = statusMap[run.status] || run.status;
+        }
+      }
+    })
+    .catch(function() {
+      // Keep mock data if API fails
+    });
+
+  // 3. Load tool events for Stage 1
+  fetch('/api/prototype/runs/' + runId + '/tool-events')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      // data.byStage is an object like { "1": [...events], "2": [...events] }
+      // data.all is all events
+      var stage1Events = (data.byStage && data.byStage['1']) || data.all || [];
+      if (stage1Events.length > 0) {
+        renderToolEvents(stage1Events);
+      }
+    })
+    .catch(function() {
+      // Show error or keep mock data
+    });
+
+  function renderToolEvents(events) {
+    var container = document.getElementById('tool-events-list');
+    if (!container || !events.length) return;
+
+    container.innerHTML = events.map(function(evt) {
+      var toolName = evt.tool || evt.toolName || evt.name || 'unknown';
+      var input = evt.input || evt.toolInput || '';
+      var inputPreview = typeof input === 'string' ? input.slice(0, 120) : JSON.stringify(input).slice(0, 120);
+      var ts = evt.createdAt ? new Date(evt.createdAt).toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit', second:'2-digit'}) : '';
+      var duration = evt.durationMs ? (evt.durationMs / 1000).toFixed(1) + 's' : '';
+      var status = evt.status || 'success';
+      var statusColor = status === 'success' ? '#10b981' : status === 'error' ? '#ef4444' : '#6b7280';
+
+      return '<div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6;">' +
+        '<div style="width:4px;background:' + statusColor + ';border-radius:2px;flex-shrink:0;"></div>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+            '<span style="font-weight:600;font-size:13px;font-family:monospace;">' + escapeHtml(toolName) + '</span>' +
+            '<span style="font-size:11px;color:#9ca3af;">' + escapeHtml(ts) + (duration ? ' · ' + escapeHtml(duration) : '') + '</span>' +
+          '</div>' +
+          (inputPreview ? '<div style="font-size:12px;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(inputPreview) + '</div>' : '') +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // 4. Load artifacts - find requirement_ir
+  fetch('/api/prototype/runs/' + runId + '/artifacts')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var artifacts = data.artifacts || [];
+      var reqIr = artifacts.find(function(a) { return a.kind === 'requirement_ir'; });
+      if (reqIr) {
+        loadRequirementContent(reqIr.blobSha256);
+      }
+    })
+    .catch(function() {
+      // Keep mock data if API fails
+    });
+
+  function loadRequirementContent(sha) {
+    fetch('/api/prototype/artifacts/' + sha + '/content')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var content = data.content || '';
+        var el = document.getElementById('requirements-content');
+        if (!el) return;
+
+        if (typeof marked !== 'undefined') {
+          el.innerHTML = '<div class="md-render">' + marked.parse(content) + '</div>';
+        } else {
+          el.innerHTML = '<pre style="white-space:pre-wrap;font-size:13px;">' + escapeHtml(content) + '</pre>';
+        }
+      })
+      .catch(function() {
+        // Keep mock data if API fails
+      });
+  }
+
+  // 5. Approve
+  window.approveStage1 = function() {
+    if (!confirm('确认通过 Stage 1 审查？')) return;
+    fetch('/api/prototype/runs/' + runId + '/approve', { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function() {
+        window.location.href = 'run-detail.html?runId=' + runId;
+      })
+      .catch(function(err) { alert('操作失败: ' + err.message); });
+  };
+
+  // 6. Reject
+  window.rejectStage1 = function() {
+    var comment = prompt('请输入拒绝原因（可选）:');
+    if (comment === null) return; // user cancelled
+    fetch('/api/prototype/runs/' + runId + '/reject', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comment: comment || '' })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function() {
+        window.location.href = 'run-detail.html?runId=' + runId;
+      })
+      .catch(function(err) { alert('操作失败: ' + err.message); });
+  };
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+})();
+</script>
 
 </body>
 </html>

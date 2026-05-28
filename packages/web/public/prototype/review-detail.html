@@ -5,6 +5,7 @@
 <title>评审详情 · CR-3 · AI 数字产线</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -73,6 +74,20 @@
   .kbd{ font-family:'JetBrains Mono',monospace; font-size:10.5px; padding:1.5px 5px; border-radius:4px; background: oklch(97% 0.008 260); border:1px solid var(--line); color: var(--ink-soft); }
   .tab2{ font-size:12px; padding:5px 10px; border-radius:7px; color: var(--ink-mute); cursor:pointer; }
   .tab2.active{ background: var(--ink); color:#fff; }
+  /* markdown render */
+  .md-render h1,.md-render h2,.md-render h3{font-weight:700;margin:1em 0 .5em}
+  .md-render h1{font-size:1.4em}.md-render h2{font-size:1.2em}.md-render h3{font-size:1.05em}
+  .md-render ul,.md-render ol{padding-left:1.5em;margin:.5em 0}
+  .md-render li{margin:.25em 0;line-height:1.6}
+  .md-render code{background:#f3f4f6;border-radius:3px;padding:1px 5px;font-size:.9em}
+  .md-render pre{background:#1e1e1e;color:#d4d4d4;border-radius:6px;padding:12px;overflow-x:auto;margin:.75em 0}
+  .md-render pre code{background:none;color:inherit;padding:0}
+  .md-render blockquote{border-left:3px solid #e5e7eb;padding-left:1em;color:#6b7280;margin:.5em 0}
+  .md-render strong{font-weight:600}
+  .md-render a{color:#7c3aed;text-decoration:underline}
+  .md-render table{border-collapse:collapse;width:100%;margin:.75em 0}
+  .md-render th,.md-render td{border:1px solid #e5e7eb;padding:6px 12px;text-align:left}
+  .md-render th{background:#f9fafb;font-weight:600}
   /* atmospheric */
   .atmo{ background:
     radial-gradient(60% 50% at 20% 10%, oklch(70% 0.16 290 / .08), transparent 60%),
@@ -84,22 +99,19 @@
 
 <!-- Top bar -->
 <header class="px-8 pt-6 pb-4 flex items-center gap-4 sticky top-0 z-20 backdrop-blur bg-[color:oklch(98.8%_0.006_90/.86)] border-b border-[color:var(--line-soft)]">
-  <a href="index.html" class="text-[12.5px] text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] flex items-center gap-1.5">
+  <a id="back-to-run-link" href="run-detail.html" class="text-[12.5px] text-[color:var(--ink-soft)] hover:text-[color:var(--ink)] flex items-center gap-1.5">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-    Run #2451
+    <span id="run-title">返回 Run 详情</span>
   </a>
   <div class="h-4 w-px bg-[color:var(--line)]"></div>
   <div class="flex items-center gap-2 text-[12.5px]">
-    <span class="pill pill-review">CR-3 评审</span>
+    <span id="run-status" class="pill pill-review">评审</span>
     <span class="mono text-[color:var(--ink-mute)]">Stage 03 · 编码 + UT</span>
     <span class="text-[color:var(--ink-mute)]">·</span>
-    <a href="artifact-diff.html" class="font-medium text-[color:var(--ink)] hover:underline">LoginService.login()</a>
-    <span class="text-[color:var(--ink-mute)]">·</span>
-    <a href="artifact-diff.html" class="text-[11.5px] text-[color:var(--ink-soft)] hover:text-[color:var(--ink)]">查看 diff →</a>
+    <span id="artifact-kind-label" class="font-medium text-[color:var(--ink)]">AI 产出文档</span>
   </div>
   <div class="ml-auto flex items-center gap-3 text-[11.5px] text-[color:var(--ink-mute)]">
-    <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--review)"></span>等待 @王工 决策</span>
-    <span class="mono">SLA 还剩 02:14:32</span>
+    <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full" style="background: var(--review)"></span>等待决策</span>
     <button class="kbd" title="键盘快捷键">⌘K</button>
   </div>
 </header>
@@ -155,7 +167,7 @@
 
     <!-- AI 自检快照 -->
     <div class="col-span-4 panel p-5">
-      <div class="section-h mb-3">AI 自动审查</div>
+      <div class="section-h mb-3">AI 自动审查 <span style="font-size:11px;background:#f59e0b;color:#fff;padding:2px 6px;border-radius:4px;margin-left:8px;">DEMO 数据</span></div>
       <div class="space-y-2">
         <div class="rule-row rule-pass">
           <span class="w-1.5 h-1.5 rounded-full" style="background: var(--done)"></span>
@@ -194,102 +206,27 @@
   <!-- Two-column workspace -->
   <section class="grid grid-cols-12 gap-4">
 
-    <!-- Left: diff viewer -->
+    <!-- Left: artifact preview -->
     <div class="col-span-8">
-      <!-- file tabs -->
-      <div class="flex items-end gap-1 pl-1">
-        <span class="file-tab active">
-          <span class="dot" style="background: var(--run)"></span>
-          LoginService.java
-          <span class="mono text-[10px] text-[color:var(--ink-mute)]">+ 92 / - 22</span>
-        </span>
-        <span class="file-tab">
-          <span class="dot" style="background: var(--add-line)"></span>
-          AccountLockService.java
-          <span class="mono text-[10px] text-[color:var(--ink-mute)]">+ 41</span>
-        </span>
-        <span class="file-tab">
-          <span class="dot" style="background: var(--add-line)"></span>
-          TokenBucketLimiter.java
-          <span class="mono text-[10px] text-[color:var(--ink-mute)]">+ 15</span>
-        </span>
-        <div class="ml-auto flex items-center gap-1 pb-1.5">
-          <span class="tab2 active">分裂</span>
-          <span class="tab2">合并</span>
-          <span class="tab2">仅变更</span>
+      <!-- Artifact preview panel -->
+      <div class="panel overflow-hidden">
+        <div style="padding:10px 16px; background: oklch(97% 0.008 260); border-bottom:1px solid var(--line-soft); display:flex; align-items:center; justify-content:space-between; gap:8px;">
+          <div class="flex items-center gap-2">
+            <span class="section-h">AI 产出文档预览</span>
+          </div>
+          <span style="font-size:10.5px; color: var(--ink-mute);">↕ 请滚动阅读完整内容后再决策</span>
+        </div>
+        <div style="padding:18px 20px; max-height:520px; overflow-y:auto; background: var(--surface);">
+          <div id="artifact-preview-content" class="md-render" style="font-size:13px; line-height:1.75; color: var(--ink);">
+            <div style="color: var(--ink-mute); text-align:center; padding:40px 0; font-size:13px;">加载中…</div>
+          </div>
         </div>
       </div>
 
-      <div class="panel rounded-tl-none overflow-hidden">
-        <!-- Diff body -->
-        <div class="py-2">
-          <div class="diff-row hunk"><span class="ln"></span><span class="ln-x"></span><span class="marker">@@</span><span>　-78,12 +84,38 @@　public ResponseEntity&lt;LoginResp&gt; login(LoginReq req)</span></div>
-
-          <div class="diff-row ctx"><span class="ln">78</span><span class="ln-x">84</span><span class="marker"> </span><span>　public ResponseEntity&lt;LoginResp&gt; login(LoginReq req) {</span></div>
-          <div class="diff-row del"><span class="ln">79</span><span class="ln-x"></span><span class="marker">-</span><span>　　　User u = userRepo.findByName(req.username());</span></div>
-          <div class="diff-row del"><span class="ln">80</span><span class="ln-x"></span><span class="marker">-</span><span>　　　if (u == null) throw new BizException(USER_NOT_FOUND);</span></div>
-          <div class="diff-row add"><span class="ln"></span><span class="ln-x">85</span><span class="marker">+</span><span>　　　String key = "login:" + req.username() + ":" + clientIp();</span></div>
-          <div class="diff-row add"><span class="ln"></span><span class="ln-x">86</span><span class="marker">+</span><span>　　　if (!limiter.tryAcquire(key, 10, Duration.ofMinutes(1))) {</span></div>
-          <div class="diff-row add"><span class="ln"></span><span class="ln-x">87</span><span class="marker">+</span><span>　　　　　throw new BizException(RATE_LIMITED);</span></div>
-          <div class="diff-row add"><span class="ln"></span><span class="ln-x">88</span><span class="marker">+</span><span>　　　}</span></div>
-          <div class="diff-row add"><span class="ln"></span><span class="ln-x">89</span><span class="marker">+</span><span>　　　if (lockService.isLocked(req.username())) {</span></div>
-          <div class="diff-row add"><span class="ln"></span><span class="ln-x">90</span><span class="marker">+</span><span>　　　　　throw new BizException(ACCOUNT_LOCKED);</span></div>
-          <div class="diff-row add"><span class="ln"></span><span class="ln-x">91</span><span class="marker">+</span><span>　　　}</span></div>
-          <div class="diff-row ctx"><span class="ln">81</span><span class="ln-x">92</span><span class="marker"> </span><span>　　　User u = userRepo.findByName(req.username());</span></div>
-          <div class="diff-row ctx"><span class="ln">82</span><span class="ln-x">93</span><span class="marker"> </span><span>　　　if (u == null) throw new BizException(USER_NOT_FOUND);</span></div>
-
-          <!-- inline AI comment -->
-          <div class="px-12 py-2 bg-[color:oklch(99%_0.008_260)] border-y border-[color:var(--line-soft)]">
-            <div class="comment text-[12px]">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="agent-chip chip-perf">PRF-007</span>
-                <span class="text-[color:var(--ink-mute)] text-[11px]">AI 自动审查 · 警告</span>
-              </div>
-              <div>限流键 <span class="mono">login:user:ip</span> 偏窄,建议同时实现 <span class="mono">login:ip</span> 维度桶以防止用户名枚举攻击。可在下一次迭代中加入。</div>
-            </div>
-          </div>
-
-          <div class="diff-row del"><span class="ln">83</span><span class="ln-x"></span><span class="marker">-</span><span>　　　if (!u.password().equals(req.password())) {</span></div>
-          <div class="diff-row del"><span class="ln">84</span><span class="ln-x"></span><span class="marker">-</span><span>　　　　　throw new BizException(BAD_CREDENTIALS);</span></div>
-          <div class="diff-row del"><span class="ln">85</span><span class="ln-x"></span><span class="marker">-</span><span>　　　}</span></div>
-          <div class="diff-row add"><span class="ln"></span><span class="ln-x">94</span><span class="marker">+</span><span>　　　if (!passwordEncoder.matches(req.password(), u.passwordHash())) {</span></div>
-          <div class="diff-row add"><span class="ln"></span><span class="ln-x">95</span><span class="marker">+</span><span>　　　　　lockService.recordFailure(req.username());</span></div>
-          <div class="diff-row add"><span class="ln"></span><span class="ln-x">96</span><span class="marker">+</span><span>　　　　　throw new BizException(BAD_CREDENTIALS);</span></div>
-          <div class="diff-row add"><span class="ln"></span><span class="ln-x">97</span><span class="marker">+</span><span>　　　}</span></div>
-          <div class="diff-row add"><span class="ln"></span><span class="ln-x">98</span><span class="marker">+</span><span>　　　lockService.clear(req.username());</span></div>
-
-          <!-- human comment -->
-          <div class="px-12 py-2 bg-[color:oklch(99%_0.008_260)] border-y border-[color:var(--line-soft)]">
-            <div class="comment text-[12px]" style="border-left-color: oklch(62% 0.18 255)">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="w-5 h-5 rounded-full bg-[color:oklch(62%_0.18_255)] text-white text-[10px] flex items-center justify-center font-semibold">王</span>
-                <span class="text-[12px] font-medium">@王工</span>
-                <span class="text-[color:var(--ink-mute)] text-[11px]">3 分钟前</span>
-              </div>
-              <div>清晰。<span class="mono">clear()</span> 应在登录成功的所有分支前都调用,看到这里 OK。问一下:limiter 桶大小 10/分 是来自哪个 SLO 文档?</div>
-              <div class="flex items-center gap-3 mt-2 text-[11px] text-[color:var(--ink-soft)]">
-                <span class="cursor-pointer hover:text-[color:var(--ink)]">↩ 回复</span>
-                <span class="cursor-pointer hover:text-[color:var(--ink)]">✓ 解决</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="diff-row ctx"><span class="ln">93</span><span class="ln-x">99</span><span class="marker"> </span><span>　　　return ResponseEntity.ok(buildResp(u));</span></div>
-          <div class="diff-row ctx"><span class="ln">94</span><span class="ln-x">100</span><span class="marker"> </span><span>　}</span></div>
-
-          <div class="diff-row hunk"><span class="ln"></span><span class="ln-x"></span><span class="marker">@@</span><span>　-128,0 +142,18 @@　新增 helper</span></div>
-          <div class="diff-row add"><span class="ln"></span><span class="ln-x">142</span><span class="marker">+</span><span>　private String clientIp() {</span></div>
-          <div class="diff-row add"><span class="ln"></span><span class="ln-x">143</span><span class="marker">+</span><span>　　　return Optional.ofNullable(request.getHeader("X-Forwarded-For"))</span></div>
-          <div class="diff-row add"><span class="ln"></span><span class="ln-x">144</span><span class="marker">+</span><span>　　　　　.map(s -&gt; s.split(",")[0].trim())</span></div>
-          <div class="diff-row add"><span class="ln"></span><span class="ln-x">145</span><span class="marker">+</span><span>　　　　　.orElse(request.getRemoteAddr());</span></div>
-          <div class="diff-row add"><span class="ln"></span><span class="ln-x">146</span><span class="marker">+</span><span>　}</span></div>
-        </div>
-      </div>
-
-      <!-- Below diff: knowledge / refs -->
+      <!-- Below preview: knowledge / debate (mock) -->
       <div class="grid grid-cols-2 gap-4 mt-4">
         <div class="panel p-4">
-          <div class="section-h mb-2">引用知识 · 4</div>
+          <div class="section-h mb-2">引用知识 · 4 <span style="font-size:11px;background:#f59e0b;color:#fff;padding:2px 6px;border-radius:4px;margin-left:8px;">DEMO 数据</span></div>
           <ul class="space-y-2 text-[12px]">
             <li class="flex items-start gap-2"><span class="mono text-[10.5px] text-[color:var(--ink-mute)] mt-0.5">KG·E12</span><span>《登录限流规范 v3》§3.1 单用户 10次/分</span></li>
             <li class="flex items-start gap-2"><span class="mono text-[10.5px] text-[color:var(--ink-mute)] mt-0.5">KG·E07</span><span>《账户安全策略》5次失败锁 15 分钟</span></li>
@@ -298,7 +235,7 @@
           </ul>
         </div>
         <div class="panel p-4">
-          <div class="section-h mb-2">辩论轨迹 · 7 轮</div>
+          <div class="section-h mb-2">辩论轨迹 · 7 轮 <span style="font-size:11px;background:#f59e0b;color:#fff;padding:2px 6px;border-radius:4px;margin-left:8px;">DEMO 数据</span></div>
           <ol class="space-y-2 text-[12px]">
             <li class="flex items-start gap-2"><span class="mono text-[10px] text-[color:var(--ink-mute)] mt-0.5 w-6">R1</span><span class="agent-chip chip-dev">DEV</span><span class="text-[color:var(--ink-soft)]">初版:仅加限流</span></li>
             <li class="flex items-start gap-2"><span class="mono text-[10px] text-[color:var(--ink-mute)] mt-0.5 w-6">R2</span><span class="agent-chip chip-sec">SEC</span><span class="text-[color:var(--ink-soft)]">质疑:缺少账户锁定 → 阻塞</span></li>
@@ -309,6 +246,7 @@
         </div>
       </div>
     </div>
+
 
     <!-- Right: review panel -->
     <aside class="col-span-4">
@@ -449,10 +387,15 @@
           </div>
         </div>
 
-        <button class="w-full h-11 rounded-lg text-[13px] font-medium text-white" style="background: linear-gradient(180deg, oklch(72% 0.16 150), oklch(58% 0.18 150))">
-          签字 · 通过 + 建议 →
-        </button>
-        <div class="text-center text-[10.5px] text-[color:var(--ink-mute)] mt-2 mono">⌘↵ 确认 · esc 取消</div>
+        <div class="flex gap-2 mt-1">
+          <button id="btn-approve-review" onclick="approveReview()" class="flex-1 h-11 rounded-lg text-[13px] font-medium text-white" style="background: linear-gradient(180deg, oklch(72% 0.16 150), oklch(58% 0.18 150))">
+            通过 →
+          </button>
+          <button id="btn-reject-review" onclick="rejectReview()" class="h-11 px-4 rounded-lg text-[13px] font-medium text-white" style="background: linear-gradient(180deg, oklch(60% 0.20 25), oklch(50% 0.22 25))">
+            拒绝
+          </button>
+        </div>
+        <div id="decision-feedback" class="text-center text-[10.5px] text-[color:var(--ink-mute)] mt-2 mono"></div>
       </div>
     </aside>
   </section>
@@ -462,6 +405,195 @@
   <span class="w-1.5 h-1.5 rounded-full" style="background: var(--review)"></span>
   Prototype · review-detail.html · 评审员视角 cockpit
 </footer>
+
+<script>
+(function() {
+  var runId = new URLSearchParams(window.location.search).get('runId');
+
+  // 1. Auth check
+  fetch('/api/prototype/me').then(function(r) {
+    if (r.status === 401) {
+      window.location.href = '/login?callbackUrl=' + encodeURIComponent('/prototype/review-detail.html' + (runId ? '?runId=' + runId : ''));
+    }
+  });
+
+  if (!runId) {
+    var el = document.getElementById('artifact-preview-content');
+    if (el) el.innerHTML = '<div style="color:var(--halt);text-align:center;padding:40px 0;font-size:13px;">未指定 runId，请从运行详情页进入此页面。</div>';
+    return;
+  }
+
+  // Update "back to run" link
+  var backLink = document.getElementById('back-to-run-link');
+  if (backLink) backLink.href = 'run-detail.html?runId=' + runId;
+
+  // 2. Load run detail
+  fetch('/api/prototype/runs/' + runId)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var run = data.run || data;
+
+      // Update header: run title
+      var titleEl = document.getElementById('run-title');
+      if (titleEl && run) {
+        titleEl.textContent = 'Run #' + (run.seq || run.id || runId);
+      }
+
+      // Update status badge
+      var statusEl = document.getElementById('run-status');
+      if (statusEl && run && run.status) {
+        var statusMap = {
+          paused_at_gate: '待审批',
+          running: '运行中',
+          completed: '已完成',
+          failed: '失败',
+          cancelled: '已取消',
+        };
+        statusEl.textContent = statusMap[run.status] || run.status;
+      }
+
+      // Load artifacts after getting run data
+      loadArtifacts(runId);
+    })
+    .catch(function(err) {
+      console.warn('review-detail: loadRun error:', err);
+      loadArtifacts(runId);
+    });
+
+  // 3. Load artifacts — find impl_ir or design_ir or requirement_ir
+  function loadArtifacts(rid) {
+    fetch('/api/prototype/runs/' + rid + '/artifacts')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var artifacts = data.artifacts || [];
+        var priority = ['impl_ir', 'design_ir', 'requirement_ir'];
+        var preferred = null;
+        for (var i = 0; i < priority.length; i++) {
+          var found = null;
+          for (var j = 0; j < artifacts.length; j++) {
+            if (artifacts[j].kind === priority[i]) { found = artifacts[j]; break; }
+          }
+          if (found) { preferred = found; break; }
+        }
+
+        if (preferred) {
+          loadArtifactContent(preferred.blobSha256, preferred.kind);
+        } else if (artifacts.length > 0) {
+          // Use the most recent artifact as fallback
+          loadArtifactContent(artifacts[0].blobSha256, artifacts[0].kind);
+        } else {
+          var el = document.getElementById('artifact-preview-content');
+          if (el) el.innerHTML = '<div style="color:var(--ink-mute);text-align:center;padding:40px 0;font-size:13px;">暂无 AI 产出文档</div>';
+        }
+      })
+      .catch(function(err) {
+        console.warn('review-detail: loadArtifacts error:', err);
+        var el = document.getElementById('artifact-preview-content');
+        if (el) el.innerHTML = '<div style="color:var(--halt);text-align:center;padding:40px 0;font-size:13px;">加载文档失败: ' + escapeHtml(err.message) + '</div>';
+      });
+  }
+
+  // 4. Load artifact content
+  function loadArtifactContent(sha, kind) {
+    if (!sha) {
+      var el = document.getElementById('artifact-preview-content');
+      if (el) el.innerHTML = '<div style="color:var(--ink-mute);text-align:center;padding:40px 0;font-size:13px;">文档内容不可用</div>';
+      return;
+    }
+    fetch('/api/prototype/artifacts/' + sha + '/content')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var content = data.content || '';
+        var el = document.getElementById('artifact-preview-content');
+        if (!el) return;
+
+        if (typeof marked !== 'undefined') {
+          el.innerHTML = '<div class="md-render">' + marked.parse(content) + '</div>';
+        } else {
+          el.innerHTML = '<pre style="white-space:pre-wrap;font-size:13px;">' + escapeHtml(content) + '</pre>';
+        }
+
+        // Show artifact kind label in header
+        var kindMap = {
+          requirement_ir: 'Gate 1 · 需求 IR 文档',
+          design_ir: 'Gate 2 · 设计 IR 文档',
+          impl_ir: '编码阶段 · 实现 IR 文档',
+        };
+        var kindLabel = kindMap[kind] || kind;
+        var headerKindEl = document.getElementById('artifact-kind-label');
+        if (headerKindEl) headerKindEl.textContent = kindLabel;
+      })
+      .catch(function(err) {
+        var el = document.getElementById('artifact-preview-content');
+        if (el) el.innerHTML = '<div style="color:var(--halt);text-align:center;padding:40px 0;font-size:13px;">加载内容失败: ' + escapeHtml(err.message) + '</div>';
+      });
+  }
+
+  // 5. Approve button
+  window.approveReview = function() {
+    if (!confirm('确认通过审查？')) return;
+    var btn = document.getElementById('btn-approve-review');
+    if (btn) { btn.disabled = true; btn.textContent = '提交中…'; }
+    fetch('/api/prototype/runs/' + runId + '/approve', { method: 'POST' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.ok !== false) {
+          showDecisionResult('approved');
+        } else {
+          var fb = document.getElementById('decision-feedback');
+          if (fb) { fb.textContent = '错误: ' + (data.error || '未知错误'); fb.style.color = 'var(--halt)'; }
+          if (btn) { btn.disabled = false; btn.textContent = '通过 →'; }
+        }
+      })
+      .catch(function(err) {
+        alert('操作失败: ' + err.message);
+        if (btn) { btn.disabled = false; btn.textContent = '通过 →'; }
+      });
+  };
+
+  // 6. Reject button
+  window.rejectReview = function() {
+    var comment = prompt('请输入拒绝原因（可选）:');
+    if (comment === null) return; // user cancelled prompt
+    var btn = document.getElementById('btn-reject-review');
+    if (btn) { btn.disabled = true; btn.textContent = '提交中…'; }
+    fetch('/api/prototype/runs/' + runId + '/reject', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comment: comment || '' }),
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.ok !== false) {
+          showDecisionResult('rejected');
+        } else {
+          var fb = document.getElementById('decision-feedback');
+          if (fb) { fb.textContent = '错误: ' + (data.error || '未知错误'); fb.style.color = 'var(--halt)'; }
+          if (btn) { btn.disabled = false; btn.textContent = '拒绝'; }
+        }
+      })
+      .catch(function(err) {
+        alert('操作失败: ' + err.message);
+        if (btn) { btn.disabled = false; btn.textContent = '拒绝'; }
+      });
+  };
+
+  function showDecisionResult(decision) {
+    var fb = document.getElementById('decision-feedback');
+    if (fb) {
+      fb.textContent = decision === 'approved' ? '已批准，运行将继续' : '已拒绝';
+      fb.style.color = decision === 'approved' ? 'oklch(40% 0.13 150)' : 'var(--halt)';
+    }
+    setTimeout(function() {
+      window.location.href = 'run-detail.html?runId=' + runId;
+    }, 1200);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+})();
+</script>
 
 </body>
 </html>

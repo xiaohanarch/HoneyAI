@@ -228,6 +228,7 @@
         </div>
         <div class="font-display text-[40px] text-[var(--text-strong)] leading-none">28,471</div>
         <div class="text-[11.5px] text-[var(--text-muted)] mt-1.5">过去 24h · 比昨日 +3,053</div>
+        <div class="text-[11.5px] text-[var(--text-muted)] mt-1" style="border-top:1px solid var(--border-soft); padding-top:6px;">运行总数：<span id="stat-total" class="font-mono text-[var(--text-strong)]">—</span></div>
         <svg class="sparkline mt-3" viewBox="0 0 120 40" preserveAspectRatio="none">
           <polyline fill="none" stroke="var(--a-req)" stroke-width="1.5"
             points="0,30 10,28 20,25 30,27 40,22 50,18 60,20 70,15 80,17 90,12 100,14 110,8 120,10"/>
@@ -271,8 +272,9 @@
           <span class="caps">成功率</span>
           <span class="chip" style="background:oklch(95% 0.04 25); color:var(--halt); font-size:10px; padding:1px 6px">↓ 0.4%</span>
         </div>
-        <div class="font-display text-[40px] text-[var(--text-strong)] leading-none">98.2<span class="text-[18px] text-[var(--text-muted)] ml-0.5">%</span></div>
+        <div class="font-display text-[40px] text-[var(--text-strong)] leading-none"><span id="stat-success-rate">98.2</span><span class="text-[18px] text-[var(--text-muted)] ml-0.5">%</span></div>
         <div class="text-[11.5px] text-[var(--text-muted)] mt-1.5"><span class="font-mono">512</span> 错误 · <span class="text-[var(--halt)]">3</span> 严重</div>
+        <div class="text-[11.5px] text-[var(--text-muted)] mt-1" style="border-top:1px solid var(--border-soft); padding-top:6px;">完成 <span id="stat-completed" class="font-mono text-[var(--text-strong)]">—</span> · 失败 <span id="stat-failed" class="font-mono" style="color:var(--halt)">—</span></div>
         <svg class="sparkline mt-3" viewBox="0 0 120 40" preserveAspectRatio="none">
           <polyline fill="none" stroke="var(--halt)" stroke-width="1.5"
             points="0,12 10,10 20,14 30,11 40,15 50,18 60,12 70,16 80,20 90,18 100,22 110,28 120,26"/>
@@ -280,6 +282,59 @@
             points="0,12 10,10 20,14 30,11 40,15 50,18 60,12 70,16 80,20 90,18 100,22 110,28 120,26 120,40 0,40"/>
         </svg>
       </div>
+    </section>
+
+    <!-- ==================== RUNS STATS (real data from API) ==================== -->
+    <section class="grid grid-cols-12 gap-4 mb-7">
+      <!-- run status summary cards -->
+      <div class="col-span-2 card p-4">
+        <div class="caps mb-1">运行中</div>
+        <div class="font-display text-[32px] text-[var(--text-strong)] leading-none" id="stat-running">—</div>
+      </div>
+      <div class="col-span-2 card p-4">
+        <div class="caps mb-1">待审批</div>
+        <div class="font-display text-[32px] leading-none" style="color:var(--review)" id="stat-paused">—</div>
+      </div>
+      <div class="col-span-2 card p-4">
+        <div class="caps mb-1">已取消</div>
+        <div class="font-display text-[32px] leading-none" style="color:var(--text-muted)" id="stat-cancelled">—</div>
+      </div>
+      <div class="col-span-2 card p-4">
+        <div class="caps mb-1">待处理</div>
+        <div class="font-display text-[32px] leading-none" style="color:var(--text-muted)" id="stat-pending">—</div>
+      </div>
+      <div class="col-span-2 card p-4">
+        <div class="caps mb-1">总成本</div>
+        <div class="font-display text-[28px] text-[var(--text-strong)] leading-none" id="stat-total-cost">—</div>
+      </div>
+      <div class="col-span-2 card p-4">
+        <div class="caps mb-1">平均时长</div>
+        <div class="font-display text-[28px] text-[var(--text-strong)] leading-none" id="stat-avg-duration">—</div>
+      </div>
+    </section>
+
+    <!-- ==================== RECENT RUNS (real data from API) ==================== -->
+    <section class="card p-0 overflow-hidden mb-7">
+      <div class="flex items-center justify-between p-5 pb-3">
+        <div>
+          <div class="caps mb-1">最近运行</div>
+          <div class="text-[13px] text-[var(--text-muted)]">最近 10 条，来自真实 API 数据</div>
+        </div>
+        <a href="runs-list.html" class="text-[11.5px] text-[var(--text-strong)] hover:underline">全部历史 →</a>
+      </div>
+      <table class="lean w-full">
+        <thead>
+          <tr>
+            <th>标题</th>
+            <th>状态</th>
+            <th>成本</th>
+            <th>创建时间</th>
+          </tr>
+        </thead>
+        <tbody id="recent-runs-list">
+          <tr><td colspan="4" style="padding:16px 12px; color:var(--text-muted); font-size:12px;">加载中…</td></tr>
+        </tbody>
+      </table>
     </section>
 
     <!-- ==================== MAIN CHART ROW ==================== -->
@@ -1181,6 +1236,129 @@
         heatmap.appendChild(cell);
       }
     });
+  </script>
+
+  <!-- ==================== REAL DATA SCRIPT ==================== -->
+  <script>
+  (function() {
+    // 1. Auth check
+    fetch('/api/prototype/me').then(function(r) {
+      if (r.status === 401) {
+        window.location.href = '/login?callbackUrl=' + encodeURIComponent('/prototype/operations.html');
+      }
+    });
+
+    // 2. Fetch runs and compute stats
+    fetch('/api/prototype/runs')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var runs = data.runs || [];
+        computeAndRenderStats(runs);
+      })
+      .catch(function(err) {
+        console.error('Failed to load runs:', err);
+      });
+
+    function computeAndRenderStats(runs) {
+      var total = runs.length;
+
+      // Count by status
+      var byStatus = {};
+      runs.forEach(function(r) {
+        byStatus[r.status] = (byStatus[r.status] || 0) + 1;
+      });
+
+      var completed = byStatus['completed'] || 0;
+      var failed = byStatus['failed'] || 0;
+      var running = byStatus['running'] || 0;
+      var paused = byStatus['paused_at_gate'] || 0;
+      var cancelled = byStatus['cancelled'] || 0;
+      var pending = byStatus['pending'] || 0;
+
+      // Success rate = completed / (completed + failed) * 100
+      var successRate = (completed + failed) > 0
+        ? Math.round(completed / (completed + failed) * 100)
+        : 0;
+
+      // Total cost (totalCostUsd is a decimal string)
+      var totalCost = 0;
+      runs.forEach(function(r) {
+        if (r.totalCostUsd) totalCost += parseFloat(r.totalCostUsd);
+      });
+
+      // Average duration for completed runs (in minutes)
+      var completedWithDuration = runs.filter(function(r) {
+        return r.status === 'completed' && r.createdAt && r.finishedAt;
+      });
+      var avgDurationMin = 0;
+      if (completedWithDuration.length > 0) {
+        var totalMs = completedWithDuration.reduce(function(sum, r) {
+          return sum + (new Date(r.finishedAt) - new Date(r.createdAt));
+        }, 0);
+        avgDurationMin = Math.round(totalMs / completedWithDuration.length / 60000);
+      }
+
+      // Update DOM elements
+      function setText(id, val) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = val;
+      }
+
+      setText('stat-total', total);
+      setText('stat-completed', completed);
+      setText('stat-failed', failed);
+      setText('stat-running', running);
+      setText('stat-paused', paused);
+      setText('stat-cancelled', cancelled);
+      setText('stat-pending', pending);
+      setText('stat-success-rate', successRate);
+      setText('stat-total-cost', '$' + totalCost.toFixed(2));
+      setText('stat-avg-duration', avgDurationMin > 0 ? avgDurationMin + ' 分钟' : '—');
+
+      // Recent runs table
+      var recentRunsEl = document.getElementById('recent-runs-list');
+      if (recentRunsEl) {
+        if (runs.length === 0) {
+          recentRunsEl.innerHTML = '<tr><td colspan="4" style="padding:16px 12px; color:var(--text-muted); font-size:12px;">暂无数据</td></tr>';
+          return;
+        }
+        var recent = runs.slice(0, 10);
+        var statusColorMap = {
+          completed: 'var(--done)',
+          failed: 'var(--halt)',
+          running: 'var(--run)',
+          paused_at_gate: 'var(--review)',
+          cancelled: 'var(--text-muted)',
+          pending: 'var(--text-faint)'
+        };
+        var statusLabelMap = {
+          completed: '完成',
+          failed: '失败',
+          running: '运行中',
+          paused_at_gate: '待审批',
+          cancelled: '已取消',
+          pending: '待处理'
+        };
+        recentRunsEl.innerHTML = recent.map(function(r) {
+          var statusColor = statusColorMap[r.status] || 'var(--text-muted)';
+          var statusText = statusLabelMap[r.status] || r.status;
+          var cost = r.totalCostUsd ? '$' + parseFloat(r.totalCostUsd).toFixed(2) : '—';
+          var date = r.createdAt ? new Date(r.createdAt).toLocaleDateString('zh-CN') : '—';
+          var title = escapeHtml(r.title || r.id.slice(0, 8));
+          return '<tr>' +
+            '<td style="padding:8px 12px;"><a href="run-detail.html?runId=' + escapeHtml(r.id) + '" style="color:var(--review);text-decoration:underline;">' + title + '</a></td>' +
+            '<td style="padding:8px 12px;"><span style="color:' + statusColor + ';font-weight:600;">' + statusText + '</span></td>' +
+            '<td style="padding:8px 12px;" class="font-mono">' + cost + '</td>' +
+            '<td style="padding:8px 12px;color:var(--text-muted);">' + date + '</td>' +
+            '</tr>';
+        }).join('');
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+  })();
   </script>
 </body>
 </html>
