@@ -58,6 +58,12 @@ spec:
                 secretKeyRef:
                   name: honeyai-secrets
                   key: kek_base64
+            - name: DEV_AUTH_ENABLED
+              valueFrom:
+                secretKeyRef:
+                  name: honeyai-secrets
+                  key: dev_auth_enabled
+                  optional: true
           resources:
             requests:
               cpu: '500m'
